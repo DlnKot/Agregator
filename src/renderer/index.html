@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+  <title>Remote Desktop Manager</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+            <rect x="2" y="4" width="28" height="18" rx="2" stroke="#3b82f6" stroke-width="2"/>
+            <rect x="6" y="8" width="20" height="10" fill="#3b82f6" opacity="0.3"/>
+            <circle cx="16" cy="13" r="3" fill="#3b82f6"/>
+          </svg>
+        </div>
+        <h1 class="app-title">RDM</h1>
+      </div>
+      
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-view="connections">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="3" width="20" height="14" rx="2"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+          <span>Подключения</span>
+        </button>
+        
+        <button class="nav-item" data-view="profiles">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+          <span>Профили</span>
+        </button>
+        
+        <button class="nav-item" data-view="settings">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          <span>Настройки</span>
+        </button>
+      </nav>
+      
+      <div class="sidebar-footer">
+        <span class="version">v1.0.0</span>
+      </div>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Connections View -->
+      <section id="connections-view" class="view active">
+        <div class="view-header">
+          <h2>Подключения</h2>
+          <button class="btn btn-primary" id="add-connection-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Добавить
+          </button>
+        </div>
+        
+        <!-- Client Type Tabs -->
+        <div class="client-tabs">
+          <button class="client-tab active" data-type="all">Все</button>
+          <button class="client-tab" data-type="rdp">RDP</button>
+          <button class="client-tab" data-type="horizon">Horizon</button>
+          <button class="client-tab" data-type="citrix">Citrix</button>
+        </div>
+        
+        <div class="connections-grid" id="connections-list">
+          <!-- Connections will be rendered here -->
+        </div>
+      </section>
+      
+      <!-- Profiles View -->
+      <section id="profiles-view" class="view">
+        <div class="view-header">
+          <h2>Профили</h2>
+          <button class="btn btn-primary" id="add-profile-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Добавить профиль
+          </button>
+        </div>
+        
+        <div class="profiles-list" id="profiles-list">
+          <!-- Profiles will be rendered here -->
+        </div>
+      </section>
+      
+      <!-- Settings View -->
+      <section id="settings-view" class="view">
+        <div class="view-header">
+          <h2>Настройки</h2>
+        </div>
+        
+        <div class="settings-tabs">
+          <button class="settings-tab active" data-section="rdp">RDP</button>
+          <button class="settings-tab" data-section="horizon">Horizon</button>
+          <button class="settings-tab" data-section="citrix">Citrix</button>
+          <button class="settings-tab" data-section="general">Общие</button>
+        </div>
+        
+        <div class="settings-content">
+          <!-- RDP Settings -->
+          <div class="settings-section active" data-section="rdp">
+            <h3>Настройки RDP</h3>
+            <div class="form-group">
+              <label for="rdp-resolution">Разрешение</label>
+              <select id="rdp-resolution">
+                <option value="1024x768">1024x768</option>
+                <option value="1280x720">1280x720 (HD)</option>
+                <option value="1920x1080" selected>1920x1080 (Full HD)</option>
+                <option value="2560x1440">2560x1440 (2K)</option>
+                <option value="3840x2160">3840x2160 (4K)</option>
+                <option value="fullscreen">Полноэкранный режим</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label for="rdp-colors">Глубина цвета</label>
+              <select id="rdp-colors">
+                <option value="16">16 бит</option>
+                <option value="24">24 бита</option>
+                <option value="32" selected>32 бита</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label for="rdp-multimon">Несколько мониторов</label>
+              <label class="toggle">
+                <input type="checkbox" id="rdp-multimon">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            
+            <div class="form-group">
+              <label for="rdp-clipboard">Буфер обмена</label>
+              <label class="toggle">
+                <input type="checkbox" id="rdp-clipboard" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            
+            <div class="form-group">
+              <label for="rdp-drives">Подключение дисков</label>
+              <label class="toggle">
+                <input type="checkbox" id="rdp-drives">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            
+ <div class="form-group">
+ <label for="rdp-admin-session">Административная сессия (/admin)</label>
+ <label class="toggle">
+ <input type="checkbox" id="rdp-admin-session">
+ <span class="toggle-slider"></span>
+ </label>
+ </div>
+          
+ <div class="form-group">
+ <label for="rdp-prompt-credentials">Запрашивать учётные данные (/prompt)</label>
+ <label class="toggle">
+ <input type="checkbox" id="rdp-prompt-credentials" checked>
+ <span class="toggle-slider"></span>
+ </label>
+ </div>
+ 
+ <div class="form-group">
+ <label for="rdp-start-fullscreen">Полноэкранный старт (/f)</label>
+ <label class="toggle">
+ <input type="checkbox" id="rdp-start-fullscreen">
+ <span class="toggle-slider"></span>
+ </label>
+ </div>
+ 
+ <div class="form-group">
+ <label for="rdp-span">Span на все мониторы (/span)</label>
+ <label class="toggle">
+ <input type="checkbox" id="rdp-span">
+ <span class="toggle-slider"></span>
+ </label>
+ </div>
+ 
+ <div class="form-group">
+ <label for="rdp-custom">Дополнительные параметры (.rdp строки)</label>
+ <textarea id="rdp-custom" rows="3" placeholder="Например: audiomode:i:1"></textarea>
+ </div>
+          </div>
+          
+          <!-- Horizon Settings -->
+          <div class="settings-section" data-section="horizon">
+            <h3>Настройки VMware Horizon</h3>
+            <div class="form-group">
+              <label for="horizon-broker">URL Broker</label>
+              <input type="text" id="horizon-broker" placeholder="https://horizon.company.com">
+            </div>
+            
+            <div class="form-group">
+              <label for="horizon-pool">Desktop Pool</label>
+              <input type="text" id="horizon-pool" placeholder="Имя пула рабочих столов">
+            </div>
+            
+ <div class="form-group">
+ <label for="horizon-username">Пользователь (--userName)</label>
+ <input type="text" id="horizon-username" placeholder="DOMAIN\username">
+ </div>
+          
+ <div class="form-group">
+ <label for="horizon-domain">Домен (--domainName)</label>
+ <input type="text" id="horizon-domain" placeholder="DOMAIN">
+ </div>
+ 
+ <div class="form-group">
+ <label for="horizon-once">Одноразовый запуск (--once)</label>
+ <label class="toggle">
+ <input type="checkbox" id="horizon-once" checked>
+ <span class="toggle-slider"></span>
+ </label>
+ </div>
+ 
+ <div class="form-group">
+ <label for="horizon-noninteractive">Неинтерактивный режим (--nonInteractive)</label>
+ <label class="toggle">
+ <input type="checkbox" id="horizon-noninteractive">
+ <span class="toggle-slider"></span>
+ </label>
+ </div>
+ 
+ <div class="form-group">
+ <label for="horizon-custom">Дополнительные параметры</label>
+ <textarea id="horizon-custom" rows="3" placeholder="Например: --sslCipherString=DEFAULT"></textarea>
+ </div>
+          </div>
+          
+          <!-- Citrix Settings -->
+          <div class="settings-section" data-section="citrix">
+            <h3>Настройки Citrix Workspace</h3>
+            <div class="form-group">
+              <label for="citrix-store">Store URL</label>
+              <input type="text" id="citrix-store" placeholder="https://store.company.com/Citrix/Store">
+            </div>
+            
+ <div class="form-group">
+ <label for="citrix-resource">Ресурс / Published App (-launch)</label>
+ <input type="text" id="citrix-resource" placeholder="Например: Desktop">
+ </div>
+          
+ <div class="form-group">
+ <label for="citrix-custom">Дополнительные параметры selfservice</label>
+ <textarea id="citrix-custom" rows="3" placeholder="Например: -logon"></textarea>
+ </div>
+          </div>
+          
+          <!-- General Settings -->
+          <div class="settings-section" data-section="general">
+            <h3>Общие настройки</h3>
+            <div class="form-group">
+              <label for="general-tray">Сворачивать в трей</label>
+              <label class="toggle">
+                <input type="checkbox" id="general-tray">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            
+            <div class="form-group">
+              <label for="general-start">Запускать свёрнутым</label>
+              <label class="toggle">
+                <input type="checkbox" id="general-start">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+          
+        <div class="settings-actions">
+          <button class="btn btn-primary" id="save-settings-btn">Сохранить настройки</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Connection Modal -->
+  <div class="modal" id="connection-modal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-title">Новое подключение</h3>
+        <button class="modal-close" id="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="connection-form">
+          <input type="hidden" id="connection-id">
+          
+          <div class="form-group">
+            <label for="connection-type">Тип подключения</label>
+            <select id="connection-type" required>
+              <option value="rdp">RDP (Remote Desktop)</option>
+              <option value="horizon">VMware Horizon</option>
+              <option value="citrix">Citrix Workspace</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="connection-name">Название</label>
+            <input type="text" id="connection-name" required placeholder="Например: Рабочий стол">
+          </div>
+          
+          <div class="form-group">
+            <label for="connection-host">Хост / IP адрес</label>
+            <input type="text" id="connection-host" required placeholder="192.168.1.100 или hostname">
+          </div>
+          
+          <div class="form-group horizon-fields" style="display: none;">
+            <label for="connection-pool">Desktop Pool</label>
+            <input type="text" id="connection-pool" placeholder="Имя пула Horizon">
+          </div>
+          
+ <div class="form-group">
+ <label for="connection-username">Учётная запись (domain\username)</label>
+ <input type="text" id="connection-username" placeholder="DOMAIN\username">
+ </div>
+          
+          <div class="form-group">
+            <label for="connection-description">Описание</label>
+            <textarea id="connection-description" rows="2" placeholder="Описание подключения"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="modal-cancel">Отмена</button>
+        <button class="btn btn-primary" id="modal-save">Сохранить</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Profile Modal -->
+  <div class="modal" id="profile-modal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="profile-modal-title">Новый профиль</h3>
+        <button class="modal-close" id="profile-modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="profile-form">
+          <input type="hidden" id="profile-id">
+          
+          <div class="form-group">
+            <label for="profile-name">Название профиля</label>
+            <input type="text" id="profile-name" required placeholder="Например: Профиль разработчика">
+          </div>
+          
+          <div class="form-group">
+            <label for="profile-connections">Подключения</label>
+            <select id="profile-connections" multiple size="5">
+              <!-- Will be populated dynamically -->
+            </select>
+            <small>Выберите подключения (Ctrl+клик для множественного выбора)</small>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="profile-modal-cancel">Отмена</button>
+        <button class="btn btn-primary" id="profile-modal-save">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

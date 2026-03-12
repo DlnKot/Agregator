@@ -1,0 +1,45 @@
+{
+  "name": "remote-desktop-manager",
+  "version": "1.0.0",
+  "description": "Агрегатор для запуска клиентов удалённых рабочих столов (RDP, Horizon, Citrix)",
+  "main": "src/main/main.js",
+  "scripts": {
+"start": "env -u ELECTRON_RUN_AS_NODE electron .",
+ "dev": "env -u ELECTRON_RUN_AS_NODE electron . --enable-logging",
+    "build": "electron-builder --win",
+    "pack": "electron-builder --dir"
+  },
+  "author": "Remote Desktop Manager",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.3.1",
+    "electron-builder": "^25.1.8"
+  },
+  "dependencies": {
+    "electron-log": "^5.2.4"
+  },
+  "build": {
+    "appId": "com.rdm.remotedesktopmanager",
+    "productName": "Remote Desktop Manager",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*"
+    ]
+  }
+}
