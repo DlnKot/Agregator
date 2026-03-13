@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "electron-log": "^5.2.4",
-    "electron-updater": "^6.3.9"
+    "electron-updater": "^6.8.3"
   },
   "build": {
     "appId": "com.alfa.remoteclient",
@@ -42,8 +42,8 @@
       "icon": "assets/icon.ico",
       "publish": {
         "provider": "github",
-        "owner": "YOUR_GITHUB_USERNAME",
-        "repo": "YOUR_REPO_NAME"
+        "owner": "DlnKot",
+        "repo": "Agregator"
       }
     },
     "mac": {
