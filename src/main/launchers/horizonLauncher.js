@@ -155,7 +155,7 @@ function findExeRecursive(dir, exeName, depth = 0, maxDepth = 6) {
             }
         }
 
-    } catch {}
+    } catch { }
 
     return null;
 }
@@ -195,7 +195,7 @@ function findHorizonExecutable(customPath) {
                 return p;
         }
 
-    } catch {}
+    } catch { }
 
     return null;
 }
@@ -228,7 +228,7 @@ function findMacApp() {
             if (found) return found;
         }
 
-    } catch {}
+    } catch { }
 
     return null;
 }
@@ -263,16 +263,31 @@ function launchMac(connection, settings) {
 }
 
 /* ------------------------------------------------ */
+const path = require('path');
+const { spawn } = require('child_process');
+const { log: logger } = require('../utils/logger');
+
 function launchWindows(connection, settings) {
+    const exePath = findHorizonExecutable(settings.customPath);
 
-    const exe = findHorizonExecutable(settings.customPath);
-
-    if (!exe)
-        throw new Error('VMware Horizon Client not found');
+    if (!exePath) throw new Error('VMware Horizon Client not found');
 
     const args = buildArgs(connection, settings);
 
-    launchDetached(exe, args);
+    // Формируем команду в виде одной строки с экранированием пробелов
+    // Оборачиваем путь exe в кавычки, чтобы Windows правильно его распознал
+    const cmd = `"${exePath}" ${args.map(a => `"${a}"`).join(' ')}`;
+
+    logger('info', `Launching Windows Horizon Client: ${cmd}`);
+
+    // Используем shell:true, чтобы Windows могла распознать кавычки
+    const child = spawn(cmd, {
+        shell: true,
+        detached: true,
+        stdio: 'ignore'
+    });
+
+    child.unref();
 }
 
 /* ------------------------------------------------ */
