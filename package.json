@@ -44,7 +44,8 @@
         "provider": "github",
         "owner": "DlnKot",
         "repo": "Agregator"
-      }
+      },
+      "artifactName": "Alfa.Remote.Client-${version}-Setup.${ext}"
     },
     "mac": {
       "target": [
