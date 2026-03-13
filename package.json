@@ -1,6 +1,6 @@
 {
   "name": "alfa-remote-client",
-  "version": "0.1.8",
+  "version": "0.2.0",
   "description": "Alfa Remote Client - агрегатор для запуска клиентов удалённых рабочих столов (RDP, Horizon, Citrix)",
   "main": "src/main/main.js",
   "scripts": {
@@ -21,7 +21,8 @@
     "vue": "^3.5.30"
   },
   "dependencies": {
-    "electron-log": "^5.2.4"
+    "electron-log": "^5.2.4",
+    "electron-updater": "^6.3.9"
   },
   "build": {
     "appId": "com.alfa.remoteclient",
@@ -38,7 +39,29 @@
           ]
         }
       ],
-      "icon": "assets/icon.ico"
+      "icon": "assets/icon.ico",
+      "publish": {
+        "provider": "github",
+        "owner": "YOUR_GITHUB_USERNAME",
+        "repo": "YOUR_REPO_NAME"
+      }
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.icns",
+      "publish": {
+        "provider": "github",
+        "owner": "DlnKot",
+        "repo": "Agregator"
+      }
     },
     "nsis": {
       "oneClick": false,

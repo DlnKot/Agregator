@@ -1,39 +1,34 @@
 <template>
   <div class="settings-container">
     <div class="settings-tabs">
-      <button 
-        v-for="tab in tabs" 
-        :key="tab.id"
-        class="settings-tab" 
-        :class="{ active: activeTab === tab.id }"
-        @click="activeTab = tab.id"
-      >
+      <button v-for="tab in tabs" :key="tab.id" class="settings-tab" :class="{ active: activeTab === tab.id }"
+        @click="activeTab = tab.id">
         {{ tab.label }}
       </button>
     </div>
-    
+
     <div class="settings-sections">
       <!-- User Settings -->
       <div v-if="activeTab === 'user'" class="settings-section">
         <h3>Учётная запись</h3>
-        
+
         <div class="form-group">
           <label for="user-domain">Домен</label>
           <input type="text" id="user-domain" v-model="localSettings.user.domain" placeholder="COMPANY">
         </div>
-        
+
         <div class="form-group">
           <label for="user-username">Имя пользователя</label>
           <input type="text" id="user-username" v-model="localSettings.user.username" placeholder="ivanov">
         </div>
-        
+
         <p class="preview-label">Итоговый логин: <strong>{{ previewUsername }}</strong></p>
       </div>
-      
+
       <!-- RDP Settings -->
       <div v-if="activeTab === 'rdp'" class="settings-section">
         <h3>Настройки RDP</h3>
-        
+
         <div class="form-group">
           <label for="rdp-resolution">Разрешение</label>
           <select id="rdp-resolution" v-model="localSettings.rdp.resolution">
@@ -43,7 +38,7 @@
             <option value="fullscreen">Полный экран</option>
           </select>
         </div>
-        
+
         <div class="form-group">
           <label for="rdp-colors">Глубина цвета</label>
           <select id="rdp-colors" v-model="localSettings.rdp.colorDepth">
@@ -52,7 +47,7 @@
             <option value="16">16 бит</option>
           </select>
         </div>
-        
+
         <div class="form-group">
           <label for="rdp-multimon">Несколько мониторов</label>
           <label class="toggle">
@@ -60,7 +55,7 @@
             <span class="toggle-slider"></span>
           </label>
         </div>
-        
+
         <div class="form-group">
           <label for="rdp-clipboard">Буфер обмена</label>
           <label class="toggle">
@@ -68,7 +63,7 @@
             <span class="toggle-slider"></span>
           </label>
         </div>
-        
+
         <div class="form-group">
           <label for="rdp-drives">Подключение дисков</label>
           <label class="toggle">
@@ -76,7 +71,7 @@
             <span class="toggle-slider"></span>
           </label>
         </div>
-        
+
         <div class="form-group">
           <label for="rdp-admin-session">Административная сессия (/admin)</label>
           <label class="toggle">
@@ -84,7 +79,7 @@
             <span class="toggle-slider"></span>
           </label>
         </div>
-        
+
         <div class="form-group">
           <label for="rdp-prompt-credentials">Запрашивать учётные данные (/prompt)</label>
           <label class="toggle">
@@ -92,7 +87,7 @@
             <span class="toggle-slider"></span>
           </label>
         </div>
-        
+
         <div class="form-group">
           <label for="rdp-start-fullscreen">Полноэкранный старт (/f)</label>
           <label class="toggle">
@@ -100,7 +95,7 @@
             <span class="toggle-slider"></span>
           </label>
         </div>
-        
+
         <div class="form-group">
           <label for="rdp-span">Span на все мониторы (/span)</label>
           <label class="toggle">
@@ -108,32 +103,36 @@
             <span class="toggle-slider"></span>
           </label>
         </div>
-        
+
         <div class="form-group">
           <label for="rdp-custom">Дополнительные параметры (.rdp строки)</label>
-          <textarea id="rdp-custom" v-model="localSettings.rdp.customFlags" rows="3" placeholder="Например: audiomode:i:1"></textarea>
+          <textarea id="rdp-custom" v-model="localSettings.rdp.customFlags" rows="3"
+            placeholder="Например: audiomode:i:1"></textarea>
         </div>
       </div>
-      
+
       <!-- Horizon Settings -->
       <div v-if="activeTab === 'horizon'" class="settings-section">
         <h3>Настройки VMware Horizon</h3>
-        
+
         <div class="form-group">
           <label for="horizon-server">URL сервера (--serverURL)</label>
-          <input type="text" id="horizon-server" v-model="localSettings.horizon.serverUrl" placeholder="https://horizon.company.com">
+          <input type="text" id="horizon-server" v-model="localSettings.horizon.serverUrl"
+            placeholder="https://horizon.company.com">
         </div>
-        
+
         <div class="form-group">
           <label for="horizon-desktop">Desktop Name (--desktopName)</label>
-          <input type="text" id="horizon-desktop" v-model="localSettings.horizon.desktopName" placeholder="Имя десктопа или пула">
+          <input type="text" id="horizon-desktop" v-model="localSettings.horizon.desktopName"
+            placeholder="Имя десктопа или пула">
         </div>
-        
+
         <div class="form-group">
           <label for="horizon-app">Application (--appName)</label>
-          <input type="text" id="horizon-app" v-model="localSettings.horizon.appName" placeholder="Имя приложения для запуска">
+          <input type="text" id="horizon-app" v-model="localSettings.horizon.appName"
+            placeholder="Имя приложения для запуска">
         </div>
-        
+
         <div class="form-group">
           <label for="horizon-protocol">Protocol (--desktopProtocol)</label>
           <select id="horizon-protocol" v-model="localSettings.horizon.desktopProtocol">
@@ -143,7 +142,7 @@
             <option value="Blast">Blast</option>
           </select>
         </div>
-        
+
         <div class="form-group">
           <label for="horizon-layout">Layout (--desktopLayout)</label>
           <select id="horizon-layout" v-model="localSettings.horizon.desktopLayout">
@@ -157,13 +156,13 @@
             <option value="1024x768">1024x768</option>
           </select>
         </div>
-        
+
         <div class="form-group">
           <label for="horizon-monitors">Monitors (--monitors)</label>
           <input type="text" id="horizon-monitors" v-model="localSettings.horizon.monitors" placeholder="1, 2">
           <small>Индексы мониторов через запятую (для multimonitor)</small>
         </div>
-        
+
         <div class="form-group">
           <label for="horizon-unattended">Unattended mode (--unattended)</label>
           <label class="toggle">
@@ -171,7 +170,7 @@
             <span class="toggle-slider"></span>
           </label>
         </div>
-        
+
         <div class="form-group">
           <label for="horizon-noninteractive">Non-interactive (--nonInteractive)</label>
           <label class="toggle">
@@ -179,7 +178,7 @@
             <span class="toggle-slider"></span>
           </label>
         </div>
-        
+
         <div class="form-group">
           <label for="horizon-minimized">Launch minimized (--launchMinimized)</label>
           <label class="toggle">
@@ -187,7 +186,7 @@
             <span class="toggle-slider"></span>
           </label>
         </div>
-        
+
         <div class="form-group">
           <label for="horizon-currentuser">Login as current user (--loginAsCurrentUser)</label>
           <label class="toggle">
@@ -195,7 +194,7 @@
             <span class="toggle-slider"></span>
           </label>
         </div>
-        
+
         <div class="form-group">
           <label for="horizon-hideafter">Hide client after launch (--hideClientAfterLaunchSession)</label>
           <label class="toggle">
@@ -203,7 +202,7 @@
             <span class="toggle-slider"></span>
           </label>
         </div>
-        
+
         <div class="form-group">
           <label for="horizon-useexisting">Use existing connection (--useExisting)</label>
           <label class="toggle">
@@ -211,7 +210,7 @@
             <span class="toggle-slider"></span>
           </label>
         </div>
-        
+
         <div class="form-group">
           <label for="horizon-single">Single auto-connect (--singleAutoConnect)</label>
           <label class="toggle">
@@ -219,47 +218,53 @@
             <span class="toggle-slider"></span>
           </label>
         </div>
-        
+
         <div class="form-group">
           <label for="horizon-path">Путь к VMware Horizon</label>
-          <input type="text" id="horizon-path" v-model="localSettings.horizon.customPath" placeholder="C:\Program Files\VMware\...\vmware-view.exe">
+          <input type="text" id="horizon-path" v-model="localSettings.horizon.customPath"
+            placeholder="C:\Program Files\VMware\...\vmware-view.exe">
         </div>
-        
+
         <div class="form-group">
           <label for="horizon-custom">Дополнительные параметры</label>
-          <textarea id="horizon-custom" v-model="localSettings.horizon.customFlags" rows="3" placeholder="Дополнительные флаги"></textarea>
+          <textarea id="horizon-custom" v-model="localSettings.horizon.customFlags" rows="3"
+            placeholder="Дополнительные флаги"></textarea>
         </div>
       </div>
-      
+
       <!-- Citrix Settings -->
       <div v-if="activeTab === 'citrix'" class="settings-section">
         <h3>Настройки Citrix Workspace</h3>
-        
+
         <div class="form-group">
           <label for="citrix-store">Store URL</label>
-          <input type="text" id="citrix-store" v-model="localSettings.citrix.storeUrl" placeholder="https://store.company.com/Citrix/Store">
+          <input type="text" id="citrix-store" v-model="localSettings.citrix.storeUrl"
+            placeholder="https://store.company.com/Citrix/Store">
         </div>
-        
+
         <div class="form-group">
           <label for="citrix-resource">Ресурс / Published App (-launch)</label>
-          <input type="text" id="citrix-resource" v-model="localSettings.citrix.resourceName" placeholder="Например: Desktop">
+          <input type="text" id="citrix-resource" v-model="localSettings.citrix.resourceName"
+            placeholder="Например: Desktop">
         </div>
-        
+
         <div class="form-group">
           <label for="citrix-path">Путь к Citrix Workspace</label>
-          <input type="text" id="citrix-path" v-model="localSettings.citrix.customPath" placeholder="C:\Program Files (x86)\Citrix\ICA Client\SelfServicePlugin\SelfService.exe">
+          <input type="text" id="citrix-path" v-model="localSettings.citrix.customPath"
+            placeholder="C:\Program Files (x86)\Citrix\ICA Client\SelfServicePlugin\SelfService.exe">
         </div>
-        
+
         <div class="form-group">
           <label for="citrix-custom">Дополнительные параметры selfservice</label>
-          <textarea id="citrix-custom" v-model="localSettings.citrix.customFlags" rows="3" placeholder="Например: -logon"></textarea>
+          <textarea id="citrix-custom" v-model="localSettings.citrix.customFlags" rows="3"
+            placeholder="Например: -logon"></textarea>
         </div>
       </div>
-      
+
       <!-- General Settings -->
       <div v-if="activeTab === 'general'" class="settings-section">
         <h3>Общие настройки</h3>
-        
+
         <div class="form-group">
           <label for="general-tray">Сворачивать в трей</label>
           <label class="toggle">
@@ -267,7 +272,7 @@
             <span class="toggle-slider"></span>
           </label>
         </div>
-        
+
         <div class="form-group">
           <label for="general-start">Запускать свёрнутым</label>
           <label class="toggle">
@@ -276,8 +281,64 @@
           </label>
         </div>
       </div>
+
+      <!-- Updates Settings -->
+      <div v-if="activeTab === 'updates'" class="settings-section">
+        <h3>Автообновление</h3>
+
+        <div class="update-status-card">
+          <div class="update-info">
+            <span class="update-label">Текущая версия:</span>
+            <span class="update-value">{{ appVersion }}</span>
+          </div>
+
+          <div v-if="updateStatus.updateAvailable && !updateStatus.updateDownloaded" class="update-available">
+            <div class="update-info">
+              <span class="update-label">Доступна версия:</span>
+              <span class="update-value version-new">{{ updateStatus.version }}</span>
+            </div>
+
+            <div v-if="updateProgress.percent > 0" class="update-progress">
+              <div class="progress-bar">
+                <div class="progress-fill" :style="{ width: updateProgress.percent + '%' }"></div>
+              </div>
+              <span class="progress-text">{{ updateProgress.percent.toFixed(1) }}% ({{
+                formatBytes(updateProgress.bytesPerSecond) }}/с)</span>
+            </div>
+
+            <button class="btn btn-primary" @click="handleDownloadUpdate" :disabled="isDownloading">
+              {{ isDownloading ? 'Загрузка...' : 'Скачать обновление' }}
+            </button>
+          </div>
+
+          <div v-else-if="updateStatus.updateDownloaded" class="update-ready">
+            <div class="update-info">
+              <span class="update-label">Обновление готово:</span>
+              <span class="update-value version-ready">{{ updateStatus.version }}</span>
+            </div>
+            <button class="btn btn-primary" @click="handleInstallUpdate">
+              Перезагрузить и установить
+            </button>
+          </div>
+
+          <div v-else class="update-check">
+            <p v-if="updateError" class="update-error">{{ updateError }}</p>
+            <button class="btn btn-secondary" @click="handleCheckUpdates" :disabled="isChecking">
+              {{ isChecking ? 'Проверка...' : 'Проверить обновления' }}
+            </button>
+            <p v-if="!updateStatus.updateAvailable && !isChecking && !updateError" class="update-message">
+              У вас установлена последняя версия
+            </p>
+          </div>
+        </div>
+
+        <div class="update-info-text">
+          <p>Обновления загружаются из GitHub репозитория. После загрузки обновления приложение будет перезапущено для
+            установки.</p>
+        </div>
+      </div>
     </div>
-    
+
     <div class="settings-actions">
       <button class="btn btn-primary" @click="saveSettings">Сохранить настройки</button>
     </div>
@@ -285,7 +346,8 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
+import { useApp } from '../composables/useApp'
 
 const props = defineProps({
   settings: {
@@ -296,12 +358,76 @@ const props = defineProps({
 
 const emit = defineEmits(['save'])
 
+// Auto-updater
+const {
+  updateStatus,
+  updateProgress,
+  updateError,
+  initAutoUpdater,
+  checkForUpdates,
+  downloadUpdate,
+  installUpdate
+} = useApp()
+
+const isChecking = ref(false)
+const isDownloading = ref(false)
+const appVersion = ref('0.0.0')
+
+// Initialize auto-updater on mount
+onMounted(async () => {
+  initAutoUpdater()
+
+  // Get current version from package.json via API
+  try {
+    const status = await window.api.getUpdateStatus?.()
+    if (status) {
+      updateStatus.value = status
+    }
+  } catch (e) {
+    // Ignore - may not be available in dev mode
+  }
+
+  // Try to get version from settings or use default
+  appVersion.value = '0.1.9'
+})
+
+async function handleCheckUpdates() {
+  isChecking.value = true
+  try {
+    await checkForUpdates()
+  } finally {
+    isChecking.value = false
+  }
+}
+
+async function handleDownloadUpdate() {
+  isDownloading.value = true
+  try {
+    await downloadUpdate()
+  } finally {
+    isDownloading.value = false
+  }
+}
+
+function handleInstallUpdate() {
+  installUpdate()
+}
+
+function formatBytes(bytes) {
+  if (!bytes) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
+}
+
 const tabs = [
   { id: 'user', label: 'Пользователь' },
   { id: 'rdp', label: 'RDP' },
   { id: 'horizon', label: 'Horizon' },
   { id: 'citrix', label: 'Citrix' },
-  { id: 'general', label: 'Общие' }
+  { id: 'general', label: 'Общие' },
+  { id: 'updates', label: 'Обновление' }
 ]
 
 const activeTab = ref('user')
@@ -371,7 +497,7 @@ function initSettings() {
   if (newSettings && Object.keys(newSettings).length > 0) {
     // Merge with defaults
     const merged = JSON.parse(JSON.stringify(defaultSettings))
-    
+
     // User settings
     if (newSettings.user) {
       merged.user = { ...defaultSettings.user, ...newSettings.user }
@@ -392,7 +518,7 @@ function initSettings() {
     if (newSettings.general) {
       merged.general = { ...defaultSettings.general, ...newSettings.general }
     }
-    
+
     Object.assign(localSettings, merged)
   }
 }
@@ -600,13 +726,118 @@ function saveSettings() {
   border-radius: 50%;
 }
 
-.toggle input:checked + .toggle-slider {
+.toggle input:checked+.toggle-slider {
   background-color: var(--accent-primary);
   border-color: var(--accent-primary);
 }
 
-.toggle input:checked + .toggle-slider:before {
+.toggle input:checked+.toggle-slider:before {
   transform: translateX(22px);
   background-color: white;
+}
+
+/* Update Section */
+.update-status-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.update-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.update-label {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.update-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.update-value.version-new {
+  color: var(--accent-primary);
+}
+
+.update-value.version-ready {
+  color: #22c55e;
+}
+
+.update-available,
+.update-ready,
+.update-check {
+  margin-top: 16px;
+}
+
+.update-progress {
+  margin-bottom: 16px;
+}
+
+.progress-bar {
+  height: 8px;
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent-primary);
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.update-message {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.update-error {
+  color: #ef4444;
+  font-size: 13px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: var(--radius-sm);
+}
+
+.update-info-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.update-info-text p {
+  margin: 0;
+}
+
+/* Buttons */
+.btn-secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+  background: var(--bg-hover);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 </style>

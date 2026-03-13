@@ -298,6 +298,77 @@ const filteredConnections = computed(() =>
     : connections.value.filter(c => c.type === currentClientFilter.value)
 )
 
+/* ---------------- AUTO-UPDATER ---------------- */
+
+// Update state
+const updateStatus = ref({
+  updateAvailable: false,
+  updateDownloaded: false,
+  version: null
+})
+
+const updateProgress = ref({
+  percent: 0,
+  bytesPerSecond: 0,
+  transferred: 0,
+  total: 0
+})
+
+const updateError = ref(null)
+
+// Initialize auto-update event listener
+function initAutoUpdater() {
+  if (window.api?.onAutoUpdateEvent) {
+    window.api.onAutoUpdateEvent(({ event, data }) => {
+      switch (event) {
+        case 'update-available':
+          updateStatus.value.updateAvailable = true
+          updateStatus.value.version = data.version
+          break
+        case 'download-progress':
+          updateProgress.value = data
+          break
+        case 'update-downloaded':
+          updateStatus.value.updateDownloaded = true
+          updateStatus.value.version = data.version
+          break
+        case 'update-error':
+          updateError.value = data.message
+          break
+      }
+    })
+  }
+}
+
+// Check for updates manually
+async function checkForUpdates() {
+  updateError.value = null
+  try {
+    const result = await window.api.checkForUpdates()
+    return result
+  } catch (error) {
+    updateError.value = error.message
+    return { success: false, error: error.message }
+  }
+}
+
+// Download available update
+async function downloadUpdate() {
+  updateError.value = null
+  try {
+    const result = await window.api.downloadUpdate()
+    return result
+  } catch (error) {
+    updateError.value = error.message
+    return { success: false, error: error.message }
+  }
+}
+
+// Install downloaded update and restart
+function installUpdate() {
+  window.api.installUpdate()
+}
+
 /* ---------------- EXPORT ---------------- */
 
 export function useApp() {
@@ -312,6 +383,11 @@ export function useApp() {
     isFirstRun,
     filteredConnections,
 
+    // Auto-updater state
+    updateStatus,
+    updateProgress,
+    updateError,
+
     loadData,
     saveConnection,
     deleteConnection,
@@ -319,6 +395,12 @@ export function useApp() {
     launchConnection,
     getUserCredentials,
     applyCredentialsToConnection,
-    createDefaultConnectionsIfNeeded
+    createDefaultConnectionsIfNeeded,
+
+    // Auto-updater methods
+    initAutoUpdater,
+    checkForUpdates,
+    downloadUpdate,
+    installUpdate
   }
 }
