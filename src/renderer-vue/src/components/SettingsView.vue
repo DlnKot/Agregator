@@ -13,8 +13,25 @@
     </div>
     
     <div class="settings-sections">
+      <!-- User Settings -->
+      <div v-if="activeTab === 'user'" class="settings-section active">
+        <h3>Учётная запись</h3>
+        
+        <div class="form-group">
+          <label for="user-domain">Домен</label>
+          <input type="text" id="user-domain" v-model="localSettings.user.domain" placeholder="COMPANY">
+        </div>
+        
+        <div class="form-group">
+          <label for="user-username">Имя пользователя</label>
+          <input type="text" id="user-username" v-model="localSettings.user.username" placeholder="ivanov">
+        </div>
+        
+        <p class="preview-label">Итоговый логин: <strong>{{ previewUsername }}</strong></p>
+      </div>
+      
       <!-- RDP Settings -->
-      <div v-if="activeTab === 'rdp'" class="settings-section active" data-section="rdp">
+      <div v-if="activeTab === 'rdp'" class="settings-section active">
         <h3>Настройки RDP</h3>
         
         <div class="form-group">
@@ -99,7 +116,7 @@
       </div>
       
       <!-- Horizon Settings -->
-      <div v-if="activeTab === 'horizon'" class="settings-section active" data-section="horizon">
+      <div v-if="activeTab === 'horizon'" class="settings-section active">
         <h3>Настройки VMware Horizon</h3>
         
         <div class="form-group">
@@ -115,16 +132,6 @@
         <div class="form-group">
           <label for="horizon-app">Application (--appName)</label>
           <input type="text" id="horizon-app" v-model="localSettings.horizon.appName" placeholder="Имя приложения для запуска">
-        </div>
-        
-        <div class="form-group">
-          <label for="horizon-username">User Name (--userName)</label>
-          <input type="text" id="horizon-username" v-model="localSettings.horizon.userName" placeholder="username">
-        </div>
-        
-        <div class="form-group">
-          <label for="horizon-domain">Domain (--domainName)</label>
-          <input type="text" id="horizon-domain" v-model="localSettings.horizon.domainName" placeholder="DOMAIN">
         </div>
         
         <div class="form-group">
@@ -214,7 +221,7 @@
         </div>
         
         <div class="form-group">
-          <label for="horizon-path">Путь к VMware Horizon (ручное указание)</label>
+          <label for="horizon-path">Путь к VMware Horizon</label>
           <input type="text" id="horizon-path" v-model="localSettings.horizon.customPath" placeholder="C:\Program Files\VMware\...\vmware-view.exe">
         </div>
         
@@ -225,7 +232,7 @@
       </div>
       
       <!-- Citrix Settings -->
-      <div v-if="activeTab === 'citrix'" class="settings-section active" data-section="citrix">
+      <div v-if="activeTab === 'citrix'" class="settings-section active">
         <h3>Настройки Citrix Workspace</h3>
         
         <div class="form-group">
@@ -239,7 +246,7 @@
         </div>
         
         <div class="form-group">
-          <label for="citrix-path">Путь к Citrix Workspace (ручное указание)</label>
+          <label for="citrix-path">Путь к Citrix Workspace</label>
           <input type="text" id="citrix-path" v-model="localSettings.citrix.customPath" placeholder="C:\Program Files\Citrix\...\selfservice.exe">
         </div>
         
@@ -250,7 +257,7 @@
       </div>
       
       <!-- General Settings -->
-      <div v-if="activeTab === 'general'" class="settings-section active" data-section="general">
+      <div v-if="activeTab === 'general'" class="settings-section active">
         <h3>Общие настройки</h3>
         
         <div class="form-group">
@@ -278,7 +285,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 
 const props = defineProps({
   settings: {
@@ -290,16 +297,30 @@ const props = defineProps({
 const emit = defineEmits(['save'])
 
 const tabs = [
+  { id: 'user', label: 'Пользователь' },
   { id: 'rdp', label: 'RDP' },
   { id: 'horizon', label: 'Horizon' },
   { id: 'citrix', label: 'Citrix' },
   { id: 'general', label: 'Общие' }
 ]
 
-const activeTab = ref('rdp')
+const activeTab = ref('user')
+
+// Preview username
+const previewUsername = computed(() => {
+  const u = localSettings.user
+  if (u.domain && u.username) {
+    return `${u.domain}\\${u.username}`
+  }
+  return u.username || 'не указан'
+})
 
 // Default settings structure
 const defaultSettings = {
+  user: {
+    domain: '',
+    username: ''
+  },
   rdp: {
     resolution: '1920x1080',
     colorDepth: '32',
@@ -316,8 +337,6 @@ const defaultSettings = {
     serverUrl: '',
     desktopName: '',
     appName: '',
-    userName: '',
-    domainName: '',
     desktopProtocol: '',
     desktopLayout: '',
     monitors: '',
@@ -349,10 +368,34 @@ const localSettings = reactive(JSON.parse(JSON.stringify(defaultSettings)))
 // Watch for settings changes from props
 watch(() => props.settings, (newSettings) => {
   if (newSettings && Object.keys(newSettings).length > 0) {
-    Object.assign(localSettings, {
-      ...defaultSettings,
-      ...newSettings
-    })
+    // Merge with defaults
+    const merged = JSON.parse(JSON.stringify(defaultSettings))
+    
+    // User settings
+    if (newSettings.user) {
+      merged.user = { ...defaultSettings.user, ...newSettings.user }
+    }
+    // RDP settings
+    if (newSettings.rdp) {
+      merged.rdp = { ...defaultSettings.rdp, ...newSettings.rdp }
+    }
+    // Horizon settings
+    if (newSettings.horizon) {
+      merged.horizon = { ...defaultSettings.horizon, ...newSettings.horizon }
+    }
+    // Citrix settings
+    if (newSettings.citrix) {
+      merged.citrix = { ...defaultSettings.citrix, ...newSettings.citrix }
+    }
+    // General settings
+    if (newSettings.general) {
+      merged.general = { ...defaultSettings.general, ...newSettings.general }
+    }
+    
+    Object.assign(localSettings, merged)
+  } else {
+    // Initialize with defaults if no settings
+    Object.assign(localSettings, JSON.parse(JSON.stringify(defaultSettings)))
   }
 }, { immediate: true, deep: true })
 
@@ -366,7 +409,7 @@ function saveSettings() {
   display: flex;
   flex-direction: column;
   height: 100%;
-  overflow: hidden;
+  min-height: 0;
 }
 
 .settings-tabs {
@@ -424,6 +467,20 @@ function saveSettings() {
   margin-top: 24px;
   padding-top: 24px;
   border-top: 1px solid var(--border-color);
+}
+
+/* Preview */
+.preview-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 16px;
+  padding: 12px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+}
+
+.preview-label strong {
+  color: var(--accent-primary);
 }
 
 /* Buttons */

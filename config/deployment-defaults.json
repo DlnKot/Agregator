@@ -1,5 +1,9 @@
 {
   "settings": {
+    "user": {
+      "domain": "",
+      "username": ""
+    },
     "rdp": {
       "resolution": "1920x1080",
       "colorDepth": "32",
@@ -16,8 +20,6 @@
       "serverUrl": "",
       "desktopName": "",
       "appName": "",
-      "userName": "",
-      "domainName": "",
       "desktopProtocol": "",
       "desktopLayout": "",
       "monitors": "",
@@ -42,38 +44,5 @@
       "startMinimized": false
     }
   },
-  "connections": [
-    {
-      "id": "default-rdp",
-      "type": "rdp",
-      "name": "Default RDP",
-      "host": "rdp.company.local",
-      "username": "DOMAIN\\username",
-      "description": "Стандартное RDP-подключение"
-    },
-    {
-      "id": "default-horizon",
-      "type": "horizon",
-      "name": "Default Horizon",
-      "host": "horizon.company.local",
-      "desktopPool": "",
-      "username": "DOMAIN\\username",
-      "description": "Стандартное Horizon-подключение"
-    },
-    {
-      "id": "default-citrix",
-      "type": "citrix",
-      "name": "Default Citrix",
-      "host": "storefront.company.local",
-      "username": "DOMAIN\\username",
-      "description": "Стандартное Citrix-подключение"
-    }
-  ],
-  "profiles": [
-    {
-      "id": "default-profile",
-      "name": "Default",
-      "connections": ["default-rdp", "default-horizon", "default-citrix"]
-    }
-  ]
+  "connections": []
 }

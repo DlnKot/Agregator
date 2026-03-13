@@ -60,6 +60,10 @@ const props = defineProps({
   connection: {
     type: Object,
     default: null
+  },
+  defaultUsername: {
+    type: String,
+    default: ''
   }
 })
 
@@ -90,14 +94,14 @@ watch(() => props.connection, (newVal) => {
       description: newVal.description || ''
     })
   } else {
-    // Reset form for new connection
+    // Reset form for new connection - use default username from settings
     Object.assign(form, {
       id: '',
       type: 'rdp',
       name: '',
       host: '',
       desktopPool: '',
-      username: '',
+      username: props.defaultUsername || '',
       description: ''
     })
   }

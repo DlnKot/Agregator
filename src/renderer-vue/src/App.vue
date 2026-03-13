@@ -3,7 +3,7 @@
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-header">
-        <h1>Remote Desktop Manager</h1>
+        <h1>Alfa Remote Client</h1>
       </div>
       <nav class="sidebar-nav">
         <button 
@@ -20,17 +20,6 @@
         </button>
         <button 
           class="nav-item" 
-          :class="{ active: currentView === 'profiles' }"
-          @click="currentView = 'profiles'"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-            <circle cx="12" cy="7" r="4"/>
-          </svg>
-          Профили
-        </button>
-        <button 
-          class="nav-item" 
           :class="{ active: currentView === 'settings' }"
           @click="currentView = 'settings'"
         >
@@ -41,6 +30,9 @@
           Настройки
         </button>
       </nav>
+      <div class="sidebar-footer">
+        <span class="version">v{{ appVersion }}</span>
+      </div>
     </aside>
 
     <!-- Main Content -->
@@ -75,30 +67,6 @@
         </div>
       </section>
 
-      <!-- Profiles View -->
-      <section v-if="currentView === 'profiles'" id="profiles-view" class="view">
-        <div class="view-header">
-          <h2>Профили</h2>
-          <button class="btn btn-primary" id="add-profile-btn" @click="openProfileModal()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="5" x2="12" y2="19"/>
-              <line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-            Добавить профиль
-          </button>
-        </div>
-        
-        <div id="profiles-list" class="profiles-list">
-          <ProfilesList 
-            :profiles="profiles" 
-            :connections="connections"
-            @launch="handleLaunchProfile"
-            @edit="openProfileModal"
-            @delete="handleDeleteProfile"
-          />
-        </div>
-      </section>
-
       <!-- Settings View -->
       <section v-if="currentView === 'settings'" id="settings-view" class="view">
         <div class="view-header">
@@ -116,18 +84,15 @@
     <ConnectionModal
       v-if="showConnectionModal"
       :connection="editingConnection"
-      :connections="connections"
+      :default-username="defaultUsername"
       @close="closeConnectionModal"
       @save="handleSaveConnection"
     />
 
-    <!-- Profile Modal -->
-    <ProfileModal
-      v-if="showProfileModal"
-      :profile="editingProfile"
-      :connections="connections"
-      @close="closeProfileModal"
-      @save="handleSaveProfile"
+    <!-- First Run Modal -->
+    <FirstRunModal
+      v-if="isFirstRun"
+      @save="handleFirstRunSave"
     />
 
     <!-- Toast -->
@@ -138,36 +103,42 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useApp } from './composables/useApp.js'
 import ConnectionsList from './components/ConnectionsList.vue'
-import ProfilesList from './components/ProfilesList.vue'
 import SettingsView from './components/SettingsView.vue'
 import ConnectionModal from './components/ConnectionModal.vue'
-import ProfileModal from './components/ProfileModal.vue'
+import FirstRunModal from './components/FirstRunModal.vue'
+
+const appVersion = '2.0.0'
 
 const { 
   connections, 
-  profiles, 
   settings, 
   currentView, 
   currentClientFilter,
   filteredConnections,
+  isFirstRun,
   loadData,
   saveConnection,
   deleteConnection,
-  saveProfile,
-  deleteProfile,
   saveSettings,
   launchConnection,
-  launchProfile
+  getUserCredentials
 } = useApp()
+
+// Computed default username from settings
+const defaultUsername = computed(() => {
+  const creds = getUserCredentials()
+  if (creds.domain && creds.username) {
+    return `${creds.domain}\\${creds.username}`
+  }
+  return ''
+})
 
 // Modal state
 const showConnectionModal = ref(false)
-const showProfileModal = ref(false)
 const editingConnection = ref(null)
-const editingProfile = ref(null)
 
 // Toast state
 const toast = reactive({
@@ -217,38 +188,6 @@ async function handleDeleteConnection(id) {
   }
 }
 
-// Profile modal
-function openProfileModal(profile = null) {
-  editingProfile.value = profile ? { ...profile } : null
-  showProfileModal.value = true
-}
-
-function closeProfileModal() {
-  showProfileModal.value = false
-  editingProfile.value = null
-}
-
-async function handleSaveProfile(profile) {
-  try {
-    await saveProfile(profile)
-    closeProfileModal()
-    showToast('Профиль сохранён', 'success')
-  } catch (error) {
-    showToast('Ошибка сохранения', 'error')
-  }
-}
-
-async function handleDeleteProfile(id) {
-  if (!confirm('Вы уверены, что хотите удалить этот профиль?')) return
-  
-  try {
-    await deleteProfile(id)
-    showToast('Профиль удалён', 'success')
-  } catch (error) {
-    showToast('Ошибка удаления', 'error')
-  }
-}
-
 // Launch handlers
 async function handleLaunch(id) {
   const conn = connections.value.find(c => c.id === id)
@@ -262,12 +201,6 @@ async function handleLaunch(id) {
   }
 }
 
-async function handleLaunchProfile(id) {
-  const profile = profiles.value.find(p => p.id === id)
-  if (!profile) return
-  await launchProfile(profile)
-}
-
 // Settings
 async function handleSaveSettings(newSettings) {
   try {
@@ -276,6 +209,19 @@ async function handleSaveSettings(newSettings) {
   } catch (error) {
     showToast('Ошибка сохранения настроек', 'error')
   }
+}
+
+// First run handler
+async function handleFirstRunSave(userData) {
+  // Use deep copy to avoid reactive object issues
+  const currentSettings = JSON.parse(JSON.stringify(settings.value || {}))
+  currentSettings.user = {
+    domain: userData.domain,
+    username: userData.username
+  }
+  await saveSettings(currentSettings)
+  isFirstRun.value = false
+  showToast('Данные пользователя сохранены', 'success')
 }
 
 // Initialize
@@ -357,6 +303,16 @@ onMounted(async () => {
   width: 20px;
   height: 20px;
   flex-shrink: 0;
+}
+
+.sidebar-footer {
+  padding: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.version {
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 /* Main Content */
@@ -468,5 +424,11 @@ onMounted(async () => {
 .client-tab.active {
   background: var(--accent-primary);
   color: white;
+}
+
+.connections-list {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 8px;
 }
 </style>

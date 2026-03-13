@@ -1,7 +1,7 @@
 {
-  "name": "remote-desktop-manager",
-  "version": "0.1.3",
-  "description": "Агрегатор для запуска клиентов удалённых рабочих столов (RDP, Horizon, Citrix)",
+  "name": "alfa-remote-client",
+  "version": "2.0.0",
+  "description": "Alfa Remote Client - агрегатор для запуска клиентов удалённых рабочих столов (RDP, Horizon, Citrix)",
   "main": "src/main/main.js",
   "scripts": {
     "start": "npm run build:vue && env -u ELECTRON_RUN_AS_NODE electron .",
@@ -11,7 +11,7 @@
     "build:mac": "npm run build:vue && electron-builder --mac",
     "pack": "electron-builder --dir"
   },
-  "author": "Remote Desktop Manager",
+  "author": "Alfa Remote Client",
   "license": "MIT",
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.5",
@@ -24,8 +24,8 @@
     "electron-log": "^5.2.4"
   },
   "build": {
-    "appId": "com.rdm.remotedesktopmanager",
-    "productName": "Remote Desktop Manager",
+    "appId": "com.alfa.remoteclient",
+    "productName": "Alfa Remote Client",
     "directories": {
       "output": "dist"
     },
@@ -46,6 +46,7 @@
     },
     "files": [
       "src/**/*",
+      "dist-renderer/**/*",
       "assets/**/*"
     ]
   }
