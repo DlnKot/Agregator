@@ -216,25 +216,38 @@ function launchCitrix(connection, settings) {
  logger('info', `Citrix Launcher: Resource: ${citrixSettings.resourceName}`);
 
  if (process.platform === 'win32') {
-  // Find Citrix Workspace executable
+  // Find Citrix Workspace executable - correct paths
   const citrixPaths = [
-   'C:\\Program Files\\Citrix\\ICA Client\\selfservice.exe',
+   'C:\\Program Files (x86)\\Citrix\\ICA Client\\SelfServicePlugin\\SelfService.exe',
+   'C:\\Program Files\\Citrix\\ICA Client\\SelfServicePlugin\\SelfService.exe',
    'C:\\Program Files (x86)\\Citrix\\ICA Client\\selfservice.exe',
-   path.join(process.env.LOCALAPPDATA || '', 'Citrix', 'ICA Client', 'selfservice.exe'),
-   path.join(process.env.PROGRAMDATA || 'C:\\ProgramData', 'Citrix', 'ICA Client', 'selfservice.exe')
+   'C:\\Program Files\\Citrix\\ICA Client\\selfservice.exe',
+   path.join(process.env.LOCALAPPDATA || '', 'Citrix', 'ICA Client', 'SelfServicePlugin', 'SelfService.exe'),
+   path.join(process.env.PROGRAMDATA || 'C:\\ProgramData', 'Citrix', 'ICA Client', 'SelfServicePlugin', 'SelfService.exe')
   ];
   
   let exePath = null;
   for (const p of citrixPaths) {
-   if (fs.existsSync(p)) {
-    exePath = p;
-    break;
-   }
+   try {
+    if (fs.existsSync(p)) {
+     exePath = p;
+     logger('info', `Citrix Launcher: Found at: ${p}`);
+     break;
+    }
+   } catch (e) { continue; }
   }
   
   // Try custom path
-  if (citrixSettings.customPath && fs.existsSync(citrixSettings.customPath)) {
-   exePath = citrixSettings.customPath;
+  if (citrixSettings.customPath) {
+   const customPath = citrixSettings.customPath.trim();
+   try {
+    if (fs.existsSync(customPath)) {
+     exePath = customPath;
+     logger('info', `Citrix Launcher: Using custom path: ${customPath}`);
+    }
+   } catch (e) {
+    logger('warn', `Citrix Launcher: Custom path not found: ${customPath}`);
+   }
   }
   
   if (!exePath) {
@@ -242,18 +255,38 @@ function launchCitrix(connection, settings) {
    throw new Error('Citrix Workspace not found. Please install it or specify custom path in settings.');
   }
   
-  // Build args
+  // Build args - use command line parameters for Citrix
+  // According to docs: -store, -launch, -quiet, etc.
   const args = [];
+  
+  // Store URL - normalize with https:// if needed
   if (citrixSettings.storeUrl) {
-   args.push('-store', citrixSettings.storeUrl);
+   let storeUrl = citrixSettings.storeUrl.trim();
+   // Add https:// if no protocol specified
+   if (!storeUrl.startsWith('http://') && !storeUrl.startsWith('https://')) {
+    storeUrl = 'https://' + storeUrl;
+   }
+   args.push('-store');
+   args.push(storeUrl);
+   logger('info', `Citrix Launcher: Using store URL: ${storeUrl}`);
   }
+  
+  // Resource to launch
   if (citrixSettings.resourceName) {
-   args.push('-launch', citrixSettings.resourceName);
+   args.push('-launch');
+   args.push(citrixSettings.resourceName);
+   logger('info', `Citrix Launcher: Launching resource: ${citrixSettings.resourceName}`);
   }
+  
+  // Run quietly (no UI)
+  args.push('-quiet');
+  
+  // Custom flags
   if (citrixSettings.customFlags) {
    args.push(...splitArgs(citrixSettings.customFlags));
   }
   
+  logger('info', `Citrix Launcher: Launching ${exePath} with args: ${args.join(' ')}`);
   launchDetached(exePath, args);
   logger('info', `Citrix Launcher: Launched from ${exePath}`);
   return;

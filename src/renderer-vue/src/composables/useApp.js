@@ -1,4 +1,4 @@
-import { ref, reactive, computed } from 'vue'
+import { ref, computed } from 'vue'
 
 // Global state
 const connections = ref([])
@@ -8,63 +8,83 @@ const currentClientFilter = ref('all')
 const isLoading = ref(false)
 const isFirstRun = ref(false)
 
-// Load data from main process
+/* --------------------------- LOAD DATA --------------------------- */
+
 async function loadData() {
   isLoading.value = true
+
   try {
-    connections.value = await window.api.getConnections()
-    settings.value = await window.api.getSettings()
-    
-    // Check if first run (no user credentials configured)
-    const s = settings.value
-    if (!s.user || !s.user.domain || !s.user.username) {
+    const [conns, s] = await Promise.all([
+      window.api.getConnections(),
+      window.api.getSettings()
+    ])
+
+    connections.value = conns
+    settings.value = s
+
+    if (!s?.user?.username) {
       isFirstRun.value = true
     } else {
-      // User is configured, create default connections if needed
       await createDefaultConnectionsIfNeeded(s)
     }
+
   } catch (error) {
+
     console.error('Error loading data:', error)
     isFirstRun.value = true
+
   } finally {
+
     isLoading.value = false
+
   }
 }
 
-// Connection operations
+/* ------------------------ CONNECTION OPS ------------------------ */
+
 async function saveConnection(connection) {
+
   const result = await window.api.saveConnection(connection)
+
   connections.value = await window.api.getConnections()
+
   return result
 }
 
 async function deleteConnection(id) {
+
   await window.api.deleteConnection(id)
+
   connections.value = await window.api.getConnections()
 }
 
-// Settings operations
+/* -------------------------- SETTINGS OPS ------------------------ */
+
 async function saveSettings(newSettings) {
-  // Convert to plain object to avoid IPC cloning issues
+
   const plainSettings = JSON.parse(JSON.stringify(newSettings))
+
   await window.api.saveSettings(plainSettings)
+
   settings.value = plainSettings
-  
-  // Create default connections if this is first run setup
+
   await createDefaultConnectionsIfNeeded(plainSettings)
 }
 
-// Default connections configuration
+/* ------------------- DEFAULT CONNECTION CONFIG ------------------ */
+
 function getDefaultConnectionsConfig() {
+
   return [
     {
       type: 'horizon',
-      name: 'Horizon - telework.alfabank.ru',
+      name: 'VDI',
       host: 'telework.alfabank.ru',
       description: 'Рабочее место через Horizon',
       isDefault: true,
+      desktopPool: 'workspace-fullwm',
       defaultSettings: {
-        serverUrl: 'telework.alfabank.ru',
+        serverUrl: 'https://telework.alfabank.ru',
         desktopName: 'workspace-fullwm',
         desktopProtocol: '',
         desktopLayout: '',
@@ -80,12 +100,13 @@ function getDefaultConnectionsConfig() {
     },
     {
       type: 'horizon',
-      name: 'Horizon - telework.moscow.alfaintra.net',
+      name: 'VDI - Резерв',
       host: 'telework.moscow.alfaintra.net',
       description: 'Рабочее место через Horizon (Москва)',
       isDefault: true,
+      desktopPool: 'workspace-fullwm',
       defaultSettings: {
-        serverUrl: 'telework.moscow.alfaintra.net',
+        serverUrl: 'https://telework.moscow.alfaintra.net',
         desktopName: 'workspace-fullwm',
         desktopProtocol: '',
         desktopLayout: '',
@@ -93,7 +114,7 @@ function getDefaultConnectionsConfig() {
         unattended: true,
         nonInteractive: false,
         launchMinimized: false,
-        loginAsCurrentUser: false,
+        loginAsCurrentUser: true,
         hideClientAfterLaunchSession: false,
         useExisting: false,
         singleAutoConnect: false
@@ -101,7 +122,7 @@ function getDefaultConnectionsConfig() {
     },
     {
       type: 'rdp',
-      name: 'RDP - mypc.moscow.alfaintra.net',
+      name: 'ПУРМС',
       host: 'mypc.moscow.alfaintra.net',
       description: 'Удалённый рабочий стол',
       isDefault: true,
@@ -116,85 +137,115 @@ function getDefaultConnectionsConfig() {
         startFullScreen: false,
         span: false
       }
+    },
+    {
+      type: 'citrix',
+      name: 'Citrix',
+      host: 'sf-vdi.moscow.alfaintra.net',
+      description: 'Виртуальные приложения Citrix',
+      isDefault: true,
+      defaultSettings: {
+        storeUrl: 'https://sf-vdi.moscow.alfaintra.net/Citrix/VDI-Apps/discovery',
+        resourceName: '',
+        customPath: '',
+        customFlags: ''
+      }
     }
   ]
 }
 
-// Create default connections if user credentials are set and no connections exist
+/* ---------------- CREATE DEFAULT CONNECTIONS ---------------- */
+
 async function createDefaultConnectionsIfNeeded(currentSettings) {
+
   const user = currentSettings?.user
-  if (!user || !user.username) return
-  
-  // Check if default connections already exist
+
+  if (!user?.username) return
+
   const existingConnections = await window.api.getConnections()
+
   const hasDefaults = existingConnections.some(c => c.isDefault === true)
-  
+
   if (hasDefaults) return
-  
-  // Create default connections
+
   const defaultConfigs = getDefaultConnectionsConfig()
-  
+
   for (const config of defaultConfigs) {
+
     const connection = {
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+
+      id: Date.now().toString() + Math.random().toString(36).slice(2, 9),
+
       name: config.name,
       host: config.host,
       type: config.type,
       description: config.description,
-      username: user.domain ? `${user.domain}\\${user.username}` : user.username,
+      username: user.domain
+        ? `${user.domain}\\${user.username}`
+        : user.username,
+
       isDefault: true,
-      // Store default client settings
+
+      desktopPool: config.desktopPool || '',
+
       clientSettings: config.defaultSettings
     }
-    
+
     await window.api.saveConnection(connection)
   }
-  
-  // Reload connections
+
   connections.value = await window.api.getConnections()
 }
 
-// Get user credentials from settings
+/* ---------------- USER CREDENTIALS ---------------- */
+
 function getUserCredentials() {
+
   const s = settings.value
+
   return {
     domain: s.user?.domain || '',
     username: s.user?.username || ''
   }
 }
 
-// Apply user credentials to connection
 function applyCredentialsToConnection(connection) {
+
   const creds = getUserCredentials()
-  if (!connection.username && (creds.domain || creds.username)) {
-    const username = creds.domain ? `${creds.domain}\\${creds.username}` : creds.username
+
+  if (!connection.username?.trim() && (creds.domain || creds.username)) {
+
+    const username = creds.domain
+      ? `${creds.domain}\\${creds.username}`
+      : creds.username
+
     return { ...connection, username }
   }
-  // Return a plain copy to avoid reactive issues
+
   return { ...connection }
 }
 
-// Launch operations
+/* --------------------- LAUNCH CONNECTION --------------------- */
+
 async function launchConnection(conn) {
-  if (!conn) return { success: false, error: 'Connection not found' }
-  
+
+  if (!conn)
+    return { success: false, error: 'Connection not found' }
+
   try {
-    // Convert connection to plain object to avoid IPC cloning issues
+
     const plainConnection = JSON.parse(JSON.stringify(conn))
-    
-    // Apply credentials from settings
+
     const connectionWithCreds = applyCredentialsToConnection(plainConnection)
-    
-    // Merge global settings with connection-specific settings
+
     const globalSettings = JSON.parse(JSON.stringify(settings.value))
-    
-    // If connection has client-specific settings, merge them
+
     let clientSettings = {}
+
     if (plainConnection.clientSettings) {
       clientSettings = plainConnection.clientSettings
     }
-    
-    // Merge settings: global -> client specific
+
     const mergedSettings = {
       ...globalSettings,
       [plainConnection.type]: {
@@ -202,38 +253,57 @@ async function launchConnection(conn) {
         ...clientSettings
       }
     }
-    
+
     let result
+
     switch (plainConnection.type) {
+
       case 'rdp':
         result = await window.api.launchRdp(connectionWithCreds, mergedSettings)
         break
+
       case 'horizon':
         result = await window.api.launchHorizon(connectionWithCreds, mergedSettings)
         break
+
       case 'citrix':
         result = await window.api.launchCitrix(connectionWithCreds, mergedSettings)
         break
+
+      default:
+        return {
+          success: false,
+          error: `Unsupported connection type: ${plainConnection.type}`
+        }
     }
+
     return result || { success: false, error: 'Unknown error' }
+
   } catch (error) {
+
     console.error('Launch error:', error)
-    return { success: false, error: error.message }
+
+    return {
+      success: false,
+      error: error.message
+    }
   }
 }
 
-// Filtered connections
-const filteredConnections = computed(() => {
-  if (currentClientFilter.value === 'all') {
-    return connections.value
-  }
-  return connections.value.filter(c => c.type === currentClientFilter.value)
-})
+/* ---------------- FILTERED CONNECTIONS ---------------- */
 
-// Export composable
+const filteredConnections = computed(() =>
+  currentClientFilter.value === 'all'
+    ? connections.value
+    : connections.value.filter(c => c.type === currentClientFilter.value)
+)
+
+/* ---------------- EXPORT ---------------- */
+
 export function useApp() {
+
   return {
-    // State
+
     connections,
     settings,
     currentView,
@@ -241,8 +311,7 @@ export function useApp() {
     isLoading,
     isFirstRun,
     filteredConnections,
-    
-    // Methods
+
     loadData,
     saveConnection,
     deleteConnection,

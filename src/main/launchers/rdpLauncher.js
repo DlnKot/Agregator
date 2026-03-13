@@ -1,6 +1,3 @@
-/**
- * RDP Launcher - handles launching Microsoft Remote Desktop connections
- */
 const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
@@ -8,122 +5,183 @@ const { log: logger } = require('../utils/logger');
 
 const launchedProcesses = [];
 
-function launchDetached(command, args = [], options = {}) {
-    logger('info', `RDP Launcher: launching ${command} with args: ${args.join(' ')}`);
+/* ------------------------------------------------ */
+function launchDetached(command, args = []) {
 
-    try {
-        const child = spawn(command, args, {
-            detached: true,
-            stdio: 'ignore',
-            shell: false,
-            ...options
-        });
+    logger('info', `RDP Launcher: ${command} ${args.join(' ')}`);
 
-        launchedProcesses.push({
-            pid: child.pid,
-            command: command,
-            args: args,
-            startTime: Date.now()
-        });
+    const child = spawn(command, args, {
+        detached: true,
+        stdio: 'ignore',
+        windowsVerbatimArguments: true
+    });
 
-        logger('info', `RDP Launcher: Process started with PID ${child.pid}`);
-        child.unref();
-    } catch (error) {
-        logger('error', `RDP Launcher: Failed to launch ${command}: ${error.message}`);
-        throw error;
+    if (!child.pid) {
+        throw new Error('Failed to launch process');
     }
+
+    const proc = {
+        pid: child.pid,
+        command,
+        args,
+        startTime: Date.now()
+    };
+
+    launchedProcesses.push(proc);
+
+    child.on('exit', () => {
+        const i = launchedProcesses.findIndex(p => p.pid === proc.pid);
+        if (i !== -1) launchedProcesses.splice(i, 1);
+    });
+
+    child.unref();
 }
 
-function createRdpFile(connection, rdpSettings) {
+/* ------------------------------------------------ */
+function splitArgs(raw = '') {
+
+    const regex = /[^\s"]+|"([^"]*)"/gi;
+    const args = [];
+    let match;
+
+    while ((match = regex.exec(raw)) !== null) {
+        args.push(match[1] ? match[1] : match[0]);
+    }
+
+    return args;
+}
+
+/* ------------------------------------------------ */
+function createRdpFile(connection, settings) {
+
     const tempDir = require('electron').app.getPath('temp');
-    const rdpFilePath = path.join(tempDir, `rdm_${connection.id}.rdp`);
+    const file = path.join(tempDir, `rdm_${connection.id}.rdp`);
 
-    const resolution = rdpSettings.resolution || '1920x1080';
-    const isFullscreen = resolution === 'fullscreen' || !!rdpSettings.startFullScreen;
-    const width = isFullscreen ? 1920 : parseInt(resolution.split('x')[0], 10) || 1920;
-    const height = isFullscreen ? 1080 : parseInt(resolution.split('x')[1], 10) || 1080;
+    const resolution = settings.resolution || '1920x1080';
+    const fullscreen = resolution === 'fullscreen' || settings.startFullScreen;
 
-    const rdpContent = [
+    const width = fullscreen ? 1920 : parseInt(resolution.split('x')[0]) || 1920;
+    const height = fullscreen ? 1080 : parseInt(resolution.split('x')[1]) || 1080;
+
+    const lines = [
+
         `full address:s:${connection.host}`,
         `username:s:${connection.username || ''}`,
-        `screen mode id:i:${isFullscreen ? '2' : '1'}`,
+
+        `screen mode id:i:${fullscreen ? 2 : 1}`,
         `desktopwidth:i:${width}`,
         `desktopheight:i:${height}`,
-        `session bpp:i:${parseInt(rdpSettings.colorDepth, 10) || 32}`,
+
+        `session bpp:i:${parseInt(settings.colorDepth) || 32}`,
+
         `compression:i:1`,
-        `multimon:i:${rdpSettings.multimon ? '1' : '0'}`,
-        `span monitors:i:${rdpSettings.span ? '1' : '0'}`,
-        `redirectclipboard:i:${rdpSettings.clipboard ? '1' : '0'}`,
-        `drivestoredirect:s:${rdpSettings.driveMapping ? '*' : ''}`,
-        `prompt for credentials:i:${rdpSettings.promptCredentials ? '1' : '0'}`,
-        `administrative session:i:${rdpSettings.useAdminSession ? '1' : '0'}`,
+        `multimon:i:${settings.multimon ? 1 : 0}`,
+        `span monitors:i:${settings.span ? 1 : 0}`,
+
+        `redirectclipboard:i:${settings.clipboard ? 1 : 0}`,
+        `drivestoredirect:s:${settings.driveMapping ? '*' : ''}`,
+
+        `prompt for credentials:i:${settings.promptCredentials ? 1 : 0}`,
+        `administrative session:i:${settings.useAdminSession ? 1 : 0}`,
+
         'authentication level:i:2',
         'negotiate security layer:i:1'
     ];
 
-    if (rdpSettings.customFlags) {
-        rdpContent.push(rdpSettings.customFlags);
+    if (settings.customFlags) {
+        lines.push(...splitArgs(settings.customFlags));
     }
 
-    fs.writeFileSync(rdpFilePath, rdpContent.join('\n'), 'utf8');
-    return rdpFilePath;
+    fs.writeFileSync(file, lines.join('\n'), 'utf8');
+
+    return file;
 }
 
-function scheduleDeleteFile(filePath, timeoutMs = 5000) {
+/* ------------------------------------------------ */
+function scheduleDelete(file, timeout = 10000) {
+
     setTimeout(() => {
-        try { fs.unlinkSync(filePath); } catch (e) { /* ignore */ }
-    }, timeoutMs);
+        try { fs.unlinkSync(file); }
+        catch {}
+    }, timeout);
 }
 
+/* ------------------------------------------------ */
 function launchRdp(connection, settings) {
+
     const rdpSettings = settings?.rdp || settings || {};
-    const rdpFilePath = createRdpFile(connection, rdpSettings);
+
+    const rdpFile = createRdpFile(connection, rdpSettings);
+
+    /* ---------- WINDOWS ---------- */
 
     if (process.platform === 'win32') {
-        launchDetached('mstsc.exe', [rdpFilePath]);
-        scheduleDeleteFile(rdpFilePath);
+
+        launchDetached('mstsc.exe', [rdpFile]);
+
+        scheduleDelete(rdpFile);
+
         return;
     }
+
+    /* ---------- MAC ---------- */
 
     if (process.platform === 'darwin') {
-        const { spawnSync } = require('child_process');
-        const macApps = ['Windows App', 'Microsoft Remote Desktop'];
 
-        for (const appName of macApps) {
-            const result = spawnSync('open', ['-Ra', appName], { stdio: 'ignore' });
-            if (result.status === 0) {
-                launchDetached('open', ['-a', appName, rdpFilePath], { shell: false });
-                scheduleDeleteFile(rdpFilePath, 10000);
-                return;
-            }
-        }
-        // Fallback
-        launchDetached('open', [rdpFilePath], { shell: false });
-        scheduleDeleteFile(rdpFilePath, 10000);
+        logger('info', 'RDP Launcher: using Windows App');
+
+        launchDetached('open', [
+            '-a',
+            'Windows App',
+            rdpFile
+        ]);
+
+        scheduleDelete(rdpFile);
+
         return;
     }
 
-    // Linux - xfreerdp
+    /* ---------- LINUX ---------- */
+
     const args = [
         `/v:${connection.host}`,
         connection.username ? `/u:${connection.username}` : '',
-        ...(rdpSettings.customFlags ? rdpSettings.customFlags.split(' ').filter(Boolean) : [])
+        ...(rdpSettings.customFlags ? splitArgs(rdpSettings.customFlags) : [])
     ].filter(Boolean);
 
     launchDetached('xfreerdp', args);
 }
 
+/* ------------------------------------------------ */
 function killAllProcesses() {
-    logger('info', `RDP Launcher: Killing ${launchedProcesses.length} processes`);
-    for (const proc of launchedProcesses) {
+
+    logger('info', `RDP Launcher: killing ${launchedProcesses.length}`);
+
+    for (const proc of [...launchedProcesses]) {
+
         try {
+
             if (process.platform === 'win32') {
-                spawn('taskkill', ['/pid', proc.pid.toString(), '/T', '/F'], { stdio: 'ignore', shell: true });
+
+                spawn(
+                    'taskkill',
+                    ['/pid', proc.pid.toString(), '/T', '/F'],
+                    { stdio: 'ignore', shell: true }
+                );
+
+            } else {
+
+                process.kill(proc.pid, 'SIGKILL');
+
             }
+
         } catch (e) {
-            logger('warn', `RDP Launcher: Failed to kill ${proc.pid}: ${e.message}`);
+
+            logger('warn', `Kill failed ${proc.pid}: ${e.message}`);
+
         }
     }
+
     launchedProcesses.length = 0;
 }
 

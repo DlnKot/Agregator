@@ -247,7 +247,7 @@
         
         <div class="form-group">
           <label for="citrix-path">Путь к Citrix Workspace</label>
-          <input type="text" id="citrix-path" v-model="localSettings.citrix.customPath" placeholder="C:\Program Files\Citrix\...\selfservice.exe">
+          <input type="text" id="citrix-path" v-model="localSettings.citrix.customPath" placeholder="C:\Program Files (x86)\Citrix\ICA Client\SelfServicePlugin\SelfService.exe">
         </div>
         
         <div class="form-group">

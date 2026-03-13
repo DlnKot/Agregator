@@ -9,7 +9,7 @@
       <div class="modal-body">
         <form id="connection-form" @submit.prevent="save">
           <input type="hidden" id="connection-id" v-model="form.id">
-          
+
           <div class="form-group">
             <label for="connection-type">Тип подключения</label>
             <select id="connection-type" v-model="form.type" required>
@@ -18,30 +18,38 @@
               <option value="citrix">Citrix Workspace</option>
             </select>
           </div>
-          
+
           <div class="form-group">
             <label for="connection-name">Название</label>
             <input type="text" id="connection-name" v-model="form.name" required placeholder="Например: Рабочий стол">
           </div>
-          
+
           <div class="form-group">
             <label for="connection-host">Хост / IP адрес</label>
-            <input type="text" id="connection-host" v-model="form.host" required placeholder="192.168.1.100 или hostname">
+            <input type="text" id="connection-host" v-model="form.host" required
+              placeholder="192.168.1.100 или hostname">
           </div>
-          
+
           <div class="form-group horizon-fields" :style="{ display: form.type === 'horizon' ? 'block' : 'none' }">
-            <label for="connection-pool">Desktop Pool</label>
-            <input type="text" id="connection-pool" v-model="form.desktopPool" placeholder="Имя пула Horizon">
+            <label for="connection-pool">Desktop Pool (имя пула)</label>
+            <input type="text" id="connection-pool" v-model="form.desktopPool" placeholder="workspace-fullwm">
           </div>
-          
+
+          <div class="form-group citrix-fields" :style="{ display: form.type === 'citrix' ? 'block' : 'none' }">
+            <label for="connection-store">Citrix Store URL</label>
+            <input type="text" id="connection-store" v-model="form.storeUrl"
+              placeholder="https://store.company.com/Citrix/Store">
+          </div>
+
           <div class="form-group">
             <label for="connection-username">Учётная запись (domain\username)</label>
             <input type="text" id="connection-username" v-model="form.username" placeholder="DOMAIN\username">
           </div>
-          
+
           <div class="form-group">
             <label for="connection-description">Описание</label>
-            <textarea id="connection-description" v-model="form.description" rows="2" placeholder="Описание подключения"></textarea>
+            <textarea id="connection-description" v-model="form.description" rows="2"
+              placeholder="Описание подключения"></textarea>
           </div>
         </form>
       </div>
@@ -107,22 +115,39 @@ watch(() => props.connection, (newVal) => {
   }
 }, { immediate: true })
 
+// Normalize URL - add https:// if missing protocol
+function normalizeServerUrl(url) {
+  if (!url) return ''
+  const trimmed = url.trim()
+  // Add https:// if no protocol specified
+  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+    return 'https://' + trimmed
+  }
+  return trimmed
+}
+
 function save() {
   if (!form.name || !form.host) {
     alert('Заполните обязательные поля')
     return
   }
-  
+
+  // For Horizon connections, normalize server URL (add https:// if missing)
+  let normalizedHost = form.host.trim()
+  if (form.type === 'horizon') {
+    normalizedHost = normalizeServerUrl(form.host)
+  }
+
   const connectionData = {
     id: form.id || Date.now().toString(),
     type: form.type,
     name: form.name.trim(),
-    host: form.host.trim(),
+    host: normalizedHost,
     desktopPool: form.desktopPool.trim(),
     username: form.username.trim(),
     description: form.description.trim()
   }
-  
+
   emit('save', connectionData)
 }
 </script>
@@ -174,6 +199,7 @@ function save() {
     opacity: 0;
     transform: translateY(-20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
