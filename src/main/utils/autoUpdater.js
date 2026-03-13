@@ -2,7 +2,7 @@
  * Auto Updater Module - handles automatic updates from GitHub releases
  */
 const { autoUpdater } = require('electron-updater');
-const { BrowserWindow, dialog, ipcMain } = require('electron');
+const { BrowserWindow, dialog, ipcMain, app } = require('electron');
 const { log: logger } = require('./logger');
 
 // Configure auto-updater logging
@@ -14,6 +14,9 @@ autoUpdater.logger = {
 };
 
 autoUpdater.logger.transports = { level: 'info' };
+
+// Enable debugging
+process.env.ELECTRON_DEBUG = '1';
 
 // Track if update is available
 let updateAvailable = false;
@@ -29,7 +32,7 @@ function initAutoUpdater(config = {}) {
     if (config.owner && config.repo) {
         autoUpdater.autoDownload = false;
         autoUpdater.autoInstallOnAppQuit = true;
-        
+
         logger('info', `AutoUpdater: Initialized for ${config.owner}/${config.repo}`);
         logger('info', `AutoUpdater: Current version - ${config.currentVersion}`);
     } else {
@@ -48,7 +51,7 @@ function initAutoUpdater(config = {}) {
         logger('info', `AutoUpdater: Update available - ${info.version}`);
         updateAvailable = true;
         updateInfo = info;
-        
+
         // Notify renderer process
         notifyRenderer('update-available', {
             version: info.version,
@@ -65,7 +68,7 @@ function initAutoUpdater(config = {}) {
     autoUpdater.on('download-progress', (progressObj) => {
         const logMessage = `AutoUpdater: Download speed: ${progressObj.bytesPerSecond} - Downloaded ${progressObj.percent.toFixed(1)}%`;
         logger('info', logMessage);
-        
+
         notifyRenderer('download-progress', {
             percent: progressObj.percent,
             bytesPerSecond: progressObj.bytesPerSecond,
@@ -78,14 +81,14 @@ function initAutoUpdater(config = {}) {
         logger('info', `AutoUpdater: Update downloaded - ${info.version}`);
         updateDownloaded = true;
         updateInfo = info;
-        
+
         // Notify renderer
         notifyRenderer('update-downloaded', {
             version: info.version,
             releaseDate: info.releaseDate,
             releaseNotes: info.releaseNotes
         });
-        
+
         // Show dialog to user
         showUpdateReadyDialog(info);
     });

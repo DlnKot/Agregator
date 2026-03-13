@@ -1,14 +1,14 @@
 {
   "name": "alfa-remote-client",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Alfa Remote Client - агрегатор для запуска клиентов удалённых рабочих столов (RDP, Horizon, Citrix)",
   "main": "src/main/main.js",
   "scripts": {
     "start": "npm run build:vue && env -u ELECTRON_RUN_AS_NODE electron .",
     "dev": "vite --port 5173 & env -u ELECTRON_RUN_AS_NODE electron .",
     "build:vue": "vite build",
-    "build:win": "npm run build:vue && electron-builder --win",
-    "build:mac": "npm run build:vue && electron-builder --mac",
+    "build:win": "npm run build:vue && electron-builder --win --publish always",
+    "build:mac": "npm run build:vue && electron-builder --mac --publish always",
     "pack": "electron-builder --dir"
   },
   "author": "Alfa Remote Client",
