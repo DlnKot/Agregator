@@ -263,10 +263,6 @@ function launchMac(connection, settings) {
 }
 
 /* ------------------------------------------------ */
-const path = require('path');
-const { spawn } = require('child_process');
-const { log: logger } = require('../utils/logger');
-
 function launchWindows(connection, settings) {
     const exePath = findHorizonExecutable(settings.customPath);
 
@@ -276,7 +272,7 @@ function launchWindows(connection, settings) {
 
     // Формируем команду в виде одной строки с экранированием пробелов
     // Оборачиваем путь exe в кавычки, чтобы Windows правильно его распознал
-    const cmd = `"${exePath}" ${args.map(a => `"${a}"`).join(' ')}`;
+    const cmd = `"${exePath}" ${args.map(a => `${a}`).join(' ')}`;
 
     logger('info', `Launching Windows Horizon Client: ${cmd}`);
 
