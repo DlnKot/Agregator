@@ -388,7 +388,7 @@ onMounted(async () => {
   }
 
   // Try to get version from settings or use default
-  appVersion.value = '0.1.9'
+  appVersion.value = '0.2.2'
 })
 
 async function handleCheckUpdates() {
