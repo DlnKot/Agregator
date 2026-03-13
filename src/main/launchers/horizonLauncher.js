@@ -268,16 +268,30 @@ function launchWindows(connection, settings) {
 
     if (!exePath) throw new Error('VMware Horizon Client not found');
 
-    const args = buildArgs(connection, settings);
+    // Формируем аргументы в формате: -key "value"
+    const argsMap = {
+        '-serverURL': connection.host,
+        '-userName': connection.username,
+        '-domainName': connection.domain || '',
+        '-desktopName': settings.desktopName || '',
+        '-loginAsCurrentUser': settings.loginAsCurrentUser ? 'True' : 'False'
+    };
 
-    // Формируем команду в виде одной строки с экранированием пробелов
-    // Оборачиваем путь exe в кавычки, чтобы Windows правильно его распознал
-    const cmd = `"${exePath}" ${args.map(a => `${a}`).join(' ')}`;
+    // Массив аргументов с кавычками вокруг значений, если они не пустые
+    const args = [];
+    for (const [key, value] of Object.entries(argsMap)) {
+        if (value !== '') {
+            // оборачиваем значение в кавычки
+            args.push(`${key} "${value}"`);
+        }
+    }
 
-    logger('info', `Launching Windows Horizon Client: ${cmd}`);
+    // Лог для дебага
+    const cmdForLog = `"${exePath}" ${args.join(' ')}`;
+    logger('info', `Launching Windows Horizon Client: ${cmdForLog}`);
 
-    // Используем shell:true, чтобы Windows могла распознать кавычки
-    const child = spawn(cmd, {
+    // Запуск через shell:true
+    const child = spawn(`"${exePath}" ${args.join(' ')}`, {
         shell: true,
         detached: true,
         stdio: 'ignore'
