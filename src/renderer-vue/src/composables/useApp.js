@@ -85,7 +85,7 @@ function getDefaultConnectionsConfig() {
       desktopPool: 'workspace-fullwm',
       defaultSettings: {
         serverUrl: 'https://telework.alfabank.ru',
-        desktopName: 'workspace-fullwm',
+        desktopName: 'workspace-fullvm',
         desktopProtocol: '',
         desktopLayout: '',
         monitors: '',
@@ -104,7 +104,7 @@ function getDefaultConnectionsConfig() {
       host: 'telework.moscow.alfaintra.net',
       description: 'Рабочее место через Horizon (Москва)',
       isDefault: true,
-      desktopPool: 'workspace-fullwm',
+      desktopPool: 'workspace-fullvm',
       defaultSettings: {
         serverUrl: 'https://telework.moscow.alfaintra.net',
         desktopName: 'workspace-fullwm',
