@@ -54,7 +54,7 @@ function normalizeUrl(url) {
         url = 'https://' + url;
     }
 
-    return url;
+    return `"${url}"`;
 }
 
 /* ------------------------------------------------ */
@@ -81,7 +81,7 @@ function buildArgs(connection, settings = {}, macFormat = false) {
         : (k, v) => v ? args.push(`--${k}=${v}`) : args.push(`--${k}`);
 
     if (settings.serverUrl)
-        flag('serverURL', normalizeUrl(settings.serverUrl));
+        flag('serverURL', `"${normalizeUrl(settings.serverUrl)}"`);
 
     if (connection.desktopPool || settings.desktopName)
         flag('desktopName', connection.desktopPool || settings.desktopName);
