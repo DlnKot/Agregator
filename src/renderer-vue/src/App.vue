@@ -325,7 +325,6 @@ onMounted(async () => {
 }
 
 .view {
-  display: none;
   flex: 1;
   flex-direction: column;
   overflow: hidden;

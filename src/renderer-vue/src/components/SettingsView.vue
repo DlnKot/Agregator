@@ -14,7 +14,7 @@
     
     <div class="settings-sections">
       <!-- User Settings -->
-      <div v-if="activeTab === 'user'" class="settings-section active">
+      <div v-if="activeTab === 'user'" class="settings-section">
         <h3>Учётная запись</h3>
         
         <div class="form-group">
@@ -31,7 +31,7 @@
       </div>
       
       <!-- RDP Settings -->
-      <div v-if="activeTab === 'rdp'" class="settings-section active">
+      <div v-if="activeTab === 'rdp'" class="settings-section">
         <h3>Настройки RDP</h3>
         
         <div class="form-group">
@@ -116,7 +116,7 @@
       </div>
       
       <!-- Horizon Settings -->
-      <div v-if="activeTab === 'horizon'" class="settings-section active">
+      <div v-if="activeTab === 'horizon'" class="settings-section">
         <h3>Настройки VMware Horizon</h3>
         
         <div class="form-group">
@@ -232,7 +232,7 @@
       </div>
       
       <!-- Citrix Settings -->
-      <div v-if="activeTab === 'citrix'" class="settings-section active">
+      <div v-if="activeTab === 'citrix'" class="settings-section">
         <h3>Настройки Citrix Workspace</h3>
         
         <div class="form-group">
@@ -257,7 +257,7 @@
       </div>
       
       <!-- General Settings -->
-      <div v-if="activeTab === 'general'" class="settings-section active">
+      <div v-if="activeTab === 'general'" class="settings-section">
         <h3>Общие настройки</h3>
         
         <div class="form-group">
@@ -362,11 +362,12 @@ const defaultSettings = {
   }
 }
 
-// Local settings state
+// Initialize local settings with defaults
 const localSettings = reactive(JSON.parse(JSON.stringify(defaultSettings)))
 
-// Watch for settings changes from props
-watch(() => props.settings, (newSettings) => {
+// Initialize function
+function initSettings() {
+  const newSettings = props.settings
   if (newSettings && Object.keys(newSettings).length > 0) {
     // Merge with defaults
     const merged = JSON.parse(JSON.stringify(defaultSettings))
@@ -393,10 +394,12 @@ watch(() => props.settings, (newSettings) => {
     }
     
     Object.assign(localSettings, merged)
-  } else {
-    // Initialize with defaults if no settings
-    Object.assign(localSettings, JSON.parse(JSON.stringify(defaultSettings)))
   }
+}
+
+// Watch for settings changes from props
+watch(() => props.settings, () => {
+  initSettings()
 }, { immediate: true, deep: true })
 
 function saveSettings() {
@@ -408,8 +411,10 @@ function saveSettings() {
 .settings-container {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  min-height: 0;
+  height: 90%;
+  background: var(--bg-primary);
+  padding: 20px;
+  overflow: hidden;
 }
 
 .settings-tabs {
@@ -446,10 +451,7 @@ function saveSettings() {
 .settings-sections {
   flex: 1;
   overflow-y: auto;
-}
-
-.settings-section {
-  display: none;
+  min-height: 200px;
 }
 
 .settings-section.active {
@@ -464,9 +466,11 @@ function saveSettings() {
 }
 
 .settings-actions {
-  margin-top: 24px;
-  padding-top: 24px;
+  flex-shrink: 0;
+  margin-top: 16px;
+  padding-top: 16px;
   border-top: 1px solid var(--border-color);
+  background: var(--bg-primary);
 }
 
 /* Preview */
