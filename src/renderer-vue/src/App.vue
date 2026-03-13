@@ -111,7 +111,7 @@ import SettingsView from './components/SettingsView.vue'
 import ConnectionModal from './components/ConnectionModal.vue'
 import FirstRunModal from './components/FirstRunModal.vue'
 
-const appVersion = '0.2.0'
+const appVersion = '0.2.1'
 
 const { 
   connections, 
