@@ -58,12 +58,13 @@
         </div>
         
         <div id="connections-list" class="connections-list">
-          <ConnectionsList 
-            :connections="filteredConnections" 
-            @launch="handleLaunch"
-            @edit="openConnectionModal"
-            @delete="handleDeleteConnection"
-          />
+            <ConnectionsList 
+              :connections="filteredConnections" 
+              @launch="handleLaunch"
+              @edit="openConnectionModal"
+              @delete="handleDeleteConnection"
+              @add="openConnectionModal"
+            />
         </div>
       </section>
 
@@ -110,7 +111,7 @@ import SettingsView from './components/SettingsView.vue'
 import ConnectionModal from './components/ConnectionModal.vue'
 import FirstRunModal from './components/FirstRunModal.vue'
 
-const appVersion = '2.0.0'
+const appVersion = '0.1.7'
 
 const { 
   connections, 
@@ -325,6 +326,7 @@ onMounted(async () => {
 }
 
 .view {
+  /* display: none; */
   flex: 1;
   flex-direction: column;
   overflow: hidden;
