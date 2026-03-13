@@ -50,7 +50,7 @@
       </nav>
       
       <div class="sidebar-footer">
-        <span class="version">v1.0.0</span>
+        <span class="version">v0.1.3</span>
       </div>
     </aside>
     
@@ -204,45 +204,125 @@
           <div class="settings-section" data-section="horizon">
             <h3>Настройки VMware Horizon</h3>
             <div class="form-group">
-              <label for="horizon-broker">URL Broker</label>
-              <input type="text" id="horizon-broker" placeholder="https://horizon.company.com">
+              <label for="horizon-server">URL сервера (--serverURL)</label>
+              <input type="text" id="horizon-server" placeholder="https://horizon.company.com">
             </div>
             
             <div class="form-group">
-              <label for="horizon-pool">Desktop Pool</label>
-              <input type="text" id="horizon-pool" placeholder="Имя пула рабочих столов">
+              <label for="horizon-desktop">Desktop Name (--desktopName)</label>
+              <input type="text" id="horizon-desktop" placeholder="Имя десктопа или пула">
             </div>
             
- <div class="form-group">
- <label for="horizon-username">Пользователь (--userName)</label>
- <input type="text" id="horizon-username" placeholder="DOMAIN\username">
- </div>
-          
- <div class="form-group">
- <label for="horizon-domain">Домен (--domainName)</label>
- <input type="text" id="horizon-domain" placeholder="DOMAIN">
- </div>
- 
- <div class="form-group">
- <label for="horizon-once">Одноразовый запуск (--once)</label>
- <label class="toggle">
- <input type="checkbox" id="horizon-once" checked>
- <span class="toggle-slider"></span>
- </label>
- </div>
- 
- <div class="form-group">
- <label for="horizon-noninteractive">Неинтерактивный режим (--nonInteractive)</label>
- <label class="toggle">
- <input type="checkbox" id="horizon-noninteractive">
- <span class="toggle-slider"></span>
- </label>
- </div>
- 
- <div class="form-group">
- <label for="horizon-custom">Дополнительные параметры</label>
- <textarea id="horizon-custom" rows="3" placeholder="Например: --sslCipherString=DEFAULT"></textarea>
- </div>
+            <div class="form-group">
+              <label for="horizon-app">Application (--appName)</label>
+              <input type="text" id="horizon-app" placeholder="Имя приложения для запуска">
+            </div>
+            
+            <div class="form-group">
+              <label for="horizon-username">User Name (--userName)</label>
+              <input type="text" id="horizon-username" placeholder="username">
+            </div>
+            
+            <div class="form-group">
+              <label for="horizon-domain">Domain (--domainName)</label>
+              <input type="text" id="horizon-domain" placeholder="DOMAIN">
+            </div>
+            
+            <div class="form-group">
+              <label for="horizon-protocol">Protocol (--desktopProtocol)</label>
+              <select id="horizon-protocol">
+                <option value="">По умолчанию</option>
+                <option value="RDP">RDP</option>
+                <option value="PCoIP">PCoIP</option>
+                <option value="Blast">Blast</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label for="horizon-layout">Layout (--desktopLayout)</label>
+              <select id="horizon-layout">
+                <option value="">По умолчанию</option>
+                <option value="fullscreen">Fullscreen</option>
+                <option value="multimonitor">Multi-Monitor</option>
+                <option value="windowLarge">Window Large</option>
+                <option value="windowSmall">Window Small</option>
+                <option value="1920x1080">1920x1080</option>
+                <option value="1366x768">1366x768</option>
+                <option value="1024x768">1024x768</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label for="horizon-monitors">Monitors (--monitors)</label>
+              <input type="text" id="horizon-monitors" placeholder="1, 2">
+              <small>Индексы мониторов через запятую (для multimonitor)</small>
+            </div>
+            
+            <div class="form-group">
+              <label for="horizon-unattended">Unattended mode (--unattended)</label>
+              <label class="toggle">
+                <input type="checkbox" id="horizon-unattended">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            
+            <div class="form-group">
+              <label for="horizon-noninteractive">Non-interactive (--nonInteractive)</label>
+              <label class="toggle">
+                <input type="checkbox" id="horizon-noninteractive">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            
+            <div class="form-group">
+              <label for="horizon-minimized">Launch minimized (--launchMinimized)</label>
+              <label class="toggle">
+                <input type="checkbox" id="horizon-minimized">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            
+            <div class="form-group">
+              <label for="horizon-currentuser">Login as current user (--loginAsCurrentUser)</label>
+              <label class="toggle">
+                <input type="checkbox" id="horizon-currentuser">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            
+            <div class="form-group">
+              <label for="horizon-hideafter">Hide client after launch (--hideClientAfterLaunchSession)</label>
+              <label class="toggle">
+                <input type="checkbox" id="horizon-hideafter">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            
+            <div class="form-group">
+              <label for="horizon-useexisting">Use existing connection (--useExisting)</label>
+              <label class="toggle">
+                <input type="checkbox" id="horizon-useexisting">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            
+            <div class="form-group">
+              <label for="horizon-single">Single auto-connect (--singleAutoConnect)</label>
+              <label class="toggle">
+                <input type="checkbox" id="horizon-single">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            
+            <div class="form-group">
+              <label for="horizon-path">Путь к VMware Horizon (ручное указание)</label>
+              <input type="text" id="horizon-path" placeholder="C:\Program Files\VMware\...\vmware-view.exe">
+            </div>
+            
+            <div class="form-group">
+              <label for="horizon-custom">Дополнительные параметры</label>
+              <textarea id="horizon-custom" rows="3" placeholder="Дополнительные флаги"></textarea>
+            </div>
           </div>
           
           <!-- Citrix Settings -->
@@ -256,6 +336,11 @@
  <div class="form-group">
  <label for="citrix-resource">Ресурс / Published App (-launch)</label>
  <input type="text" id="citrix-resource" placeholder="Например: Desktop">
+ </div>
+          
+ <div class="form-group">
+ <label for="citrix-path">Путь к Citrix Workspace (ручное указание)</label>
+ <input type="text" id="citrix-path" placeholder="C:\Program Files\Citrix\...\selfservice.exe">
  </div>
           
  <div class="form-group">

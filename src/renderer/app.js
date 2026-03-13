@@ -68,17 +68,28 @@ const elements = {
   rdpSpan: document.getElementById('rdp-span'),
   rdpCustom: document.getElementById('rdp-custom'),
 
-  horizonBroker: document.getElementById('horizon-broker'),
-  horizonPool: document.getElementById('horizon-pool'),
+  horizonServer: document.getElementById('horizon-server'),
+  horizonDesktop: document.getElementById('horizon-desktop'),
+  horizonApp: document.getElementById('horizon-app'),
   horizonUsername: document.getElementById('horizon-username'),
   horizonDomain: document.getElementById('horizon-domain'),
-  horizonOnce: document.getElementById('horizon-once'),
+  horizonProtocol: document.getElementById('horizon-protocol'),
+  horizonLayout: document.getElementById('horizon-layout'),
+  horizonMonitors: document.getElementById('horizon-monitors'),
+  horizonUnattended: document.getElementById('horizon-unattended'),
   horizonNonInteractive: document.getElementById('horizon-noninteractive'),
+  horizonMinimized: document.getElementById('horizon-minimized'),
+  horizonCurrentUser: document.getElementById('horizon-currentuser'),
+  horizonHideAfter: document.getElementById('horizon-hideafter'),
+  horizonUseExisting: document.getElementById('horizon-useexisting'),
+  horizonSingle: document.getElementById('horizon-single'),
+  horizonPath: document.getElementById('horizon-path'),
   horizonCustom: document.getElementById('horizon-custom'),
-
-  citrixStore: document.getElementById('citrix-store'),
-  citrixResource: document.getElementById('citrix-resource'),
-  citrixCustom: document.getElementById('citrix-custom'),
+ 
+ citrixStore: document.getElementById('citrix-store'),
+ citrixResource: document.getElementById('citrix-resource'),
+ citrixPath: document.getElementById('citrix-path'),
+ citrixCustom: document.getElementById('citrix-custom'),
 
   generalTray: document.getElementById('general-tray'),
   generalStart: document.getElementById('general-start')
@@ -200,7 +211,7 @@ function renderConnections() {
   if (filtered.length === 0) {
     elements.connectionsList.innerHTML = `
  <div class="empty-state">
- <svg viewBox="002424" fill="none" stroke="currentColor" stroke-width="1.5">
+ <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
  <rect x="2" y="3" width="20" height="14" rx="2"/>
  <line x1="8" y1="21" x2="16" y2="21"/>
  <line x1="12" y1="17" x2="12" y2="21"/>
@@ -517,23 +528,34 @@ function renderSettings() {
  elements.rdpCustom.value = s.rdp.customFlags || '';
  }
 
-  // Horizon
-  if (s.horizon) {
-    elements.horizonBroker.value = s.horizon.brokerUrl || '';
-    elements.horizonPool.value = s.horizon.desktopPool || '';
-    elements.horizonUsername.value = s.horizon.userName || '';
-    elements.horizonDomain.value = s.horizon.domainName || '';
-    elements.horizonOnce.checked = s.horizon.once !== false;
-    elements.horizonNonInteractive.checked = !!s.horizon.nonInteractive;
-    elements.horizonCustom.value = s.horizon.customFlags || '';
-  }
-
-  // Citrix
-  if (s.citrix) {
-    elements.citrixStore.value = s.citrix.storeUrl || '';
-    elements.citrixResource.value = s.citrix.resourceName || '';
-    elements.citrixCustom.value = s.citrix.customFlags || '';
-  }
+ // Horizon
+ if (s.horizon) {
+ elements.horizonServer.value = s.horizon.serverUrl || '';
+ elements.horizonDesktop.value = s.horizon.desktopName || '';
+ elements.horizonApp.value = s.horizon.appName || '';
+ elements.horizonUsername.value = s.horizon.userName || '';
+ elements.horizonDomain.value = s.horizon.domainName || '';
+ elements.horizonProtocol.value = s.horizon.desktopProtocol || '';
+ elements.horizonLayout.value = s.horizon.desktopLayout || '';
+ elements.horizonMonitors.value = s.horizon.monitors || '';
+ elements.horizonUnattended.checked = !!s.horizon.unattended;
+ elements.horizonNonInteractive.checked = !!s.horizon.nonInteractive;
+ elements.horizonMinimized.checked = !!s.horizon.launchMinimized;
+ elements.horizonCurrentUser.checked = !!s.horizon.loginAsCurrentUser;
+ elements.horizonHideAfter.checked = !!s.horizon.hideClientAfterLaunchSession;
+ elements.horizonUseExisting.checked = !!s.horizon.useExisting;
+ elements.horizonSingle.checked = !!s.horizon.singleAutoConnect;
+ elements.horizonPath.value = s.horizon.customPath || '';
+ elements.horizonCustom.value = s.horizon.customFlags || '';
+ }
+ 
+ // Citrix
+ if (s.citrix) {
+ elements.citrixStore.value = s.citrix.storeUrl || '';
+ elements.citrixResource.value = s.citrix.resourceName || '';
+ elements.citrixPath.value = s.citrix.customPath || '';
+ elements.citrixCustom.value = s.citrix.customFlags || '';
+ }
 
   // General
   if (s.general) {
@@ -557,12 +579,22 @@ async function saveSettings() {
  customFlags: elements.rdpCustom.value
  },
  horizon: {
- brokerUrl: elements.horizonBroker.value,
- desktopPool: elements.horizonPool.value,
+ serverUrl: elements.horizonServer.value,
+ desktopName: elements.horizonDesktop.value,
+ appName: elements.horizonApp.value,
  userName: elements.horizonUsername.value,
  domainName: elements.horizonDomain.value,
- once: elements.horizonOnce.checked,
+ desktopProtocol: elements.horizonProtocol.value,
+ desktopLayout: elements.horizonLayout.value,
+ monitors: elements.horizonMonitors.value,
+ unattended: elements.horizonUnattended.checked,
  nonInteractive: elements.horizonNonInteractive.checked,
+ launchMinimized: elements.horizonMinimized.checked,
+ loginAsCurrentUser: elements.horizonCurrentUser.checked,
+ hideClientAfterLaunchSession: elements.horizonHideAfter.checked,
+ useExisting: elements.horizonUseExisting.checked,
+ singleAutoConnect: elements.horizonSingle.checked,
+ customPath: elements.horizonPath.value,
  customFlags: elements.horizonCustom.value
  },
  citrix: {
