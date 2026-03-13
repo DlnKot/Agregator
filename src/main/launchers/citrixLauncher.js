@@ -158,14 +158,15 @@ function buildArgs(connection = {}, settings = {}) {
 }
 
 function launchHorizon(connection, settings) {
-
- const args = buildArgs(connection, settings);
+ // Extract horizon settings from full settings object
+ const horizonSettings = settings?.horizon || settings || {};
+ const args = buildArgs(connection, horizonSettings);
 
  logger('info', `Horizon Launcher: Built args: ${args.join(' ')}`);
 
  if (process.platform === 'win32') {
 
-  const exePath = findHorizonExecutable(settings?.customPath);
+  const exePath = findHorizonExecutable(horizonSettings?.customPath);
 
   if (!exePath) {
    logger('error', 'Horizon Launcher: VMware Horizon client not found');
@@ -205,6 +206,85 @@ function launchHorizon(connection, settings) {
  launchDetached('vmware-view', args);
 }
 
+// Citrix Workspace launcher
+function launchCitrix(connection, settings) {
+ // Extract citrix settings from full settings object
+ const citrixSettings = settings?.citrix || settings || {};
+ 
+ logger('info', `Citrix Launcher: Starting connection to ${connection.host}`);
+ logger('info', `Citrix Launcher: Store URL: ${citrixSettings.storeUrl}`);
+ logger('info', `Citrix Launcher: Resource: ${citrixSettings.resourceName}`);
+
+ if (process.platform === 'win32') {
+  // Find Citrix Workspace executable
+  const citrixPaths = [
+   'C:\\Program Files\\Citrix\\ICA Client\\selfservice.exe',
+   'C:\\Program Files (x86)\\Citrix\\ICA Client\\selfservice.exe',
+   path.join(process.env.LOCALAPPDATA || '', 'Citrix', 'ICA Client', 'selfservice.exe'),
+   path.join(process.env.PROGRAMDATA || 'C:\\ProgramData', 'Citrix', 'ICA Client', 'selfservice.exe')
+  ];
+  
+  let exePath = null;
+  for (const p of citrixPaths) {
+   if (fs.existsSync(p)) {
+    exePath = p;
+    break;
+   }
+  }
+  
+  // Try custom path
+  if (citrixSettings.customPath && fs.existsSync(citrixSettings.customPath)) {
+   exePath = citrixSettings.customPath;
+  }
+  
+  if (!exePath) {
+   logger('error', 'Citrix Launcher: Citrix Workspace not found');
+   throw new Error('Citrix Workspace not found. Please install it or specify custom path in settings.');
+  }
+  
+  // Build args
+  const args = [];
+  if (citrixSettings.storeUrl) {
+   args.push('-store', citrixSettings.storeUrl);
+  }
+  if (citrixSettings.resourceName) {
+   args.push('-launch', citrixSettings.resourceName);
+  }
+  if (citrixSettings.customFlags) {
+   args.push(...splitArgs(citrixSettings.customFlags));
+  }
+  
+  launchDetached(exePath, args);
+  logger('info', `Citrix Launcher: Launched from ${exePath}`);
+  return;
+ }
+
+ if (process.platform === 'darwin') {
+  // Check for Citrix Workspace
+  const citrixApps = ['Citrix Workspace', 'Citrix Receiver'];
+  
+  for (const appName of citrixApps) {
+   const result = spawnSync('open', ['-Ra', appName], { stdio: 'ignore' });
+   if (result.status === 0) {
+    logger('info', `Citrix Launcher: Found app ${appName}`);
+    // On macOS, Citrix typically opens the store URL
+    if (citrixSettings.storeUrl) {
+     launchDetached('open', [citrixSettings.storeUrl]);
+    } else {
+     launchDetached('open', ['-a', appName]);
+    }
+    return;
+   }
+  }
+  
+  logger('error', 'Citrix Launcher: Citrix Workspace not found on macOS');
+  throw new Error('Citrix Workspace not found on macOS');
+ }
+
+ // Linux
+ launchDetached('ctx', ['-store', citrixSettings.storeUrl || '']);
+}
+
 function killAllProcesses() {
 
  logger('info', `Horizon Launcher: Killing ${launchedProcesses.length} processes`);
@@ -236,5 +316,6 @@ function killAllProcesses() {
 
 module.exports = {
  launchHorizon,
+ launchCitrix,
  killAllProcesses
 };

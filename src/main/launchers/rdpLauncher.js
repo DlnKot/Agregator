@@ -76,7 +76,7 @@ function scheduleDeleteFile(filePath, timeoutMs = 5000) {
 }
 
 function launchRdp(connection, settings) {
-    const rdpSettings = settings || {};
+    const rdpSettings = settings?.rdp || settings || {};
     const rdpFilePath = createRdpFile(connection, rdpSettings);
 
     if (process.platform === 'win32') {

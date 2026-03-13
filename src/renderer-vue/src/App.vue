@@ -223,6 +223,9 @@ async function handleFirstRunSave(userData) {
   await saveSettings(currentSettings)
   isFirstRun.value = false
   showToast('Данные пользователя сохранены', 'success')
+  
+  // Reload connections to get default ones
+  await loadData()
 }
 
 // Initialize

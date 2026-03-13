@@ -162,13 +162,25 @@ function findExeRecursive(dir, exeName, maxDepth, currentDepth = 0) {
  return null;
 }
 
+function normalizeUrl(url) {
+ if (!url) return '';
+ url = url.trim();
+ // Add https:// if no protocol specified
+ if (!url.startsWith('http://') && !url.startsWith('https://')) {
+ url = 'https://' + url;
+ }
+ return url;
+}
+
 function buildArgs(connection, settings) {
  const args = [];
  const s = settings || {};
  
- // Server URL
+ // Server URL - normalize with https://
  if (s.serverUrl) {
- args.push(`--serverURL=${s.serverUrl}`);
+ const normalizedUrl = normalizeUrl(s.serverUrl);
+ args.push(`--serverURL=${normalizedUrl}`);
+ logger('info', `Horizon Launcher: Using server URL: ${normalizedUrl}`);
  }
  
  // Desktop name (from connection or settings)
@@ -250,13 +262,16 @@ function buildArgs(connection, settings) {
 }
 
 function launchHorizon(connection, settings) {
- const args = buildArgs(connection, settings);
+ // Extract horizon settings from full settings object
+ const horizonSettings = settings?.horizon || settings || {};
+ const args = buildArgs(connection, horizonSettings);
+ const s = horizonSettings;
+ 
  logger('info', `Horizon Launcher: Built args: ${args.join(' ')}`);
 
  if (process.platform === 'win32') {
  // Pass customPath from horizon settings
- const horizonSettings = settings?.horizon || {}
- const exePath = findHorizonExecutable(horizonSettings.customPath);
+ const exePath = findHorizonExecutable(s.customPath);
  
  if (exePath) {
  logger('info', `Horizon Launcher: Using executable: ${exePath}`);
@@ -270,19 +285,109 @@ function launchHorizon(connection, settings) {
  }
 
  if (process.platform === 'darwin') {
+ logger('info', 'Horizon Launcher: Detected macOS platform');
+ 
  // Check for VMware Horizon Client
  const checkApp = (appName) => {
  const result = spawnSync('open', ['-Ra', appName], { stdio: 'ignore' });
  return result.status === 0;
  };
  
- if (checkApp('VMware Horizon Client')) {
- launchDetached('open', ['-a', 'VMware Horizon Client', '--args', ...args], { shell: false });
- } else if (checkApp('VMware Horizon')) {
- launchDetached('open', ['-a', 'VMware Horizon', '--args', ...args], { shell: false });
+ // Find the actual app bundle path
+ const horizonAppPaths = [
+ '/Applications/VMware Horizon Client.app',
+ '/Applications/VMware Horizon.app',
+ path.join(process.env.HOME || '', 'Applications/VMware Horizon Client.app'),
+ path.join(process.env.HOME || '', 'Applications/VMware Horizon.app')
+ ];
+ 
+ let appPath = null;
+ for (const p of horizonAppPaths) {
+ if (fs.existsSync(p)) {
+ appPath = p;
+ logger('info', `Horizon Launcher: Found app at: ${p}`);
+ break;
+ }
+ }
+ 
+ // Try to find via mdfind
+ if (!appPath) {
+ try {
+ const result = spawnSync('mdfind', ['kMDItemCFBundleIdentifier = "com.vmware.horizon"'], { stdio: 'pipe' });
+ if (result.status === 0 && result.stdout) {
+ const foundPath = result.stdout.toString().split('\n')[0].trim();
+ if (foundPath) {
+ appPath = foundPath;
+ logger('info', `Horizon Launcher: Found via mdfind: ${appPath}`);
+ }
+ }
+ } catch (e) {
+ logger('warn', `Horizon Launcher: mdfind failed: ${e.message}`);
+ }
+ }
+ 
+ if (appPath) {
+ logger('info', `Horizon Launcher: Using app at: ${appPath}`);
+ 
+ // On macOS, VMware Horizon Client has a CLI tool in Contents/Launchers
+ const viewClientPathArm = path.join(appPath, 'Contents/Launchers/viewclient-macosx-arm64');
+ const viewClientPathIntel = path.join(appPath, 'Contents/Launchers/viewclient-macosx');
+ 
+ let cliPath = null;
+ 
+ // Check for ARM version first (Apple Silicon), then Intel
+ if (fs.existsSync(viewClientPathArm)) {
+ cliPath = viewClientPathArm;
+ logger('info', `Horizon Launcher: Found ARM CLI: ${cliPath}`);
+ } else if (fs.existsSync(viewClientPathIntel)) {
+ cliPath = viewClientPathIntel;
+ logger('info', `Horizon Launcher: Found Intel CLI: ${cliPath}`);
+ } else {
+ logger('warn', 'Horizon Launcher: CLI tool not found in app bundle');
+ }
+ 
+ if (cliPath) {
+ // Use CLI tool with arguments
+ logger('info', `Horizon Launcher: Launching with CLI: ${cliPath} ${args.join(' ')}`);
+ try {
+ launchDetached(cliPath, args);
+ logger('info', 'Horizon Launcher: Launched successfully via CLI');
+ } catch (cliError) {
+ logger('error', `Horizon Launcher: CLI launch failed: ${cliError.message}`);
+ // Fallback to opening app
+ launchDetached('open', ['-a', appPath]);
+ }
+ } else {
+ // No CLI found - use URL scheme to connect
+ // VMware Horizon uses "vmware://" URL scheme
+ const serverUrl = s.serverUrl || settings?.serverUrl;
+ const desktopName = connection.desktopPool || s.desktopName || settings?.desktopName;
+ 
+ if (serverUrl) {
+ // Build VMware Horizon URL
+ let horizonUrl = `vmware://connect?serverURL=${encodeURIComponent(serverUrl)}`;
+ if (desktopName) {
+ horizonUrl += `&desktopName=${encodeURIComponent(desktopName)}`;
+ }
+ if (connection.username) {
+ horizonUrl += `&username=${encodeURIComponent(connection.username)}`;
+ }
+ if (s.desktopProtocol) {
+ horizonUrl += `&desktopProtocol=${encodeURIComponent(s.desktopProtocol)}`;
+ }
+ 
+ logger('info', `Horizon Launcher: Opening URL: ${horizonUrl}`);
+ launchDetached('open', [horizonUrl]);
+ } else {
+ // Just open the app
+ logger('info', `Horizon Launcher: Opening app directly: ${appPath}`);
+ launchDetached('open', ['-a', appPath]);
+ }
+ }
  } else {
  logger('error', 'Horizon Launcher: VMware Horizon Client not found on macOS');
- throw new Error('VMware Horizon Client not found on macOS');
+ logger('info', 'Horizon Launcher: Please install from https://customerconnect.vmware.com/en/downloads/productinfo/vmc_horizon_clients');
+ throw new Error('VMware Horizon Client not found on macOS. Please install it from: https://customerconnect.vmware.com/en/downloads/productinfo/vmc_horizon_clients');
  }
  return;
  }

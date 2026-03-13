@@ -19,6 +19,9 @@ async function loadData() {
     const s = settings.value
     if (!s.user || !s.user.domain || !s.user.username) {
       isFirstRun.value = true
+    } else {
+      // User is configured, create default connections if needed
+      await createDefaultConnectionsIfNeeded(s)
     }
   } catch (error) {
     console.error('Error loading data:', error)
@@ -46,6 +49,109 @@ async function saveSettings(newSettings) {
   const plainSettings = JSON.parse(JSON.stringify(newSettings))
   await window.api.saveSettings(plainSettings)
   settings.value = plainSettings
+  
+  // Create default connections if this is first run setup
+  await createDefaultConnectionsIfNeeded(plainSettings)
+}
+
+// Default connections configuration
+function getDefaultConnectionsConfig() {
+  return [
+    {
+      type: 'horizon',
+      name: 'Horizon - telework.alfabank.ru',
+      host: 'telework.alfabank.ru',
+      description: 'Рабочее место через Horizon',
+      isDefault: true,
+      defaultSettings: {
+        serverUrl: 'telework.alfabank.ru',
+        desktopName: 'workspace-fullwm',
+        desktopProtocol: '',
+        desktopLayout: '',
+        monitors: '',
+        unattended: true,
+        nonInteractive: false,
+        launchMinimized: false,
+        loginAsCurrentUser: false,
+        hideClientAfterLaunchSession: false,
+        useExisting: false,
+        singleAutoConnect: false
+      }
+    },
+    {
+      type: 'horizon',
+      name: 'Horizon - telework.moscow.alfaintra.net',
+      host: 'telework.moscow.alfaintra.net',
+      description: 'Рабочее место через Horizon (Москва)',
+      isDefault: true,
+      defaultSettings: {
+        serverUrl: 'telework.moscow.alfaintra.net',
+        desktopName: 'workspace-fullwm',
+        desktopProtocol: '',
+        desktopLayout: '',
+        monitors: '',
+        unattended: true,
+        nonInteractive: false,
+        launchMinimized: false,
+        loginAsCurrentUser: false,
+        hideClientAfterLaunchSession: false,
+        useExisting: false,
+        singleAutoConnect: false
+      }
+    },
+    {
+      type: 'rdp',
+      name: 'RDP - mypc.moscow.alfaintra.net',
+      host: 'mypc.moscow.alfaintra.net',
+      description: 'Удалённый рабочий стол',
+      isDefault: true,
+      defaultSettings: {
+        resolution: '1920x1080',
+        colorDepth: '32',
+        multimon: false,
+        clipboard: true,
+        driveMapping: false,
+        useAdminSession: false,
+        promptCredentials: true,
+        startFullScreen: false,
+        span: false
+      }
+    }
+  ]
+}
+
+// Create default connections if user credentials are set and no connections exist
+async function createDefaultConnectionsIfNeeded(currentSettings) {
+  const user = currentSettings?.user
+  if (!user || !user.username) return
+  
+  // Check if default connections already exist
+  const existingConnections = await window.api.getConnections()
+  const hasDefaults = existingConnections.some(c => c.isDefault === true)
+  
+  if (hasDefaults) return
+  
+  // Create default connections
+  const defaultConfigs = getDefaultConnectionsConfig()
+  
+  for (const config of defaultConfigs) {
+    const connection = {
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      name: config.name,
+      host: config.host,
+      type: config.type,
+      description: config.description,
+      username: user.domain ? `${user.domain}\\${user.username}` : user.username,
+      isDefault: true,
+      // Store default client settings
+      clientSettings: config.defaultSettings
+    }
+    
+    await window.api.saveConnection(connection)
+  }
+  
+  // Reload connections
+  connections.value = await window.api.getConnections()
 }
 
 // Get user credentials from settings
@@ -64,29 +170,49 @@ function applyCredentialsToConnection(connection) {
     const username = creds.domain ? `${creds.domain}\\${creds.username}` : creds.username
     return { ...connection, username }
   }
-  return connection
+  // Return a plain copy to avoid reactive issues
+  return { ...connection }
 }
 
 // Launch operations
 async function launchConnection(conn) {
-  // Apply credentials from settings
-  const connectionWithCreds = applyCredentialsToConnection(conn)
-  
   if (!conn) return { success: false, error: 'Connection not found' }
   
   try {
-    // Convert to plain object to avoid IPC cloning issues
-    const plainSettings = JSON.parse(JSON.stringify(settings.value))
+    // Convert connection to plain object to avoid IPC cloning issues
+    const plainConnection = JSON.parse(JSON.stringify(conn))
+    
+    // Apply credentials from settings
+    const connectionWithCreds = applyCredentialsToConnection(plainConnection)
+    
+    // Merge global settings with connection-specific settings
+    const globalSettings = JSON.parse(JSON.stringify(settings.value))
+    
+    // If connection has client-specific settings, merge them
+    let clientSettings = {}
+    if (plainConnection.clientSettings) {
+      clientSettings = plainConnection.clientSettings
+    }
+    
+    // Merge settings: global -> client specific
+    const mergedSettings = {
+      ...globalSettings,
+      [plainConnection.type]: {
+        ...(globalSettings[plainConnection.type] || {}),
+        ...clientSettings
+      }
+    }
+    
     let result
-    switch (conn.type) {
+    switch (plainConnection.type) {
       case 'rdp':
-        result = await window.api.launchRdp(connectionWithCreds, plainSettings)
+        result = await window.api.launchRdp(connectionWithCreds, mergedSettings)
         break
       case 'horizon':
-        result = await window.api.launchHorizon(connectionWithCreds, plainSettings)
+        result = await window.api.launchHorizon(connectionWithCreds, mergedSettings)
         break
       case 'citrix':
-        result = await window.api.launchCitrix(connectionWithCreds, plainSettings)
+        result = await window.api.launchCitrix(connectionWithCreds, mergedSettings)
         break
     }
     return result || { success: false, error: 'Unknown error' }
@@ -123,6 +249,7 @@ export function useApp() {
     saveSettings,
     launchConnection,
     getUserCredentials,
-    applyCredentialsToConnection
+    applyCredentialsToConnection,
+    createDefaultConnectionsIfNeeded
   }
 }

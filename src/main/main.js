@@ -250,7 +250,7 @@ function setupIpcHandlers() {
  // Launch handlers
  ipcMain.handle('launch-rdp', async (event, connection, settings) => {
  try {
- rdpLauncher.launchRdp(connection, settings?.rdp || {});
+ rdpLauncher.launchRdp(connection, settings || {});
  return { success: true };
  } catch (error) {
  logger('error', `RDP launch error: ${error.message}`);
@@ -260,7 +260,8 @@ function setupIpcHandlers() {
 
  ipcMain.handle('launch-horizon', async (event, connection, settings) => {
  try {
- horizonLauncher.launchHorizon(connection, settings?.horizon || {});
+ // Pass the full settings object - launcher will extract horizon settings
+ horizonLauncher.launchHorizon(connection, settings || {});
  return { success: true };
  } catch (error) {
  logger('error', `Horizon launch error: ${error.message}`);
