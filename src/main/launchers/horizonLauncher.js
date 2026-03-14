@@ -10,6 +10,17 @@ const { log: logger } = require('../utils/logger');
 const launchedProcesses = [];
 
 /* ------------------------------------------------ */
+function stripDomainFromUserName(userName) {
+    if (!userName || typeof userName !== 'string') return '';
+    const trimmed = userName.trim();
+    // Handle DOMAIN\\user (e.g. MOSCOW\\u_m123) -> user
+    if (trimmed.includes('\\')) return trimmed.split('\\').pop().trim();
+    // Handle DOMAIN/user -> user
+    if (trimmed.includes('/')) return trimmed.split('/').pop().trim();
+    return trimmed;
+}
+
+/* ------------------------------------------------ */
 function launchDetached(command, args = []) {
 
     logger('info', `Launching: ${command} ${args.join(' ')}`);
@@ -89,11 +100,9 @@ function buildArgs(connection, settings = {}, macFormat = false) {
     if (settings.appName)
         flag('appName', settings.appName);
 
-    if (connection.username || settings.user?.username)
-        flag('userName', connection.username || settings.user.username);
-
-    if (settings.user?.domain)
-        flag('domainName', settings.user.domain);
+    const userName = stripDomainFromUserName(connection.username || settings.user?.username);
+    if (userName)
+        flag('userName', userName);
 
     if (settings.desktopProtocol)
         flag('desktopProtocol', settings.desktopProtocol);
@@ -274,11 +283,9 @@ function launchWindows(connection, settings) {
     if (connection.host)
         args.push('-serverURL', connection.host);
 
-    if (connection.username)
-        args.push('-userName', connection.username);
-
-    if (connection.domain)
-        args.push('-domainName', connection.domain);
+    const userName = stripDomainFromUserName(connection.username);
+    if (userName)
+        args.push('-userName', userName);
 
     if (settings.desktopName)
         args.push('-desktopName', settings.desktopName);
