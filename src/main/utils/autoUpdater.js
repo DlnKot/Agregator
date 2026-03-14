@@ -126,8 +126,20 @@ function initAutoUpdater(config = {}) {
     });
 
     autoUpdater.on('error', (error) => {
-        logger('error', `AutoUpdater: Error - ${error.message}`);
-        notifyRenderer('update-error', { message: error.message });
+        const rawMessage = error?.message || String(error);
+        const message = /Cannot find latest-mac\.yml/i.test(rawMessage) || /\b404\b/.test(rawMessage)
+            ? (
+                'AutoUpdater: Cannot download update metadata (latest-mac.yml).\n' +
+                'Checklist:\n' +
+                '1) GitHub Release for the current channel is published (not Draft).\n' +
+                '2) Release assets contain `latest-mac.yml` and the corresponding `*-mac.zip`.\n' +
+                '3) If the repo is private, the app must be configured with an auth token to download assets.\n' +
+                `Original error: ${rawMessage}`
+            )
+            : `AutoUpdater: Error - ${rawMessage}`;
+
+        logger('error', message);
+        notifyRenderer('update-error', { message });
     });
 }
 

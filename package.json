@@ -73,7 +73,8 @@
     "files": [
       "src/**/*",
       "dist-renderer/**/*",
-      "assets/**/*"
+      "assets/**/*",
+      "config/**/*"
     ],
     "publish": {
       "provider": "github",
