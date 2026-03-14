@@ -14,7 +14,7 @@
 
         <div class="form-group">
           <label for="user-domain">Домен</label>
-          <input type="text" id="user-domain" v-model="localSettings.user.domain" placeholder="COMPANY">
+          <input type="text" id="user-domain" v-model="localSettings.user.domain" placeholder="CORP или CORP.RU">
         </div>
 
         <div class="form-group">
@@ -32,10 +32,10 @@
         <div class="form-group">
           <label for="rdp-resolution">Разрешение</label>
           <select id="rdp-resolution" v-model="localSettings.rdp.resolution">
-            <option value="1920x1080">1920x1080</option>
+            <option value="1920x1080">1920x1080 (FullHD)</option>
             <option value="1366x768">1366x768</option>
             <option value="1024x768">1024x768</option>
-            <option value="fullscreen">Полный экран</option>
+            <option value="1280x720">1280x720 (HD)</option>
           </select>
         </div>
 
@@ -377,7 +377,17 @@ const appVersion = ref('0.0.0')
 onMounted(async () => {
   initAutoUpdater()
 
-  // Get current version from package.json via API
+  // Get current version from main process via API
+  try {
+    const version = await window.api.getVersion?.()
+    if (version) {
+      appVersion.value = version
+    }
+  } catch (e) {
+    // Ignore - will use default value
+  }
+
+  // Try to get update status
   try {
     const status = await window.api.getUpdateStatus?.()
     if (status) {
@@ -386,9 +396,6 @@ onMounted(async () => {
   } catch (e) {
     // Ignore - may not be available in dev mode
   }
-
-  // Try to get version from settings or use default
-  appVersion.value = '0.2.3'
 })
 
 async function handleCheckUpdates() {

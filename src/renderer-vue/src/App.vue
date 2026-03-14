@@ -6,26 +6,20 @@
         <h1>Alfa Remote Client</h1>
       </div>
       <nav class="sidebar-nav">
-        <button 
-          class="nav-item" 
-          :class="{ active: currentView === 'connections' }"
-          @click="currentView = 'connections'"
-        >
+        <button class="nav-item" :class="{ active: currentView === 'connections' }"
+          @click="currentView = 'connections'">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="2" y="3" width="20" height="14" rx="2"/>
-            <line x1="8" y1="21" x2="16" y2="21"/>
-            <line x1="12" y1="17" x2="12" y2="21"/>
+            <rect x="2" y="3" width="20" height="14" rx="2" />
+            <line x1="8" y1="21" x2="16" y2="21" />
+            <line x1="12" y1="17" x2="12" y2="21" />
           </svg>
           Подключения
         </button>
-        <button 
-          class="nav-item" 
-          :class="{ active: currentView === 'settings' }"
-          @click="currentView = 'settings'"
-        >
+        <button class="nav-item" :class="{ active: currentView === 'settings' }" @click="currentView = 'settings'">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="3"/>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            <circle cx="12" cy="12" r="3" />
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
           </svg>
           Настройки
         </button>
@@ -43,28 +37,36 @@
           <h2>Подключения</h2>
           <button class="btn btn-primary" id="add-connection-btn" @click="openConnectionModal()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="5" x2="12" y2="19"/>
-              <line x1="5" y1="12" x2="19" y2="12"/>
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
             Добавить подключение
           </button>
         </div>
-        
+
         <div class="client-tabs">
-          <button class="client-tab" :class="{ active: currentClientFilter === 'all' }" @click="currentClientFilter = 'all'">Все</button>
-          <button class="client-tab" :class="{ active: currentClientFilter === 'rdp' }" @click="currentClientFilter = 'rdp'">RDP</button>
-          <button class="client-tab" :class="{ active: currentClientFilter === 'horizon' }" @click="currentClientFilter = 'horizon'">Horizon</button>
-          <button class="client-tab" :class="{ active: currentClientFilter === 'citrix' }" @click="currentClientFilter = 'citrix'">Citrix</button>
+          <button class="client-tab" :class="{ active: currentClientFilter === 'all' }"
+            @click="currentClientFilter = 'all'">Все</button>
+          <button class="client-tab" :class="{ active: currentClientFilter === 'rdp' }"
+            @click="currentClientFilter = 'rdp'">RDP</button>
+          <button class="client-tab" :class="{ active: currentClientFilter === 'horizon' }"
+            @click="currentClientFilter = 'horizon'">Horizon</button>
+          <button class="client-tab" :class="{ active: currentClientFilter === 'citrix' }"
+            @click="currentClientFilter = 'citrix'">Citrix</button>
+          <button class="client-tab vpn-tab" @click="handleVpnClick">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="12 3 20 7.5 20 16.5 12 21 4 16.5 4 7.5 12 3"></polyline>
+              <line x1="12" y1="12" x2="20" y2="7.5"></line>
+              <line x1="12" y1="12" x2="12" y2="21"></line>
+              <line x1="12" y1="12" x2="4" y2="7.5"></line>
+            </svg>
+            VPN
+          </button>
         </div>
-        
+
         <div id="connections-list" class="connections-list">
-            <ConnectionsList 
-              :connections="filteredConnections" 
-              @launch="handleLaunch"
-              @edit="openConnectionModal"
-              @delete="handleDeleteConnection"
-              @add="openConnectionModal"
-            />
+          <ConnectionsList :connections="filteredConnections" @launch="handleLaunch" @edit="openConnectionModal"
+            @delete="handleDeleteConnection" @add="openConnectionModal" />
         </div>
       </section>
 
@@ -73,28 +75,17 @@
         <div class="view-header">
           <h2>Настройки</h2>
         </div>
-        
-        <SettingsView 
-          :settings="settings" 
-          @save="handleSaveSettings"
-        />
+
+        <SettingsView :settings="settings" @save="handleSaveSettings" />
       </section>
     </main>
 
     <!-- Connection Modal -->
-    <ConnectionModal
-      v-if="showConnectionModal"
-      :connection="editingConnection"
-      :default-username="defaultUsername"
-      @close="closeConnectionModal"
-      @save="handleSaveConnection"
-    />
+    <ConnectionModal v-if="showConnectionModal" :connection="editingConnection" :default-username="defaultUsername"
+      @close="closeConnectionModal" @save="handleSaveConnection" />
 
     <!-- First Run Modal -->
-    <FirstRunModal
-      v-if="isFirstRun"
-      @save="handleFirstRunSave"
-    />
+    <FirstRunModal v-if="isFirstRun" @save="handleFirstRunSave" />
 
     <!-- Toast -->
     <div v-if="toast.show" :class="['toast', toast.type]">
@@ -111,12 +102,12 @@ import SettingsView from './components/SettingsView.vue'
 import ConnectionModal from './components/ConnectionModal.vue'
 import FirstRunModal from './components/FirstRunModal.vue'
 
-const appVersion = '0.2.3'
+const appVersion = ref('0.2.3')  // Default, will be loaded from API
 
-const { 
-  connections, 
-  settings, 
-  currentView, 
+const {
+  connections,
+  settings,
+  currentView,
   currentClientFilter,
   filteredConnections,
   isFirstRun,
@@ -180,7 +171,7 @@ async function handleSaveConnection(connection) {
 
 async function handleDeleteConnection(id) {
   if (!confirm('Вы уверены, что хотите удалить это подключение?')) return
-  
+
   try {
     await deleteConnection(id)
     showToast('Подключение удалено', 'success')
@@ -193,12 +184,24 @@ async function handleDeleteConnection(id) {
 async function handleLaunch(id) {
   const conn = connections.value.find(c => c.id === id)
   if (!conn) return
-  
+
   const result = await launchConnection(conn)
   if (result && result.success) {
     showToast('Клиент запущен', 'success')
   } else {
     showToast(result?.error || 'Ошибка запуска', 'error')
+  }
+}
+
+// VPN handler - launching bank VPN
+async function handleVpnClick() {
+  try {
+    // TODO: Implement VPN launch logic
+    // This will typically call a VPN connection or script
+    // For now, show a placeholder message
+    showToast('VPN функция будет реализована в будущих версиях', 'info')
+  } catch (error) {
+    showToast('Ошибка при подключении к VPN', 'error')
   }
 }
 
@@ -223,7 +226,7 @@ async function handleFirstRunSave(userData) {
   await saveSettings(currentSettings)
   isFirstRun.value = false
   showToast('Данные пользователя сохранены', 'success')
-  
+
   // Reload connections to get default ones
   await loadData()
 }
@@ -231,6 +234,16 @@ async function handleFirstRunSave(userData) {
 // Initialize
 onMounted(async () => {
   await loadData()
+
+  // Load app version from main process
+  try {
+    const version = await window.api.getVersion?.()
+    if (version) {
+      appVersion.value = version
+    }
+  } catch (e) {
+    // Ignore - version will use default value
+  }
 })
 </script>
 
@@ -428,6 +441,27 @@ onMounted(async () => {
 .client-tab.active {
   background: var(--accent-primary);
   color: white;
+}
+
+.vpn-tab {
+  margin-left: auto;
+  background: var(--accent-secondary, #e74c3c);
+  color: white;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.vpn-tab:hover {
+  background: var(--accent-secondary-hover, #c0392b);
+  color: white;
+}
+
+.vpn-tab svg {
+  width: 16px;
+  height: 16px;
 }
 
 .connections-list {

@@ -55,6 +55,7 @@
       "defaultSettings": {
         "serverUrl": "https://telework.alfabank.ru",
         "desktopName": "workspace-fullvm",
+        "appName": "",
         "desktopProtocol": "",
         "desktopLayout": "",
         "monitors": "",
@@ -77,6 +78,7 @@
       "defaultSettings": {
         "serverUrl": "https://telework.moscow.alfaintra.net",
         "desktopName": "workspace-fullwm",
+        "appName": "",
         "desktopProtocol": "",
         "desktopLayout": "",
         "monitors": "",

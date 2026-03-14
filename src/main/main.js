@@ -16,6 +16,7 @@ const rdpLauncher = require('./launchers/rdpLauncher');
 const horizonLauncher = require('./launchers/horizonLauncher');
 const citrixLauncher = require('./launchers/citrixLauncher');
 const autoUpdaterModule = require('./utils/autoUpdater');
+const { version: appVersion } = require('../version');
 
 // Default configuration
 const BUILTIN_DEFAULTS = {
@@ -209,6 +210,9 @@ function setupIpcHandlers() {
   ipcMain.handle('get-connections', () => configStore ? configStore.get('connections', []) : []);
   ipcMain.handle('get-settings', () => configStore ? configStore.get('settings') : BUILTIN_DEFAULTS.settings);
   ipcMain.handle('get-profiles', () => configStore ? configStore.get('profiles', []) : []);
+
+  // App version handler
+  ipcMain.handle('get-version', () => appVersion);
 
   // Connection handlers
   ipcMain.handle('save-connection', (event, connection) => {

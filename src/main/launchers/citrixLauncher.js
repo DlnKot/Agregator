@@ -355,25 +355,40 @@ function launchCitrix(connection, settings) {
     }
 
     if (process.platform === 'darwin') {
-        // Check for Citrix Workspace
+        // Check for Citrix Workspace on macOS
         const citrixApps = ['Citrix Workspace', 'Citrix Receiver'];
+        let appFound = false;
 
         for (const appName of citrixApps) {
             const result = spawnSync('open', ['-Ra', appName], { stdio: 'ignore' });
             if (result.status === 0) {
                 logger('info', `Citrix Launcher: Found app ${appName}`);
-                // On macOS, Citrix typically opens the store URL
+                appFound = true;
+
+                // On macOS Citrix Workspace, pass store URL as environment variable
+                // The app reads configuration from defaults or environment
                 if (citrixSettings.storeUrl) {
-                    launchDetached('open', [citrixSettings.storeUrl]);
+                    let storeUrl = citrixSettings.storeUrl.trim();
+                    if (!storeUrl.startsWith('http://') && !storeUrl.startsWith('https://')) {
+                        storeUrl = 'https://' + storeUrl;
+                    }
+
+                    logger('info', `Citrix Launcher: Launching with store URL: ${storeUrl}`);
+
+                    // Open the store URL directly - Citrix Workspace will handle it
+                    launchDetached('open', [storeUrl]);
                 } else {
+                    // Open application without URL
                     launchDetached('open', ['-a', appName]);
                 }
                 return;
             }
         }
 
-        logger('error', 'Citrix Launcher: Citrix Workspace not found on macOS');
-        throw new Error('Citrix Workspace not found on macOS');
+        if (!appFound) {
+            logger('error', 'Citrix Launcher: Citrix Workspace not found on macOS');
+            throw new Error('Citrix Workspace not found on macOS. Please install Citrix Workspace from App Store');
+        }
     }
 
     // Linux
