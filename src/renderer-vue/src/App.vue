@@ -102,7 +102,7 @@ import SettingsView from './components/SettingsView.vue'
 import ConnectionModal from './components/ConnectionModal.vue'
 import FirstRunModal from './components/FirstRunModal.vue'
 
-const appVersion = ref('0.2.3')  // Default, will be loaded from API
+const appVersion = ref('0.2.6')  // Default, will be loaded from API
 
 const {
   connections,
