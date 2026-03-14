@@ -42,11 +42,6 @@
         }
       ],
       "icon": "assets/icon.ico",
-      "publish": {
-        "provider": "github",
-        "owner": "DlnKot",
-        "repo": "Agregator"
-      },
       "artifactName": "Alfa.Remote.Client-${version}-Setup.${ext}"
     },
     "mac": {
@@ -59,12 +54,7 @@
           ]
         }
       ],
-      "icon": "assets/icon.icns",
-      "publish": {
-        "provider": "github",
-        "owner": "DlnKot",
-        "repo": "Agregator"
-      }
+      "icon": "assets/icon.icns"
     },
     "nsis": {
       "oneClick": false,
@@ -77,6 +67,7 @@
       "src/**/*",
       "dist-renderer/**/*",
       "assets/**/*"
-    ]
+    ],
+    "publish": null
   }
 }
