@@ -3,6 +3,8 @@
  */
 const { autoUpdater } = require('electron-updater');
 const { BrowserWindow, dialog, ipcMain, app } = require('electron');
+const path = require('path');
+const fs = require('fs');
 const { log: logger } = require('./logger');
 
 // Configure auto-updater logging
@@ -25,11 +27,39 @@ let updateAvailable = false;
 let updateDownloaded = false;
 let updateInfo = null;
 
+function getExpectedUpdateConfigPath() {
+    // electron-updater:
+    // - prod: process.resourcesPath/app-update.yml
+    // - dev (forceDevUpdateConfig): app.getAppPath()/dev-app-update.yml
+    // We only use it for a friendly "missing file" check before checkForUpdates().
+    const fileName = autoUpdater.forceDevUpdateConfig ? 'dev-app-update.yml' : 'app-update.yml';
+    const baseDir = autoUpdater.forceDevUpdateConfig ? app.getAppPath() : process.resourcesPath;
+    return path.join(baseDir, fileName);
+}
+
 /**
  * Initialize auto-updater with GitHub settings
  * @param {Object} config - Configuration with publish settings
  */
 function initAutoUpdater(config = {}) {
+    // Prevent a noisy ENOENT on macOS/Windows if the app was built without update metadata.
+    // In production electron-updater always tries to read process.resourcesPath/app-update.yml.
+    const updateConfigPath = getExpectedUpdateConfigPath();
+    if (app.isPackaged) {
+        try {
+            if (!fs.existsSync(updateConfigPath)) {
+                const message = `AutoUpdater: Missing update config (${updateConfigPath}). ` +
+                    `Build must be produced by electron-builder with a non-null "publish" config.`;
+                logger('error', message);
+                notifyRenderer('update-error', { message });
+                return;
+            }
+        } catch (e) {
+            // If we cannot stat the file for some reason, keep going and let electron-updater emit a proper error.
+            logger('warn', `AutoUpdater: Cannot verify update config file: ${e.message || e}`);
+        }
+    }
+
     // Configure GitHub publish settings
     if (config.owner && config.repo) {
         autoUpdater.autoDownload = false;
