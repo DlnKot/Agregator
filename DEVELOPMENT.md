@@ -3,14 +3,12 @@
 ## Структура веток
 
 ### `dev` ветка (разработка)
-
 - **Назначение:** Активная разработка, тестирование новых фич
 - **Автоматизация:** При пуше создается **Development Build** (pre-release) на GitHub
 - **Тегирование:** Не требуется
 - **Когда использовать:** Для разработки новых функций и исправления багов
 
 ### `main` ветка (стабильные релизы)
-
 - **Назначение:** Стабильные, готовые к продакшену версии
 - **Автоматизация:** При пуше создается **Stable Release** на GitHub
 - **Тегирование:** Автоматическое (на основе версии в `package.json`)
@@ -19,7 +17,6 @@
 ## Workflow разработки
 
 ### 1. Работа на dev ветке
-
 ```bash
 # Переключиться на dev ветку
 git checkout dev
@@ -38,15 +35,12 @@ git push origin dev
 ```
 
 ### 2. Автоматическая сборка (dev ветка)
-
 При пуше в `dev` автоматически:
-
 - ✅ Собирается приложение для Windows и macOS
 - ✅ Создается/обновляется **Development Build** release
 - ✅ Артефакты доступны в GitHub Releases (tag: `dev-build`)
 
 ### 3. Переход на main (релиз)
-
 Когда dev ветка стабильна и готова к релизу:
 
 ```bash
@@ -58,7 +52,6 @@ git push origin main
 ```
 
 Автоматически:
-
 - ✅ Собирается приложение для Windows и macOS
 - ✅ Создается **Stable Release** на GitHub
 - ✅ Релиз содержит свежие артефакты
@@ -74,14 +67,12 @@ git push origin main
 ```
 
 **Правила версионирования:**
-
 - `MAJOR.MINOR.PATCH` (семантическое версионирование)
 - `MAJOR` - крупные изменения (несовместимое изменение API)
 - `MINOR` - новые фичи (обратно совместимо)
 - `PATCH` - исправления багов
 
 **Пример:**
-
 ```bash
 # Исправление бага
 # 0.2.3 → 0.2.4
@@ -96,35 +87,30 @@ git push origin main
 ## GitHub Actions CI/CD
 
 ### Триггеры
-
 - ✅ Пуш в `dev` → Development Build
 - ✅ Пуш в `main` → Stable Release
 - ✅ Тег `v*` в main → Named Release
 
 ### Процесс
-
 1. **Build Windows** - компилирует на Windows Runner
 2. **Build macOS** - компилирует на macOS Runner
 3. **Create Release** - создает релиз на GitHub
 
 ### Что попадает в релиз
-
 - `Alfa.Remote.Client-X.X.X-Setup.exe` (Windows)
 - `Alfa.Remote.Client-X.X.X.dmg` (macOS x64)
 - `Alfa.Remote.Client-X.X.X-arm64.dmg` (macOS ARM)
 - `.blockmap` файлы для дельта-обновлений
 
-## Скопировать и командую
+## Команды для разработки
 
 ### Собрать локально (без публикации)
-
 ```bash
 npm run build:win    # Windows
 npm run build:mac    # macOS
 ```
 
 ### Опубликовать на GitHub (требует GH_TOKEN)
-
 ```bash
 export GH_TOKEN=your_token_here
 npm run publish:win   # Windows + публикация
@@ -132,7 +118,6 @@ npm run publish:mac   # macOS + публикация
 ```
 
 ### Работа с dev веткой
-
 ```bash
 git checkout dev
 git pull origin dev
@@ -143,7 +128,6 @@ git push origin dev
 ```
 
 ### Переход на main (релиз)
-
 ```bash
 git checkout main
 git pull origin main
@@ -161,22 +145,19 @@ git push origin main
 ## Troubleshooting
 
 ### GitHub Actions сборка упала
-
 1. Проверьте логи в Actions tab
 2. Убедитесь, что `package.json` синтаксис правильный
-3. Проверьте что не было changes в `src` и `vite.config.js`
+3. Проверьте что Node.js версия 20+ используется
 
 ### Релиз не создался
-
 - Проверьте что token имеет доступ к `contents: write`
 - Убедитесь что у репо включены Releases
 
 ### Auto-updater не работает
-
 - Проверьте что версия в `package.json` совпадает с тегом релиза
 - Убедитесь что `electron-updater` конфигурация правильная
 
-## Например процесс выпуска версии
+## Пример процесса выпуска версии
 
 ```bash
 # 1. Разработка на dev
