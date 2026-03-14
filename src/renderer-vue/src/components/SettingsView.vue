@@ -348,6 +348,7 @@
 <script setup>
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useApp } from '../composables/useApp'
+import versionData from '../../../version'
 
 const props = defineProps({
   settings: {
@@ -371,7 +372,7 @@ const {
 
 const isChecking = ref(false)
 const isDownloading = ref(false)
-const appVersion = ref('0.0.0')
+const appVersion = ref(versionData.version)
 
 // Initialize auto-updater on mount
 onMounted(async () => {

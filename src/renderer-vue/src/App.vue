@@ -101,8 +101,9 @@ import ConnectionsList from './components/ConnectionsList.vue'
 import SettingsView from './components/SettingsView.vue'
 import ConnectionModal from './components/ConnectionModal.vue'
 import FirstRunModal from './components/FirstRunModal.vue'
+import versionSoure from '../../version.js'
 
-const appVersion = ref('0.2.6')  // Default, will be loaded from API
+const appVersion = ref(versionSoure.version)  // Default, will be loaded from API
 
 const {
   connections,

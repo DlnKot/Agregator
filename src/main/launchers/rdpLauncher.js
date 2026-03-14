@@ -1,4 +1,4 @@
-const { spawn } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const { log: logger } = require('../utils/logger');
@@ -35,6 +35,22 @@ function launchDetached(command, args = []) {
     });
 
     child.unref();
+}
+
+/* ------------------------------------------------ */
+function tryLaunch(command, args = []) {
+    logger('info', `RDP Launcher: ${command} ${args.join(' ')}`);
+
+    // For `open` on macOS we don't want/need detached process tracking.
+    const child = spawn(command, args, { stdio: 'ignore' });
+    child.on('error', (e) => {
+        logger('error', `RDP Launcher: failed to launch ${command}: ${e.message}`);
+    });
+    child.on('exit', (code) => {
+        if (typeof code === 'number' && code !== 0) {
+            logger('warn', `RDP Launcher: ${command} exited with code ${code}`);
+        }
+    });
 }
 
 /* ------------------------------------------------ */
@@ -107,6 +123,40 @@ function scheduleDelete(file, timeout = 10000) {
 }
 
 /* ------------------------------------------------ */
+function findMacWindowsApp() {
+    // Prefer bundle id to avoid app renames/localization ("Windows App" vs "Microsoft Remote Desktop").
+    // Historically Microsoft Remote Desktop uses com.microsoft.rdc.macos.
+    const bundleId = 'com.microsoft.rdc.macos';
+
+    try {
+        const res = spawnSync(
+            'mdfind',
+            [`kMDItemCFBundleIdentifier == "${bundleId}"`],
+            { stdio: 'pipe' }
+        );
+        if (res.status === 0) {
+            const found = res.stdout.toString().split('\n')[0].trim();
+            if (found) return { bundleId, appPath: found };
+        }
+    } catch { /* ignore */ }
+
+    const candidates = [
+        '/Applications/Windows App.app',
+        '/Applications/Microsoft Remote Desktop.app',
+        path.join(process.env.HOME || '', 'Applications/Windows App.app'),
+        path.join(process.env.HOME || '', 'Applications/Microsoft Remote Desktop.app')
+    ];
+
+    for (const p of candidates) {
+        try {
+            if (fs.existsSync(p)) return { bundleId, appPath: p };
+        } catch { /* ignore */ }
+    }
+
+    return { bundleId, appPath: null };
+}
+
+/* ------------------------------------------------ */
 function launchRdp(connection, settings) {
 
     const rdpSettings = settings?.rdp || settings || {};
@@ -128,13 +178,17 @@ function launchRdp(connection, settings) {
 
     if (process.platform === 'darwin') {
 
-        logger('info', 'RDP Launcher: using Windows App');
+        const { bundleId, appPath } = findMacWindowsApp();
 
-        launchDetached('open', [
-            '-a',
-            'Windows App',
-            rdpFile
-        ]);
+        if (appPath) {
+            logger('info', `RDP Launcher: using Windows App (${bundleId}) at ${appPath}`);
+            // Use bundle id to avoid issues with application name/localization.
+            tryLaunch('open', ['-b', bundleId, rdpFile]);
+        } else {
+            // Fall back to the system default handler for .rdp (may be Horizon if user associated it).
+            logger('warn', `RDP Launcher: Windows App not found (bundle id ${bundleId}). Falling back to default handler for .rdp`);
+            tryLaunch('open', [rdpFile]);
+        }
 
         scheduleDelete(rdpFile);
 

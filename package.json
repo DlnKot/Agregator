@@ -1,6 +1,6 @@
 {
   "name": "alfa-remote-client",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "description": "Alfa Remote Client - агрегатор для запуска клиентов удалённых рабочих столов (RDP, Horizon, Citrix)",
   "main": "src/main/main.js",
   "scripts": {

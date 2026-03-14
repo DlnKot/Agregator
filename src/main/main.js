@@ -104,6 +104,40 @@ function readDeploymentDefaults() {
 
 // ==================== Store Initialization ====================
 
+function normalizeConnections(connections = []) {
+  let changed = false;
+
+  const normalized = (Array.isArray(connections) ? connections : []).map((conn, index) => {
+    if (!conn || typeof conn !== 'object') return conn;
+
+    const result = { ...conn };
+
+    // deployment-defaults.json entries historically didn't include id, but the UI uses it as a key and identifier.
+    if (!result.id) {
+      result.id = `${Date.now()}_${index}_${Math.random().toString(36).slice(2, 9)}`;
+      changed = true;
+    }
+
+    if (typeof result.type === 'string') {
+      const lower = result.type.toLowerCase();
+      if (lower !== result.type) {
+        result.type = lower;
+        changed = true;
+      }
+    }
+
+    // Renderer expects per-connection overrides in `clientSettings`.
+    if (result.defaultSettings && !result.clientSettings) {
+      result.clientSettings = result.defaultSettings;
+      changed = true;
+    }
+
+    return result;
+  });
+
+  return { normalized, changed };
+}
+
 function initializeStores() {
   const userDataPath = app.getPath('userData');
   logger('info', `User data path: ${userDataPath}`);
@@ -121,9 +155,18 @@ function initializeStores() {
   if (existingConnections.length === 0 && existingProfiles.length === 0) {
     const source = deploymentDefaults || BUILTIN_DEFAULTS;
     configStore.set('settings', { ...BUILTIN_DEFAULTS.settings, ...(source.settings || {}) });
-    configStore.set('connections', source.connections || []);
+    const { normalized } = normalizeConnections(source.connections || []);
+    configStore.set('connections', normalized);
     configStore.set('profiles', source.profiles || []);
     logger('info', 'Default deployment profile has been applied');
+  }
+
+  // Migration: ensure all stored connections have an id and normalized structure.
+  const currentConnections = configStore.get('connections', []);
+  const { normalized, changed } = normalizeConnections(currentConnections);
+  if (changed) {
+    configStore.set('connections', normalized);
+    logger('info', `Connections normalized (missing id/clientSettings fixed): ${currentConnections.length} entries`);
   }
 }
 
