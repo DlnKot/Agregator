@@ -339,8 +339,13 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-app.on('before-quit', () => {
+app.on('before-quit', (event) => {
+  logger('info', 'App is quitting...');
   killAllLaunchedProcesses();
+  // Give processes time to cleanup
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.destroy();
+  }
 });
 
 logger('info', 'Main process initialized');

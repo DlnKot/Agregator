@@ -15,8 +15,10 @@ autoUpdater.logger = {
 
 autoUpdater.logger.transports = { level: 'info' };
 
-// Enable debugging
-process.env.ELECTRON_DEBUG = '1';
+// Enable debugging only in development mode
+if (process.env.NODE_ENV === 'development') {
+    process.env.ELECTRON_DEBUG = '1';
+}
 
 // Track if update is available
 let updateAvailable = false;
@@ -115,24 +117,66 @@ function notifyRenderer(event, data) {
  * Show dialog when update is ready to install
  */
 async function showUpdateReadyDialog(info) {
-    const mainWindow = BrowserWindow.getFocusedWindow();
-    if (!mainWindow) return;
+    const mainWindow = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0];
+    if (!mainWindow) {
+        // No window, just install directly
+        logger('info', 'AutoUpdater: No window found, installing directly');
+        installUpdateDirect();
+        return;
+    }
 
     const result = await dialog.showMessageBox(mainWindow, {
         type: 'info',
         title: 'Обновление готово',
         message: `Доступна версия ${info.version}`,
-        detail: 'Новое обновление было загружено. Перезапустите приложение для установки обновления.',
+        detail: 'Приложение будет перезагружено для установки обновления.',
         buttons: ['Перезагрузить сейчас', 'Позже'],
         defaultId: 0,
         cancelId: 1
     });
 
     if (result.response === 0) {
-        logger('info', 'AutoUpdater: User chose to restart now');
-        autoUpdater.quitAndInstall(false, true);
+        logger('info', 'AutoUpdater: User chose to restart now, closing all windows...');
+        // Close all windows to release file handles
+        BrowserWindow.getAllWindows().forEach(window => {
+            window.close();
+        });
+        // Give windows time to close, then install
+        setTimeout(() => {
+            installUpdateDirect();
+        }, 500);
     } else {
         logger('info', 'AutoUpdater: User chose to install later');
+    }
+}
+
+/**
+ * Install update and quit
+ */
+function installUpdateDirect() {
+    try {
+        logger('info', 'AutoUpdater: Installing update...');
+
+        // For better reliability on Windows, give extra time for file handles to release
+        if (process.platform === 'win32') {
+            setTimeout(() => {
+                try {
+                    // Parameters: isSilent (true = no progress window), isForceRunAfter (true = launch after install)
+                    autoUpdater.quitAndInstall(true, true);
+                } catch (err) {
+                    logger('error', `AutoUpdater: quitAndInstall failed: ${err.message}`);
+                    // Force quit if quitAndInstall fails
+                    app.quit();
+                }
+            }, 1000);
+        } else {
+            // macOS and Linux - install immediately
+            autoUpdater.quitAndInstall(true, true);
+        }
+    } catch (error) {
+        logger('error', `AutoUpdater: Failed to install update - ${error.message}`);
+        // Emergency exit if installation fails
+        app.quit();
     }
 }
 
@@ -168,8 +212,15 @@ async function downloadUpdate() {
  * Install downloaded update
  */
 function installUpdate() {
-    logger('info', 'AutoUpdater: Installing update and restarting');
-    autoUpdater.quitAndInstall(false, true);
+    logger('info', 'AutoUpdater: User triggered manual installation');
+    // Close all windows to release file handles before installation
+    BrowserWindow.getAllWindows().forEach(window => {
+        window.close();
+    });
+    // Give windows time to close, then install
+    setTimeout(() => {
+        installUpdateDirect();
+    }, 500);
 }
 
 /**

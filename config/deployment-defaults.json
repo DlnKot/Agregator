@@ -44,5 +44,81 @@
       "startMinimized": false
     }
   },
-  "connections": []
+  "connections": [
+    {
+      "type": "horizon",
+      "name": "VDI",
+      "host": "telework.alfabank.ru",
+      "description": "Рабочее место через Horizon",
+      "isDefault": true,
+      "desktopPool": "workspace-fullwm",
+      "defaultSettings": {
+        "serverUrl": "https://telework.alfabank.ru",
+        "desktopName": "workspace-fullvm",
+        "desktopProtocol": "",
+        "desktopLayout": "",
+        "monitors": "",
+        "unattended": false,
+        "nonInteractive": false,
+        "launchMinimized": false,
+        "loginAsCurrentUser": false,
+        "hideClientAfterLaunchSession": false,
+        "useExisting": false,
+        "singleAutoConnect": false
+      }
+    },
+    {
+      "type": "horizon",
+      "name": "VDI - Резерв",
+      "host": "telework.moscow.alfaintra.net",
+      "description": "Рабочее место через Horizon (Москва)",
+      "isDefault": true,
+      "desktopPool": "workspace-fullvm",
+      "defaultSettings": {
+        "serverUrl": "https://telework.moscow.alfaintra.net",
+        "desktopName": "workspace-fullwm",
+        "desktopProtocol": "",
+        "desktopLayout": "",
+        "monitors": "",
+        "unattended": false,
+        "nonInteractive": false,
+        "launchMinimized": false,
+        "loginAsCurrentUser": false,
+        "hideClientAfterLaunchSession": false,
+        "useExisting": false,
+        "singleAutoConnect": false
+      }
+    },
+    {
+      "type": "rdp",
+      "name": "ПУРМС",
+      "host": "mypc.moscow.alfaintra.net",
+      "description": "Удалённый рабочий стол",
+      "isDefault": true,
+      "defaultSettings": {
+        "resolution": "1920x1080",
+        "colorDepth": "32",
+        "multimon": false,
+        "clipboard": true,
+        "driveMapping": false,
+        "useAdminSession": false,
+        "promptCredentials": true,
+        "startFullScreen": false,
+        "span": false
+      }
+    },
+    {
+      "type": "citrix",
+      "name": "Citrix",
+      "host": "sf-vdi.moscow.alfaintra.net",
+      "description": "Виртуальные приложения Citrix",
+      "isDefault": true,
+      "defaultSettings": {
+        "storeUrl": "https://sf-vdi.moscow.alfaintra.net/Citrix/VDI-Apps/discovery",
+        "resourceName": "",
+        "customPath": "",
+        "customFlags": ""
+      }
+    }
+  ]
 }

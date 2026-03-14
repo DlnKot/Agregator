@@ -18,12 +18,12 @@ function setLogFile(filePath) {
 function log(level, ...args) {
  const timestamp = new Date().toISOString();
  const message = `[${timestamp}] [${level}] ${args.join(' ')}`;
- 
+
  // Console output
  console.log(message);
- 
- // File output (on Windows)
- if (logFilePath && process.platform === 'win32') {
+
+ // File output (on all platforms)
+ if (logFilePath) {
  try {
  fs.appendFileSync(logFilePath, message + '\n', 'utf8');
  } catch (e) {

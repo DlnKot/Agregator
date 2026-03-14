@@ -268,34 +268,35 @@ function launchWindows(connection, settings) {
 
     if (!exePath) throw new Error('VMware Horizon Client not found');
 
-    // Формируем аргументы в формате: -key "value"
-    const argsMap = {
-        '-serverURL': connection.host,
-        '-userName': connection.username,
-        '-domainName': connection.domain || '',
-        '-desktopName': settings.desktopName || '',
-        '-loginAsCurrentUser': settings.loginAsCurrentUser ? 'True' : 'False'
-    };
-
-    // Массив аргументов с кавычками вокруг значений, если они не пустые
+    // Build args array in proper format
     const args = [];
-    for (const [key, value] of Object.entries(argsMap)) {
-        if (value !== '') {
-            // оборачиваем значение в кавычки
-            args.push(`${key} "${value}"`);
-        }
-    }
 
-    // Лог для дебага
-    const cmdForLog = `"${exePath}" ${args.join(' ')}`;
-    logger('info', `Launching Windows Horizon Client: ${cmdForLog}`);
+    if (connection.host)
+        args.push('-serverURL', connection.host);
 
-    // Запуск через shell:true
-    const child = spawn(`"${exePath}" ${args.join(' ')}`, {
-        shell: true,
+    if (connection.username)
+        args.push('-userName', connection.username);
+
+    if (connection.domain)
+        args.push('-domainName', connection.domain);
+
+    if (settings.desktopName)
+        args.push('-desktopName', settings.desktopName);
+
+    if (settings.loginAsCurrentUser)
+        args.push('-loginAsCurrentUser', 'true');
+
+    logger('info', `Launching Windows Horizon Client: ${exePath} ${args.join(' ')}`);
+
+    // Use proper spawn API with array arguments - no shell injection risk
+    const child = spawn(exePath, args, {
         detached: true,
-        stdio: 'ignore'
+        stdio: 'ignore',
+        shell: false
     });
+
+    if (!child.pid)
+        throw new Error('Failed to start Horizon Client');
 
     child.unref();
 }
