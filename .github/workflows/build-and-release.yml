@@ -1,0 +1,147 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build Windows
+      run: npm run build:win
+      env:
+        CSC_IDENTITY_AUTO_DISCOVERY: false
+
+    - name: Upload Windows artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-artifacts
+        path: |
+          dist/Alfa.Remote.Client-*.exe
+          dist/Alfa.Remote.Client-*.exe.blockmap
+        retention-days: 1
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build macOS
+      run: npm run build:mac
+      env:
+        CSC_IDENTITY_AUTO_DISCOVERY: false
+
+    - name: Upload macOS artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-artifacts
+        path: |
+          dist/Alfa*.dmg
+          dist/Alfa*.dmg.blockmap
+        retention-days: 1
+
+  create-release:
+    needs: [build-windows, build-macos]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || startsWith(github.ref, 'refs/tags/v'))
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+
+    - name: Prepare release files
+      run: |
+        mkdir -p release-files
+        find artifacts -type f \( -name "*.exe" -o -name "*.dmg" -o -name "*.blockmap" \) -exec cp {} release-files/ \;
+
+    - name: Get version
+      id: version
+      run: |
+        VERSION=$(node -e "console.log(require('./package.json').version)")
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Release version: $VERSION"
+
+    - name: Create/Update dev release
+      if: github.ref == 'refs/heads/dev'
+      uses: softprops/action-gh-release@v2
+      with:
+        files: release-files/*
+        tag_name: dev-build
+        name: Development Build (Latest)
+        draft: false
+        prerelease: true
+        body: |
+          **Development Build** - Latest from dev branch
+
+          Version: ${{ steps.version.outputs.version }}
+
+          Build: ${{ github.run_number }}
+          Commit: ${{ github.sha }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Create release for main/tags
+      if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+      uses: softprops/action-gh-release@v2
+      with:
+        files: release-files/*
+        tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('v{0}', steps.version.outputs.version) }}
+        name: Release ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('v{0}', steps.version.outputs.version) }}
+        draft: false
+        prerelease: false
+        body: |
+          **Stable Release**
+
+          Version: ${{ steps.version.outputs.version }}
+          Build: ${{ github.run_number }}
+
+          Download your preferred installer for your operating system.
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload to GitHub Release
+      if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+      run: |
+        echo "Files ready for release:"
+        ls -lah release-files/
