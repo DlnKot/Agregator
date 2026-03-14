@@ -208,6 +208,62 @@ function launchHorizon(connection, settings) {
     launchDetached('vmware-view', args);
 }
 
+/**
+ * Initialize Citrix Storefront (Windows only)
+ * Registers/configures a Storefront provider for Citrix client
+ * Command: SelfService.exe -init -createprovider PROVIDER_NAME STORE_URL
+ */
+function initializeCitrixStorefront(exePath, storeUrl) {
+    try {
+        // Normalize store URL
+        let normalizedUrl = storeUrl.trim();
+        if (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
+            normalizedUrl = 'https://' + normalizedUrl;
+        }
+
+        // Use a descriptive provider name for the Storefront
+        const providerName = 'StoreFront';
+
+        logger('info', `Citrix Launcher: Initializing Storefront`);
+        logger('info', `Citrix Launcher: Store URL: ${normalizedUrl}`);
+        logger('info', `Citrix Launcher: Provider Name: ${providerName}`);
+
+        // Build initialization arguments
+        const initArgs = [
+            '-init',
+            '-createprovider',
+            providerName,
+            normalizedUrl
+        ];
+
+        logger('info', `Citrix Launcher: Running initialization: ${exePath} ${initArgs.join(' ')}`);
+
+        // Run initialization synchronously and wait for completion
+        const result = spawnSync(exePath, initArgs, {
+            stdio: ['ignore', 'pipe', 'pipe'],
+            timeout: 30000 // 30 second timeout for initialization
+        });
+
+        if (result.error) {
+            logger('warn', `Citrix Launcher: Initialization process error: ${result.error.message}`);
+            return;
+        }
+
+        if (result.status === 0) {
+            logger('info', `Citrix Launcher: Storefront initialization completed successfully`);
+        } else {
+            logger('warn', `Citrix Launcher: Initialization exited with code ${result.status}`);
+            if (result.stderr) {
+                logger('warn', `Citrix Launcher: stderr: ${result.stderr.toString()}`);
+            }
+        }
+
+    } catch (error) {
+        logger('warn', `Citrix Launcher: Storefront initialization failed: ${error.message}`);
+        // Don't throw - continue with normal launch even if initialization fails
+    }
+}
+
 // Citrix Workspace launcher
 function launchCitrix(connection, settings) {
     // Extract citrix settings from full settings object
@@ -257,8 +313,12 @@ function launchCitrix(connection, settings) {
             throw new Error('Citrix Workspace not found. Please install it or specify custom path in settings.');
         }
 
-        // Build args - use command line parameters for Citrix
-        // According to docs: -store, -launch, -quiet, etc.
+        // Initialize storefront if storeUrl is provided
+        if (citrixSettings.storeUrl) {
+            initializeCitrixStorefront(exePath, citrixSettings.storeUrl);
+        }
+
+        // Build args for launching resource or opening client
         const args = [];
 
         // Store URL - normalize with https:// if needed
