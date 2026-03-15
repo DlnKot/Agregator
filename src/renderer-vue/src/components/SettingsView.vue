@@ -348,7 +348,6 @@
 <script setup>
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useApp } from '../composables/useApp'
-import versionData from '../../../version'
 
 const props = defineProps({
   settings: {
@@ -372,7 +371,7 @@ const {
 
 const isChecking = ref(false)
 const isDownloading = ref(false)
-const appVersion = ref(versionData.version)
+const appVersion = ref('0.0.0')
 
 // Initialize auto-updater on mount
 onMounted(async () => {
@@ -547,6 +546,7 @@ function saveSettings() {
   flex-direction: column;
   height: 90%;
   background: var(--bg-primary);
+  border-radius: 30px;
   padding: 20px;
   overflow: hidden;
 }
@@ -557,7 +557,7 @@ function saveSettings() {
   margin-bottom: 24px;
   padding: 4px;
   background: var(--bg-secondary);
-  border-radius: var(--radius);
+  border-radius: var(--radius-xl);
   width: fit-content;
 }
 
@@ -565,20 +565,22 @@ function saveSettings() {
   padding: 10px 20px;
   border: none;
   background: transparent;
-  color: var(--text-secondary);
-  font-size: 13px;
+  color: var(--text-primary);
+  opacity: 0.8;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  border-radius: var(--radius-sm);
+  border-radius: 25px;
   transition: var(--transition);
 }
 
 .settings-tab:hover {
-  color: var(--text-primary);
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
 }
 
 .settings-tab.active {
-  background: var(--accent-primary);
+  background: black;
   color: white;
 }
 
@@ -610,7 +612,7 @@ function saveSettings() {
 /* Preview */
 .preview-label {
   font-size: 13px;
-  color: var(--text-secondary);
+  color: var(--accent-primary);
   margin-top: 16px;
   padding: 12px;
   background: var(--bg-tertiary);
@@ -618,7 +620,7 @@ function saveSettings() {
 }
 
 .preview-label strong {
-  color: var(--accent-primary);
+  color: var(--accent-danger);
 }
 
 /* Buttons */
@@ -636,12 +638,12 @@ function saveSettings() {
 }
 
 .btn-primary {
-  background: var(--accent-primary);
+  background: var(--bg-tertiary);
   color: white;
 }
 
 .btn-primary:hover {
-  background: var(--accent-primary-hover);
+  background: var(--accent-danger);
 }
 
 /* Forms */
@@ -653,7 +655,7 @@ function saveSettings() {
   display: block;
   font-size: 13px;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   margin-bottom: 8px;
 }
 
@@ -663,7 +665,6 @@ function saveSettings() {
 .form-group textarea {
   width: 100%;
   padding: 10px 14px;
-  background: var(--bg-tertiary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
@@ -716,7 +717,7 @@ function saveSettings() {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: var(--bg-tertiary);
+  background-color: var(--accent-primary);
   border: 1px solid var(--border-color);
   transition: var(--transition);
   border-radius: 26px;
@@ -735,7 +736,7 @@ function saveSettings() {
 }
 
 .toggle input:checked+.toggle-slider {
-  background-color: var(--accent-primary);
+  background-color: var(--bg-tertiary);
   border-color: var(--accent-primary);
 }
 
@@ -746,7 +747,7 @@ function saveSettings() {
 
 /* Update Section */
 .update-status-card {
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
   padding: 20px;
@@ -762,7 +763,7 @@ function saveSettings() {
 
 .update-label {
   font-size: 14px;
-  color: var(--text-secondary);
+  color: var(--text-primary);
 }
 
 .update-value {
@@ -791,7 +792,7 @@ function saveSettings() {
 
 .progress-bar {
   height: 8px;
-  background: var(--bg-tertiary);
+  background: var(--bg-primary);
   border-radius: 4px;
   overflow: hidden;
   margin-bottom: 8px;
@@ -805,13 +806,13 @@ function saveSettings() {
 
 .progress-text {
   font-size: 12px;
-  color: var(--text-secondary);
+  color: var(--text-primary);
 }
 
 .update-message {
   margin-top: 12px;
   font-size: 13px;
-  color: var(--text-secondary);
+  color: var(--text-primary);
 }
 
 .update-error {
@@ -836,12 +837,12 @@ function saveSettings() {
 /* Buttons */
 .btn-secondary {
   background: var(--bg-tertiary);
-  color: var(--text-primary);
+  color: var(--text-secondary);
   border: 1px solid var(--border-color);
 }
 
 .btn-secondary:hover {
-  background: var(--bg-hover);
+  background: var(--accent-danger);
 }
 
 .btn:disabled {

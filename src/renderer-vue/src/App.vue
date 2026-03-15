@@ -1,91 +1,99 @@
 <template>
   <div class="app">
-    <!-- Sidebar -->
-    <aside class="sidebar">
-      <div class="sidebar-header">
+    <div class="app-container">
+      <div class="header">
         <h1>Alfa Remote Client</h1>
       </div>
-      <nav class="sidebar-nav">
-        <button class="nav-item" :class="{ active: currentView === 'connections' }"
-          @click="currentView = 'connections'">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="2" y="3" width="20" height="14" rx="2" />
-            <line x1="8" y1="21" x2="16" y2="21" />
-            <line x1="12" y1="17" x2="12" y2="21" />
-          </svg>
-          Подключения
-        </button>
-        <button class="nav-item" :class="{ active: currentView === 'settings' }" @click="currentView = 'settings'">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="3" />
-            <path
-              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-          </svg>
-          Настройки
-        </button>
-      </nav>
-      <div class="sidebar-footer">
-        <span class="version">v{{ appVersion }}</span>
+      <div class="app-content">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+          <nav class="sidebar-nav">
+            <button class="nav-item" :class="{ active: currentView === 'connections' }"
+              @click="currentView = 'connections'">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="3" width="20" height="14" rx="2" />
+                <line x1="8" y1="21" x2="16" y2="21" />
+                <line x1="12" y1="17" x2="12" y2="21" />
+              </svg>
+              Подключения
+            </button>
+            <button class="nav-item" :class="{ active: currentView === 'settings' }" @click="currentView = 'settings'">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3" />
+                <path
+                  d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+              Настройки
+            </button>
+          </nav>
+          <div class="sidebar-footer">
+            <span class="version">v{{ appVersion }}</span>
+          </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+          <!-- Connections View -->
+          <section v-if="currentView === 'connections'" id="connections-view" class="view active">
+            <div class="view-header">
+              <div class="client-tabs">
+                <button class="client-tab" :class="{ active: currentClientFilter === 'all' }"
+                  @click="currentClientFilter = 'all'">Все</button>
+                <button class="client-tab" :class="{ active: currentClientFilter === 'rdp' }"
+                  @click="currentClientFilter = 'rdp'">RDP</button>
+                <button class="client-tab" :class="{ active: currentClientFilter === 'horizon' }"
+                  @click="currentClientFilter = 'horizon'">Horizon</button>
+                <button class="client-tab" :class="{ active: currentClientFilter === 'citrix' }"
+                  @click="currentClientFilter = 'citrix'">Citrix</button>
+                <button class="client-tab vpn-tab" @click="handleVpnClick">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="12 3 20 7.5 20 16.5 12 21 4 16.5 4 7.5 12 3"></polyline>
+                    <line x1="12" y1="12" x2="20" y2="7.5"></line>
+                    <line x1="12" y1="12" x2="12" y2="21"></line>
+                    <line x1="12" y1="12" x2="4" y2="7.5"></line>
+                  </svg>
+                  VPN
+                </button>
+              </div>
+              <button class="btn btn-primary" id="add-connection-btn" @click="openConnectionModal()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Добавить подключение
+              </button>
+            </div>
+
+            <div id="connections-list" class="connections-list">
+              <ConnectionsList :connections="filteredConnections" @launch="handleLaunch" @edit="openConnectionModal"
+                @delete="handleDeleteConnection" @add="openConnectionModal" />
+            </div>
+          </section>
+
+          <!-- Settings View -->
+          <section v-if="currentView === 'settings'" id="settings-view" class="view">
+            <div class="view-header">
+              <h2>Настройки</h2>
+            </div>
+
+            <SettingsView :settings="settings" @save="handleSaveSettings" />
+          </section>
+        </main>
+
       </div>
-    </aside>
+    </div>
 
-    <!-- Main Content -->
-    <main class="main-content">
-      <!-- Connections View -->
-      <section v-if="currentView === 'connections'" id="connections-view" class="view active">
-        <div class="view-header">
-          <h2>Подключения</h2>
-          <button class="btn btn-primary" id="add-connection-btn" @click="openConnectionModal()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            Добавить подключение
-          </button>
-        </div>
 
-        <div class="client-tabs">
-          <button class="client-tab" :class="{ active: currentClientFilter === 'all' }"
-            @click="currentClientFilter = 'all'">Все</button>
-          <button class="client-tab" :class="{ active: currentClientFilter === 'rdp' }"
-            @click="currentClientFilter = 'rdp'">RDP</button>
-          <button class="client-tab" :class="{ active: currentClientFilter === 'horizon' }"
-            @click="currentClientFilter = 'horizon'">Horizon</button>
-          <button class="client-tab" :class="{ active: currentClientFilter === 'citrix' }"
-            @click="currentClientFilter = 'citrix'">Citrix</button>
-          <button class="client-tab vpn-tab" @click="handleVpnClick">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="12 3 20 7.5 20 16.5 12 21 4 16.5 4 7.5 12 3"></polyline>
-              <line x1="12" y1="12" x2="20" y2="7.5"></line>
-              <line x1="12" y1="12" x2="12" y2="21"></line>
-              <line x1="12" y1="12" x2="4" y2="7.5"></line>
-            </svg>
-            VPN
-          </button>
-        </div>
 
-        <div id="connections-list" class="connections-list">
-          <ConnectionsList :connections="filteredConnections" @launch="handleLaunch" @edit="openConnectionModal"
-            @delete="handleDeleteConnection" @add="openConnectionModal" />
-        </div>
-      </section>
 
-      <!-- Settings View -->
-      <section v-if="currentView === 'settings'" id="settings-view" class="view">
-        <div class="view-header">
-          <h2>Настройки</h2>
-        </div>
-
-        <SettingsView :settings="settings" @save="handleSaveSettings" />
-      </section>
-    </main>
 
     <!-- Connection Modal -->
     <ConnectionModal v-if="showConnectionModal" :connection="editingConnection" :default-username="defaultUsername"
       @close="closeConnectionModal" @save="handleSaveConnection" />
 
     <!-- First Run Modal -->
-    <FirstRunModal v-if="isFirstRun" @save="handleFirstRunSave" />
+    <!-- TODO: Убрать как закончу переделку интерфейса  -->
+    <FirstRunModal v-if="false" @save="handleFirstRunSave" />
 
     <!-- Toast -->
     <div v-if="toast.show" :class="['toast', toast.type]">
@@ -101,9 +109,8 @@ import ConnectionsList from './components/ConnectionsList.vue'
 import SettingsView from './components/SettingsView.vue'
 import ConnectionModal from './components/ConnectionModal.vue'
 import FirstRunModal from './components/FirstRunModal.vue'
-import versionSoure from '../../version.js'
 
-const appVersion = ref(versionSoure.version)  // Default, will be loaded from API
+const appVersion = ref('0.0.0')  // Will be loaded from API when running in Electron
 
 const {
   connections,
@@ -250,33 +257,49 @@ onMounted(async () => {
 
 <style scoped>
 .app {
-  display: flex;
   height: 100vh;
   width: 100vw;
   overflow: hidden;
 }
 
+.app-container {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius);
+  /* background: var(--bg-primary); */
+  /* box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); */
+}
+
+.app-content {
+  display: flex;
+}
+
 /* Sidebar */
 .sidebar {
   width: var(--sidebar-width);
+  /* height: 100%; */
   background: var(--bg-secondary);
-  border-right: 1px solid var(--border-color);
+  margin: 10px;
+  border-radius: 30px;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
 }
 
-.sidebar-header {
-  padding: 20px 16px;
+.header {
+  background: var(--bg-secondary);
+  padding: 20px 10px;
+  margin: 10px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  border-bottom: 1px solid var(--border-color);
+  border-radius: 30px;
+  margin-bottom: 5px;
 }
 
-.sidebar-header h1 {
-  font-size: 18px;
-  font-weight: 600;
+.header h1 {
+  font-size: 24px;
+  margin-inline: 10px;
+  font-weight: 500;
   color: var(--text-primary);
 }
 
@@ -295,11 +318,11 @@ onMounted(async () => {
   padding: 12px 16px;
   border: none;
   background: transparent;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  border-radius: var(--radius);
+  border-radius: 25px;
   transition: var(--transition);
   text-align: left;
   width: 100%;
@@ -307,14 +330,14 @@ onMounted(async () => {
 
 .nav-item:hover {
   background: var(--bg-tertiary);
-  color: var(--text-primary);
+  color: var(--text-secondary);
+  transition: var(--transition);
+  opacity: 0.9;
 }
 
 .nav-item.active {
-  background: var(--bg-tertiary);
+  background: var(--accent-danger);
   color: var(--accent-primary);
-  border-left: 3px solid var(--accent-primary);
-  padding-left: 13px;
 }
 
 .nav-item svg {
@@ -324,12 +347,14 @@ onMounted(async () => {
 }
 
 .sidebar-footer {
-  padding: 16px;
+  padding: 10px;
   border-top: 1px solid var(--border-color);
+  opacity: 0.8;
 }
 
 .version {
   font-size: 12px;
+  margin-inline: 10px;
   color: var(--text-muted);
 }
 
@@ -339,7 +364,10 @@ onMounted(async () => {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: var(--bg-primary);
+  background: var(--bg-secondary);
+  border-radius: 30px;
+  margin-block: 10px;
+  margin-right: 10px;
 }
 
 .view {
@@ -373,7 +401,7 @@ onMounted(async () => {
   gap: 8px;
   padding: 10px 16px;
   border: none;
-  border-radius: var(--radius);
+  border-radius: var(--radius-xl);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -386,12 +414,13 @@ onMounted(async () => {
 }
 
 .btn-primary {
-  background: var(--accent-primary);
+  background: var(--accent-danger);
   color: white;
 }
 
 .btn-primary:hover {
-  background: var(--accent-primary-hover);
+  background: var(--bg-tertiary);
+  opacity: 0.9;
 }
 
 .btn-secondary {
@@ -415,11 +444,12 @@ onMounted(async () => {
 /* Client Tabs */
 .client-tabs {
   display: flex;
+  align-content: center;
+  justify-content: center;
   gap: 8px;
-  margin-bottom: 20px;
   padding: 4px;
-  background: var(--bg-secondary);
-  border-radius: var(--radius);
+  background: var(--bg-primary);
+  border-radius: var(--radius-xl);
   width: fit-content;
 }
 
@@ -427,11 +457,11 @@ onMounted(async () => {
   padding: 8px 16px;
   border: none;
   background: transparent;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-xl);
   transition: var(--transition);
 }
 
@@ -440,7 +470,7 @@ onMounted(async () => {
 }
 
 .client-tab.active {
-  background: var(--accent-primary);
+  background: var(--bg-tertiary);
   color: white;
 }
 

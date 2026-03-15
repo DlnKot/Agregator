@@ -83,14 +83,13 @@ function escapeHtml(text) {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 16px;
-  overflow-y: auto;
+  overflow-y: scroll;
   padding-right: 8px;
 }
 
 .connection-card {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
+  background: var(--bg-primary);
+  border-radius: var(--radius-xl);
   padding: 20px;
   transition: var(--transition);
   cursor: pointer;
@@ -148,13 +147,15 @@ function escapeHtml(text) {
 
 .connection-host {
   font-size: 13px;
-  color: var(--text-secondary);
+  color: var(--text-primary);
+  opacity: 0.8;
   margin-bottom: 12px;
 }
 
 .connection-description {
   font-size: 12px;
   color: var(--text-muted);
+  opacity: 0.8;
   margin-bottom: 16px;
 }
 
@@ -198,17 +199,15 @@ function escapeHtml(text) {
 .btn-icon {
   padding: 8px;
   background: transparent;
-  color: #ffffff;
-}
-
-.btn-icon svg {
-  stroke: #ffffff;
+  color: black;
 }
 
 .btn-icon:hover {
   background: var(--bg-tertiary);
-  color: #ffffff;
+  stroke: white;
+  color: white;
 }
+
 
 .btn-empty-add {
   min-width: 220px;

@@ -1,21 +1,21 @@
 /* ==================== Global CSS Variables ==================== */
 :root {
-  --bg-primary: #0f0f0f;
-  --bg-secondary: #1a1a1a;
+  --bg-primary: #F2F3F5;
+  --bg-secondary: #ffffff;
   --bg-tertiary: #252525;
   --bg-hover: #2d2d2d;
   
-  --accent-primary: #3b82f6;
+  --accent-primary: #DBDDE1;
   --accent-primary-hover: #2563eb;
   --accent-success: #10b981;
   --accent-warning: #f59e0b;
   --accent-danger: #ef4444;
   
-  --text-primary: #ffffff;
-  --text-secondary: #a1a1aa;
+  --text-primary: #000000;
+  --text-secondary: #ffffff;
   --text-muted: #71717a;
   
-  --border-color: #2d2d2d;
+  --border-color: #8e8e8e;
   --border-light: #3d3d3d;
   
   --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
@@ -24,6 +24,7 @@
   --radius: 8px;
   --radius-sm: 6px;
   --radius-lg: 12px;
+  --radius-xl: 25px;
   
   --transition: 150ms ease;
   

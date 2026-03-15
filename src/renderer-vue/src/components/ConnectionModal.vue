@@ -259,7 +259,7 @@ function save() {
   gap: 8px;
   padding: 10px 16px;
   border: none;
-  border-radius: var(--radius);
+  border-radius: var(--radius-xl);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -268,20 +268,22 @@ function save() {
 
 .btn-primary {
   background: var(--accent-primary);
-  color: white;
+  color: black;
 }
 
 .btn-primary:hover {
-  background: var(--accent-primary-hover);
+  background: var(--accent-danger);
+  color: var(--text-secondary);
 }
 
 .btn-secondary {
   background: var(--bg-tertiary);
-  color: var(--text-primary);
+  color: var(--text-secondary);
 }
 
 .btn-secondary:hover {
-  background: var(--bg-hover);
+  background: var(--accent-danger);
+  color: white;
 }
 
 /* Forms */
@@ -302,7 +304,7 @@ function save() {
 .form-group textarea {
   width: 100%;
   padding: 10px 14px;
-  background: var(--bg-tertiary);
+  background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
@@ -316,14 +318,17 @@ function save() {
   outline: none;
   border-color: var(--accent-primary);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  
 }
 
 .form-group textarea {
   resize: vertical;
   min-height: 80px;
+  background: var(--bg-secondary);
 }
 
 .form-group select {
   cursor: pointer;
+  background: var(--bg-secondary);
 }
 </style>

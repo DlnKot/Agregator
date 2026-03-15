@@ -177,7 +177,7 @@ function createWindow() {
 
   mainWindow = new BrowserWindow({
     width: 1100,
-    height: 700,
+    height: 880,
     minWidth: 900,
     minHeight: 600,
     backgroundColor: '#0f0f0f',
@@ -192,17 +192,24 @@ function createWindow() {
     titleBarStyle: 'default'
   });
 
-  // Load Vue app - use built files from dist-renderer
-  const distPath = path.join(__dirname, '../../dist-renderer/index.html');
-  const fsCheck = require('fs');
-
-  if (fsCheck.existsSync(distPath)) {
-    mainWindow.loadFile(distPath);
-    logger('info', `Loading Vue app from: ${distPath}`);
+  // Dev: load Vite dev server for hot reload.
+  if (!app.isPackaged && process.env.ELECTRON_DEV) {
+    const devServerUrl = process.env.VITE_DEV_SERVER_URL || 'http://localhost:5173';
+    logger('info', `Loading Vue dev server: ${devServerUrl}`);
+    mainWindow.loadURL(devServerUrl);
   } else {
-    // Fallback to source files for development
-    mainWindow.loadFile(path.join(__dirname, '../renderer-vue/index.html'));
-    logger('info', 'Loading Vue app from source (dist not found)');
+    // Prod (or dev without server): use built files from dist-renderer if present.
+    const distPath = path.join(__dirname, '../../dist-renderer/index.html');
+    const fsCheck = require('fs');
+
+    if (fsCheck.existsSync(distPath)) {
+      mainWindow.loadFile(distPath);
+      logger('info', `Loading Vue app from: ${distPath}`);
+    } else {
+      // Fallback to source files for development
+      mainWindow.loadFile(path.join(__dirname, '../renderer-vue/index.html'));
+      logger('info', 'Loading Vue app from source (dist not found)');
+    }
   }
 
   // Log any page errors

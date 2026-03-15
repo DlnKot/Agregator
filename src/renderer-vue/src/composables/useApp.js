@@ -14,6 +14,14 @@ async function loadData() {
   isLoading.value = true
 
   try {
+    // Allows opening the renderer directly in a browser (Vite) without Electron preload.
+    if (!window.api) {
+      connections.value = []
+      settings.value = { user: { domain: '', username: '' } }
+      isFirstRun.value = true
+      return
+    }
+
     const [conns, s] = await Promise.all([
       window.api.getConnections(),
       window.api.getSettings()
