@@ -111,8 +111,7 @@
       @close="closeConnectionModal" @save="handleSaveConnection" />
 
     <!-- First Run Modal -->
-    <!-- TODO: Убрать как закончу переделку интерфейса  -->
-    <FirstRunModal v-if="false" @save="handleFirstRunSave" />
+    <FirstRunModal v-if="isFirstRun" @save="handleFirstRunSave" />
 
     <!-- Toast -->
     <div v-if="toast.show" :class="['toast', toast.type]">
@@ -128,8 +127,9 @@ import ConnectionsList from './components/ConnectionsList.vue'
 import SettingsView from './components/SettingsView.vue'
 import ConnectionModal from './components/ConnectionModal.vue'
 import FirstRunModal from './components/FirstRunModal.vue'
+import versionData from '../../version.js'
 
-const appVersion = ref('0.0.0')  // Will be loaded from API when running in Electron
+const appVersion = ref(versionData.version)  // Will be loaded from API when running in Electron
 const theme = ref('light')
 
 const {
