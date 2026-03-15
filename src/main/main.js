@@ -15,6 +15,7 @@ const SimpleStore = require('./stores/simpleStore');
 const rdpLauncher = require('./launchers/rdpLauncher');
 const horizonLauncher = require('./launchers/horizonLauncher');
 const citrixLauncher = require('./launchers/citrixLauncher');
+const vpnLauncher = require('./launchers/vpnLauncher');
 const autoUpdaterModule = require('./utils/autoUpdater');
 const { version: appVersion } = require('../version');
 
@@ -54,6 +55,7 @@ const BUILTIN_DEFAULTS = {
     },
     citrix: {
       storeUrl: '',
+      accountName: '',
       resourceName: '',
       customPath: '',
       customFlags: ''
@@ -330,6 +332,16 @@ function setupIpcHandlers() {
       return { success: true };
     } catch (error) {
       logger('error', `Citrix launch error: ${error.message}`);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('launch-vpn', async () => {
+    try {
+      vpnLauncher.launchVpn();
+      return { success: true };
+    } catch (error) {
+      logger('error', `VPN launch error: ${error.message}`);
       return { success: false, error: error.message };
     }
   });

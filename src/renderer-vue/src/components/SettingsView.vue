@@ -243,6 +243,13 @@
         </div>
 
         <div class="form-group">
+          <label for="citrix-account">Account name (macOS createaccount name=)</label>
+          <input type="text" id="citrix-account" v-model="localSettings.citrix.accountName"
+            placeholder="Store или CorpStore">
+          <small>На macOS используется для регистрации StoreFront через citrixreceiver://createaccount</small>
+        </div>
+
+        <div class="form-group">
           <label for="citrix-resource">Ресурс / Published App (-launch)</label>
           <input type="text" id="citrix-resource" v-model="localSettings.citrix.resourceName"
             placeholder="Например: Desktop">
@@ -379,7 +386,7 @@ onMounted(async () => {
 
   // Get current version from main process via API
   try {
-    const version = await window.api.getVersion?.()
+    const version = await window.api?.getVersion?.()
     if (version) {
       appVersion.value = version
     }
@@ -389,7 +396,7 @@ onMounted(async () => {
 
   // Try to get update status
   try {
-    const status = await window.api.getUpdateStatus?.()
+    const status = await window.api?.getUpdateStatus?.()
     if (status) {
       updateStatus.value = status
     }
@@ -485,6 +492,7 @@ const defaultSettings = {
   },
   citrix: {
     storeUrl: '',
+    accountName: '',
     resourceName: '',
     customPath: '',
     customFlags: ''
@@ -544,7 +552,8 @@ function saveSettings() {
 .settings-container {
   display: flex;
   flex-direction: column;
-  height: 90%;
+  flex: 1;
+  min-height: 0;
   background: var(--bg-primary);
   border-radius: 30px;
   padding: 20px;
@@ -575,13 +584,14 @@ function saveSettings() {
 }
 
 .settings-tab:hover {
-  color: var(--text-secondary);
+  color: var(--text-inverse);
   background: var(--bg-tertiary);
 }
 
 .settings-tab.active {
-  background: black;
-  color: white;
+  background: var(--bg-tertiary);
+  color: var(--text-inverse);
+  opacity: 1;
 }
 
 .settings-sections {
@@ -612,7 +622,7 @@ function saveSettings() {
 /* Preview */
 .preview-label {
   font-size: 13px;
-  color: var(--accent-primary);
+  color: var(--text-inverse);
   margin-top: 16px;
   padding: 12px;
   background: var(--bg-tertiary);
@@ -639,11 +649,23 @@ function saveSettings() {
 
 .btn-primary {
   background: var(--bg-tertiary);
-  color: white;
+  color: var(--text-inverse);
 }
 
 .btn-primary:hover {
   background: var(--accent-danger);
+}
+
+.btn-secondary {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-inverse);
+  border-color: var(--border-light);
 }
 
 /* Forms */
@@ -665,6 +687,7 @@ function saveSettings() {
 .form-group textarea {
   width: 100%;
   padding: 10px 14px;
+  background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
@@ -730,7 +753,7 @@ function saveSettings() {
   width: 20px;
   left: 2px;
   bottom: 2px;
-  background-color: var(--text-secondary);
+  background-color: var(--text-inverse);
   transition: var(--transition);
   border-radius: 50%;
 }
@@ -742,7 +765,7 @@ function saveSettings() {
 
 .toggle input:checked+.toggle-slider:before {
   transform: translateX(22px);
-  background-color: white;
+  background-color: var(--text-inverse);
 }
 
 /* Update Section */

@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld('api', {
   launchRdp: (connection, settings) => ipcRenderer.invoke('launch-rdp', connection, settings),
   launchHorizon: (connection, settings) => ipcRenderer.invoke('launch-horizon', connection, settings),
   launchCitrix: (connection, settings) => ipcRenderer.invoke('launch-citrix', connection, settings),
+  launchVpn: () => ipcRenderer.invoke('launch-vpn'),
 
   // Auto-updater
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),

@@ -3,6 +3,7 @@
  */
 
 const { spawn, spawnSync } = require('child_process');
+const os = require('os');
 const fs = require('fs');
 const path = require('path');
 const { log: logger } = require('../utils/logger');
@@ -54,6 +55,138 @@ function launchDetached(command, args = [], options = {}) {
 function splitArgs(raw = '') {
     if (!raw) return [];
     return raw.match(/(?:[^\s"]+|"[^"]*")+/g)?.map(a => a.replace(/"/g, '')) || [];
+}
+
+function normalizeHttpsUrl(raw = '') {
+    const trimmed = (raw || '').trim();
+    if (!trimmed) return '';
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed.replace(/\/+$/, '');
+    return ('https://' + trimmed).replace(/\/+$/, '');
+}
+
+function normalizeStorefrontAddress(raw = '') {
+    const normalized = normalizeHttpsUrl(raw);
+    if (!normalized) return '';
+
+    // If a discovery endpoint is provided, strip it to the base address.
+    // Example:
+    //   https://host/Citrix/Store/discovery -> https://host/Citrix/Store
+    try {
+        const u = new URL(normalized);
+        const p = u.pathname.replace(/\/+$/, '');
+        if (p.toLowerCase().endsWith('/discovery')) {
+            u.pathname = p.slice(0, -'/discovery'.length) || '/';
+            u.search = '';
+            u.hash = '';
+            return u.toString().replace(/\/+$/, '');
+        }
+        u.search = '';
+        u.hash = '';
+        return u.toString().replace(/\/+$/, '');
+    } catch {
+        return normalized.replace(/\/+$/, '');
+    }
+}
+
+function getUrlOrigin(raw = '') {
+    try {
+        return new URL(raw).origin;
+    } catch {
+        return '';
+    }
+}
+
+function buildCitrixCreateAccountUrl(accountName, addressUrl) {
+    const name = encodeURIComponent(accountName || 'Store');
+    const address = encodeURIComponent(addressUrl);
+    return `citrixreceiver://createaccount?name=${name}&address=${address}`;
+}
+
+function getCitrixAccountsDirMac() {
+    return path.join(os.homedir(), 'Library', 'Application Support', 'Citrix', 'Receiver', 'Accounts');
+}
+
+function scanTextInDir(dir, needles) {
+    // Best-effort scan: Citrix stores account metadata in files (often plist/binary).
+    // We'll check filenames and file contents (as utf8/latin1) up to a small depth.
+    const stack = [{ p: dir, depth: 0 }];
+    const maxDepth = 3;
+
+    while (stack.length) {
+        const { p, depth } = stack.pop();
+        let entries;
+        try {
+            entries = fs.readdirSync(p, { withFileTypes: true });
+        } catch {
+            continue;
+        }
+
+        for (const ent of entries) {
+            const full = path.join(p, ent.name);
+            const lowerName = (ent.name || '').toLowerCase();
+            if (needles.some(n => lowerName.includes(n))) return true;
+
+            if (ent.isDirectory()) {
+                if (depth < maxDepth) stack.push({ p: full, depth: depth + 1 });
+                continue;
+            }
+
+            if (!ent.isFile()) continue;
+
+            try {
+                const buf = fs.readFileSync(full);
+                const s1 = buf.toString('utf8');
+                const s2 = buf.toString('latin1');
+                const hit = needles.some(n => s1.toLowerCase().includes(n) || s2.toLowerCase().includes(n));
+                if (hit) return true;
+            } catch {
+                // ignore unreadable files
+            }
+        }
+    }
+
+    return false;
+}
+
+function isStorefrontRegisteredMac(storeUrl) {
+    const normalized = normalizeStorefrontAddress(storeUrl);
+    if (!normalized) return false;
+
+    const accountsDir = getCitrixAccountsDirMac();
+    try {
+        if (!fs.existsSync(accountsDir)) return false;
+    } catch {
+        return false;
+    }
+
+    let host = '';
+    const origin = getUrlOrigin(normalized).toLowerCase();
+    try {
+        host = new URL(normalized).host.toLowerCase();
+    } catch {
+        host = normalized.toLowerCase();
+    }
+
+    const needles = [host, origin, normalized.toLowerCase()].filter(Boolean);
+    return scanTextInDir(accountsDir, needles);
+}
+
+function ensureStorefrontAccountMac(accountName, storeUrl) {
+    const normalized = normalizeStorefrontAddress(storeUrl);
+    if (!normalized) return { ensured: false, reason: 'no_store_url' };
+
+    if (isStorefrontRegisteredMac(normalized)) {
+        logger('info', `Citrix Launcher: Storefront already registered (mac): ${normalized}`);
+        return { ensured: true, already: true, storeUrl: normalized };
+    }
+
+    // Citrix Workspace on macOS is picky about the address format for createaccount:
+    // it typically expects only the origin, like https://storefront.company.com (no /Citrix/Store/... path).
+    const origin = getUrlOrigin(normalized) || normalized;
+    const url = buildCitrixCreateAccountUrl(accountName || 'Store', origin);
+    logger('info', `Citrix Launcher: Registering Storefront (mac): ${url}`);
+    launchDetached('open', [url]);
+    return { ensured: true, already: false, storeUrl: normalized, url, origin };
 }
 
 function findHorizonExecutable(customPath) {
@@ -270,8 +403,17 @@ function launchCitrix(connection, settings) {
     const citrixSettings = settings?.citrix || settings || {};
 
     logger('info', `Citrix Launcher: Starting connection to ${connection.host}`);
-    logger('info', `Citrix Launcher: Store URL: ${citrixSettings.storeUrl}`);
+    logger('info', `Citrix Launcher: Store URL (settings): ${citrixSettings.storeUrl}`);
     logger('info', `Citrix Launcher: Resource: ${citrixSettings.resourceName}`);
+
+    const effectiveStoreUrlRaw = (connection?.storeUrl || '').trim() || (citrixSettings.storeUrl || '').trim();
+    const effectiveStoreUrl = normalizeStorefrontAddress(effectiveStoreUrlRaw);
+
+    if (effectiveStoreUrl) {
+        logger('info', `Citrix Launcher: Store URL (effective): ${effectiveStoreUrl}`);
+    } else if (effectiveStoreUrlRaw) {
+        logger('info', `Citrix Launcher: Store URL provided but cannot normalize: ${effectiveStoreUrlRaw}`);
+    }
 
     if (process.platform === 'win32') {
         // Find Citrix Workspace executable - correct paths
@@ -313,24 +455,19 @@ function launchCitrix(connection, settings) {
             throw new Error('Citrix Workspace not found. Please install it or specify custom path in settings.');
         }
 
-        // Initialize storefront if storeUrl is provided
-        if (citrixSettings.storeUrl) {
-            initializeCitrixStorefront(exePath, citrixSettings.storeUrl);
+        // Initialize storefront if storeUrl is provided (connection.storeUrl has priority)
+        if (effectiveStoreUrl) {
+            initializeCitrixStorefront(exePath, effectiveStoreUrl);
         }
 
         // Build args for launching resource or opening client
         const args = [];
 
         // Store URL - normalize with https:// if needed
-        if (citrixSettings.storeUrl) {
-            let storeUrl = citrixSettings.storeUrl.trim();
-            // Add https:// if no protocol specified
-            if (!storeUrl.startsWith('http://') && !storeUrl.startsWith('https://')) {
-                storeUrl = 'https://' + storeUrl;
-            }
+        if (effectiveStoreUrl) {
             args.push('-store');
-            args.push(storeUrl);
-            logger('info', `Citrix Launcher: Using store URL: ${storeUrl}`);
+            args.push(effectiveStoreUrl);
+            logger('info', `Citrix Launcher: Using store URL: ${effectiveStoreUrl}`);
         }
 
         // Resource to launch
@@ -357,42 +494,38 @@ function launchCitrix(connection, settings) {
     if (process.platform === 'darwin') {
         // Check for Citrix Workspace on macOS
         const citrixApps = ['Citrix Workspace', 'Citrix Receiver'];
-        let appFound = false;
 
         for (const appName of citrixApps) {
             const result = spawnSync('open', ['-Ra', appName], { stdio: 'ignore' });
             if (result.status === 0) {
                 logger('info', `Citrix Launcher: Found app ${appName}`);
-                appFound = true;
 
-                // On macOS Citrix Workspace, pass store URL as environment variable
-                // The app reads configuration from defaults or environment
-                if (citrixSettings.storeUrl) {
-                    let storeUrl = citrixSettings.storeUrl.trim();
-                    if (!storeUrl.startsWith('http://') && !storeUrl.startsWith('https://')) {
-                        storeUrl = 'https://' + storeUrl;
+                const storeUrl = effectiveStoreUrl;
+                const accountName = ((citrixSettings.accountName || '').trim() || 'Store');
+
+                if (storeUrl) {
+                    const res = ensureStorefrontAccountMac(accountName, storeUrl);
+                    if (res.ensured && !res.already) {
+                        // Give the receiver some time to create the account before we bring the app to front.
+                        setTimeout(() => {
+                            launchDetached('open', ['-a', appName]);
+                        }, 1200);
+                        return;
                     }
-
-                    logger('info', `Citrix Launcher: Launching with store URL: ${storeUrl}`);
-
-                    // Open the store URL directly - Citrix Workspace will handle it
-                    launchDetached('open', [storeUrl]);
-                } else {
-                    // Open application without URL
-                    launchDetached('open', ['-a', appName]);
                 }
+
+                // Normal open (already registered, or store URL not provided)
+                launchDetached('open', ['-a', appName]);
                 return;
             }
         }
 
-        if (!appFound) {
-            logger('error', 'Citrix Launcher: Citrix Workspace not found on macOS');
-            throw new Error('Citrix Workspace not found on macOS. Please install Citrix Workspace from App Store');
-        }
+        logger('error', 'Citrix Launcher: Citrix Workspace not found on macOS');
+        throw new Error('Citrix Workspace not found on macOS. Please install Citrix Workspace');
     }
 
     // Linux
-    launchDetached('ctx', ['-store', citrixSettings.storeUrl || '']);
+    launchDetached('ctx', ['-store', effectiveStoreUrl || '']);
 }
 
 function killAllProcesses() {

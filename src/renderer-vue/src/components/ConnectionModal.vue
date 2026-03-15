@@ -83,6 +83,7 @@ const form = reactive({
   name: '',
   host: '',
   desktopPool: '',
+  storeUrl: '',
   username: '',
   description: ''
 })
@@ -98,6 +99,7 @@ watch(() => props.connection, (newVal) => {
       name: newVal.name || '',
       host: newVal.host || '',
       desktopPool: newVal.desktopPool || '',
+      storeUrl: newVal.storeUrl || '',
       username: newVal.username || '',
       description: newVal.description || ''
     })
@@ -109,6 +111,7 @@ watch(() => props.connection, (newVal) => {
       name: '',
       host: '',
       desktopPool: '',
+      storeUrl: '',
       username: props.defaultUsername || '',
       description: ''
     })
@@ -144,6 +147,7 @@ function save() {
     name: form.name.trim(),
     host: normalizedHost,
     desktopPool: form.desktopPool.trim(),
+    storeUrl: (form.storeUrl || '').trim(),
     username: form.username.trim(),
     description: form.description.trim()
   }
@@ -268,22 +272,22 @@ function save() {
 
 .btn-primary {
   background: var(--accent-primary);
-  color: black;
+  color: #0b1220;
 }
 
 .btn-primary:hover {
   background: var(--accent-danger);
-  color: var(--text-secondary);
+  color: var(--text-inverse);
 }
 
 .btn-secondary {
   background: var(--bg-tertiary);
-  color: var(--text-secondary);
+  color: var(--text-inverse);
 }
 
 .btn-secondary:hover {
   background: var(--accent-danger);
-  color: white;
+  color: var(--text-inverse);
 }
 
 /* Forms */

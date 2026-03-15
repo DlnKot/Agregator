@@ -1,25 +1,28 @@
 /* ==================== Global CSS Variables ==================== */
 :root {
-  --bg-primary: #F2F3F5;
-  --bg-secondary: #ffffff;
-  --bg-tertiary: #252525;
-  --bg-hover: #2d2d2d;
-  
-  --accent-primary: #DBDDE1;
+  /* Theme (light by default). Use [data-theme="dark"] overrides below. */
+  color-scheme: light;
+  --bg-primary: #f2f3f5;        /* window */
+  --bg-secondary: #ffffff;      /* panels */
+  --bg-tertiary: #1f2937;       /* strong surface (chips/active/hover) */
+  --bg-hover: #111827;          /* stronger hover */
+
+  --accent-primary: #dbdde1;
   --accent-primary-hover: #2563eb;
   --accent-success: #10b981;
   --accent-warning: #f59e0b;
   --accent-danger: #ef4444;
   
-  --text-primary: #000000;
-  --text-secondary: #ffffff;
-  --text-muted: #71717a;
+  --text-primary: #0b1220;
+  --text-secondary: #3f4a5e;
+  --text-muted: #6b7280;
+  --text-inverse: #ffffff;
   
-  --border-color: #8e8e8e;
-  --border-light: #3d3d3d;
+  --border-color: rgba(17, 24, 39, 0.14);
+  --border-light: rgba(17, 24, 39, 0.22);
   
-  --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow: 0 6px 18px rgba(17, 24, 39, 0.10);
+  --shadow-lg: 0 14px 38px rgba(17, 24, 39, 0.14);
   
   --radius: 8px;
   --radius-sm: 6px;
@@ -29,6 +32,75 @@
   --transition: 150ms ease;
   
   --sidebar-width: 220px;
+}
+
+/* ==================== Fonts ==================== */
+@font-face {
+  font-family: "Ubuntu";
+  src: url("./assets/fonts/ubuntu/Ubuntu-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Ubuntu";
+  src: url("./assets/fonts/ubuntu/Ubuntu-Italic.ttf") format("truetype");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Ubuntu";
+  src: url("./assets/fonts/ubuntu/Ubuntu-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Ubuntu";
+  src: url("./assets/fonts/ubuntu/Ubuntu-MediumItalic.ttf") format("truetype");
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Ubuntu";
+  src: url("./assets/fonts/ubuntu/Ubuntu-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Ubuntu";
+  src: url("./assets/fonts/ubuntu/Ubuntu-BoldItalic.ttf") format("truetype");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Dark theme */
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --bg-primary: #161a22;
+  --bg-secondary: #1d2230;
+  --bg-tertiary: #2a3142;
+  --bg-hover: #353e54;
+
+  --text-primary: #e7eaf0;
+  --text-secondary: #c6cddd;
+  --text-muted: #8e97aa;
+  --text-inverse: #ffffff;
+
+  --border-color: rgba(255, 255, 255, 0.12);
+  --border-light: rgba(255, 255, 255, 0.18);
+
+  --shadow: 0 10px 22px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 18px 44px rgba(0, 0, 0, 0.45);
 }
 
 /* ==================== Reset & Base ==================== */
@@ -45,7 +117,7 @@ html, body, #app {
 }
 
 body {
-  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: "Ubuntu", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 14px;
   line-height: 1.5;
   color: var(--text-primary);

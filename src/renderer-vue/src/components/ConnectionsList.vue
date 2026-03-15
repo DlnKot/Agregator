@@ -83,8 +83,7 @@ function escapeHtml(text) {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 16px;
-  overflow-y: scroll;
-  padding-right: 8px;
+  overflow: visible;
 }
 
 .connection-card {
@@ -199,13 +198,13 @@ function escapeHtml(text) {
 .btn-icon {
   padding: 8px;
   background: transparent;
-  color: black;
+  color: var(--text-primary);
 }
 
 .btn-icon:hover {
   background: var(--bg-tertiary);
-  stroke: white;
-  color: white;
+  stroke: var(--text-inverse);
+  color: var(--text-inverse);
 }
 
 

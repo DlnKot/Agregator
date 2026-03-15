@@ -158,7 +158,7 @@ function save() {
 
 .preview-label {
   font-size: 13px;
-  color: var(--text-secondary);
+  color: var(--text-inverse);
   margin-top: 16px;
   padding: 12px;
   background: var(--bg-tertiary);
@@ -185,7 +185,7 @@ function save() {
 
 .btn-primary {
   background: var(--accent-primary);
-  color: white;
+  color: #0b1220;
 }
 
 .btn-primary:hover {

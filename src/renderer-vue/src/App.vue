@@ -27,6 +27,25 @@
             </button>
           </nav>
           <div class="sidebar-footer">
+            <button class="theme-toggle" type="button" @click="toggleTheme" :title="theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'">
+              <span class="theme-toggle-icon" aria-hidden="true">
+                <svg v-if="theme === 'dark'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="4"></circle>
+                  <path d="M12 2v2"></path>
+                  <path d="M12 20v2"></path>
+                  <path d="M4.93 4.93l1.41 1.41"></path>
+                  <path d="M17.66 17.66l1.41 1.41"></path>
+                  <path d="M2 12h2"></path>
+                  <path d="M20 12h2"></path>
+                  <path d="M4.93 19.07l1.41-1.41"></path>
+                  <path d="M17.66 6.34l1.41-1.41"></path>
+                </svg>
+                <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path>
+                </svg>
+              </span>
+              <span class="theme-toggle-text">{{ theme === 'dark' ? 'Light' : 'Dark' }}</span>
+            </button>
             <span class="version">v{{ appVersion }}</span>
           </div>
         </aside>
@@ -111,6 +130,7 @@ import ConnectionModal from './components/ConnectionModal.vue'
 import FirstRunModal from './components/FirstRunModal.vue'
 
 const appVersion = ref('0.0.0')  // Will be loaded from API when running in Electron
+const theme = ref('light')
 
 const {
   connections,
@@ -204,10 +224,16 @@ async function handleLaunch(id) {
 // VPN handler - launching bank VPN
 async function handleVpnClick() {
   try {
-    // TODO: Implement VPN launch logic
-    // This will typically call a VPN connection or script
-    // For now, show a placeholder message
-    showToast('VPN функция будет реализована в будущих версиях', 'info')
+    if (!window.api?.launchVpn) {
+      showToast('VPN доступен только при запуске в приложении (Electron)', 'error')
+      return
+    }
+    const result = await window.api.launchVpn()
+    if (result && result.success) {
+      showToast('VPN клиент запущен', 'success')
+    } else {
+      showToast(result?.error || 'Не удалось запустить VPN клиент', 'error')
+    }
   } catch (error) {
     showToast('Ошибка при подключении к VPN', 'error')
   }
@@ -245,7 +271,7 @@ onMounted(async () => {
 
   // Load app version from main process
   try {
-    const version = await window.api.getVersion?.()
+    const version = await window.api?.getVersion?.()
     if (version) {
       appVersion.value = version
     }
@@ -253,6 +279,35 @@ onMounted(async () => {
     // Ignore - version will use default value
   }
 })
+
+function applyTheme(nextTheme) {
+  const t = nextTheme === 'dark' ? 'dark' : 'light'
+  theme.value = t
+  document.documentElement.dataset.theme = t
+  try {
+    localStorage.setItem('arc_theme', t)
+  } catch (e) {
+    // Ignore storage errors (private mode, etc.)
+  }
+}
+
+function toggleTheme() {
+  applyTheme(theme.value === 'dark' ? 'light' : 'dark')
+}
+
+// Apply theme ASAP (before first paint when possible)
+try {
+  const saved = localStorage.getItem('arc_theme')
+  if (saved === 'dark' || saved === 'light') {
+    applyTheme(saved)
+  } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    applyTheme('dark')
+  } else {
+    applyTheme('light')
+  }
+} catch (e) {
+  applyTheme('light')
+}
 </script>
 
 <style scoped>
@@ -265,6 +320,9 @@ onMounted(async () => {
 .app-container {
   display: flex;
   flex-direction: column;
+  height: 100%;
+  padding: 10px;
+  gap: 10px;
   border-radius: var(--radius);
   /* background: var(--bg-primary); */
   /* box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); */
@@ -272,39 +330,42 @@ onMounted(async () => {
 
 .app-content {
   display: flex;
+  flex: 1;
+  min-height: 0;
+  gap: 10px;
 }
 
 /* Sidebar */
 .sidebar {
   width: var(--sidebar-width);
-  /* height: 100%; */
   background: var(--bg-secondary);
-  margin: 10px;
   border-radius: 30px;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+  min-height: 0;
 }
 
 .header {
   background: var(--bg-secondary);
   padding: 20px 10px;
-  margin: 10px;
   display: flex;
   align-items: center;
   border-radius: 30px;
-  margin-bottom: 5px;
+  flex-shrink: 0;
 }
 
 .header h1 {
   font-size: 24px;
-  margin-inline: 10px;
-  font-weight: 500;
+  margin-inline: 15px;
+  font-weight: 300;
   color: var(--text-primary);
 }
 
 .sidebar-nav {
   flex: 1;
+  min-height: 0;
+  overflow: auto;
   padding: 12px 8px;
   display: flex;
   flex-direction: column;
@@ -330,14 +391,14 @@ onMounted(async () => {
 
 .nav-item:hover {
   background: var(--bg-tertiary);
-  color: var(--text-secondary);
+  color: var(--text-inverse);
   transition: var(--transition);
   opacity: 0.9;
 }
 
 .nav-item.active {
   background: var(--accent-danger);
-  color: var(--accent-primary);
+  color: var(--text-inverse);
 }
 
 .nav-item svg {
@@ -350,12 +411,55 @@ onMounted(async () => {
   padding: 10px;
   border-top: 1px solid var(--border-color);
   opacity: 0.8;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: space-between;
 }
 
 .version {
   font-size: 12px;
   margin-inline: 10px;
   color: var(--text-muted);
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.theme-toggle:hover {
+  border-color: var(--border-light);
+  background: var(--bg-tertiary);
+  color: var(--text-inverse);
+}
+
+.theme-toggle-icon {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-toggle-icon svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.theme-toggle-text {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
 }
 
 /* Main Content */
@@ -366,20 +470,17 @@ onMounted(async () => {
   flex-direction: column;
   background: var(--bg-secondary);
   border-radius: 30px;
-  margin-block: 10px;
-  margin-right: 10px;
+  min-height: 0;
+  min-width: 0;
 }
 
 .view {
-  /* display: none; */
+  display: flex;
   flex: 1;
   flex-direction: column;
   overflow: hidden;
   padding: 24px;
-}
-
-.view.active {
-  display: flex;
+  min-height: 0;
 }
 
 .view-header {
@@ -415,7 +516,7 @@ onMounted(async () => {
 
 .btn-primary {
   background: var(--accent-danger);
-  color: white;
+  color: var(--text-inverse);
 }
 
 .btn-primary:hover {
@@ -425,7 +526,7 @@ onMounted(async () => {
 
 .btn-secondary {
   background: var(--bg-tertiary);
-  color: var(--text-primary);
+  color: var(--text-inverse);
 }
 
 .btn-secondary:hover {
@@ -434,7 +535,7 @@ onMounted(async () => {
 
 .btn-danger {
   background: var(--accent-danger);
-  color: white;
+  color: var(--text-inverse);
 }
 
 .btn-danger:hover {
@@ -451,6 +552,7 @@ onMounted(async () => {
   background: var(--bg-primary);
   border-radius: var(--radius-xl);
   width: fit-content;
+  border: 1px solid var(--border-color);
 }
 
 .client-tab {
@@ -471,13 +573,13 @@ onMounted(async () => {
 
 .client-tab.active {
   background: var(--bg-tertiary);
-  color: white;
+  color: var(--text-inverse);
 }
 
 .vpn-tab {
   margin-left: auto;
   background: var(--accent-secondary, #e74c3c);
-  color: white;
+  color: var(--text-inverse);
   padding: 8px 12px;
   display: flex;
   align-items: center;
@@ -487,7 +589,7 @@ onMounted(async () => {
 
 .vpn-tab:hover {
   background: var(--accent-secondary-hover, #c0392b);
-  color: white;
+  color: var(--text-inverse);
 }
 
 .vpn-tab svg {
@@ -497,7 +599,8 @@ onMounted(async () => {
 
 .connections-list {
   flex: 1;
-  overflow-y: auto;
+  min-height: 0;
+  overflow: auto;
   padding-right: 8px;
 }
 </style>
