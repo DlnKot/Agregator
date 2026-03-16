@@ -16,6 +16,11 @@ function launchDetached(command, args = []) {
         windowsVerbatimArguments: true
     });
 
+    // Prevent unhandled 'error' events (e.g. ENOENT) from crashing the app.
+    child.on('error', (e) => {
+        logger('error', `RDP Launcher: failed to launch ${command}: ${e.message}`);
+    });
+
     if (!child.pid) {
         throw new Error('Failed to launch process');
     }
@@ -217,11 +222,15 @@ function killAllProcesses() {
 
             if (process.platform === 'win32') {
 
-                spawn(
+                const child = spawn(
                     'taskkill',
                     ['/pid', proc.pid.toString(), '/T', '/F'],
                     { stdio: 'ignore', shell: true }
                 );
+                child.on('error', (e) => {
+                    logger('warn', `RDP Launcher: taskkill failed for ${proc.pid}: ${e.message}`);
+                });
+                child.unref();
 
             } else {
 

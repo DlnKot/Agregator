@@ -33,6 +33,11 @@ function launchDetached(command, args = [], options = {}) {
             ...options
         });
 
+        // Prevent unhandled 'error' events (e.g. ENOENT) from crashing the app.
+        child.on('error', (e) => {
+            logger('error', `Citrix Launcher: failed to launch ${command}: ${e.message}`);
+        });
+
         if (child.pid) {
             launchedProcesses.push({
                 pid: child.pid,
@@ -538,12 +543,16 @@ function killAllProcesses() {
 
             if (process.platform === 'win32') {
 
-                spawn('taskkill', [
+                const child = spawn('taskkill', [
                     '/pid',
                     proc.pid.toString(),
                     '/T',
                     '/F'
                 ], { stdio: 'ignore' });
+                child.on('error', (e) => {
+                    logger('warn', `Citrix Launcher: taskkill failed for ${proc.pid}: ${e.message}`);
+                });
+                child.unref();
 
             }
 

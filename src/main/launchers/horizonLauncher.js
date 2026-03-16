@@ -31,6 +31,11 @@ function launchDetached(command, args = []) {
         windowsVerbatimArguments: true
     });
 
+    // Prevent unhandled 'error' events (e.g. ENOENT) from crashing the app.
+    child.on('error', (e) => {
+        logger('error', `Horizon Launcher: failed to launch ${command}: ${e.message}`);
+    });
+
     if (!child.pid) {
         throw new Error('Failed to start process');
     }
@@ -302,6 +307,11 @@ function launchWindows(connection, settings) {
         shell: false
     });
 
+    // Prevent unhandled 'error' events (e.g. ENOENT) from crashing the app.
+    child.on('error', (e) => {
+        logger('error', `Horizon Launcher: failed to launch ${exePath}: ${e.message}`);
+    });
+
     if (!child.pid)
         throw new Error('Failed to start Horizon Client');
 
@@ -335,12 +345,16 @@ function killAllProcesses() {
 
             if (process.platform === 'win32') {
 
-                spawn('taskkill', [
+                const child = spawn('taskkill', [
                     '/pid',
                     proc.pid.toString(),
                     '/T',
                     '/F'
                 ], { stdio: 'ignore', shell: true });
+                child.on('error', (e) => {
+                    logger('warn', `Horizon Launcher: taskkill failed for ${proc.pid}: ${e.message}`);
+                });
+                child.unref();
 
             } else {
 

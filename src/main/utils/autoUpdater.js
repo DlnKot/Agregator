@@ -5,6 +5,7 @@ const { autoUpdater } = require('electron-updater');
 const { BrowserWindow, dialog, ipcMain, app } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { spawnSync } = require('child_process');
 const { log: logger } = require('./logger');
 
 // Configure auto-updater logging
@@ -67,6 +68,20 @@ function initAutoUpdater(config = {}) {
 
         logger('info', `AutoUpdater: Initialized for ${config.owner}/${config.repo}`);
         logger('info', `AutoUpdater: Current version - ${config.currentVersion}`);
+
+        // Best-effort diagnostics: macOS auto-update requires a signed app.
+        if (process.platform === 'darwin' && app.isPackaged) {
+            try {
+                const res = spawnSync('codesign', ['-dv', '--verbose=2', process.execPath], { encoding: 'utf8' });
+                if (res.status !== 0) {
+                    logger('warn', 'AutoUpdater: macOS app does not look code-signed. Auto-update may fail to install.');
+                } else {
+                    logger('info', 'AutoUpdater: macOS code-sign check passed.');
+                }
+            } catch (e) {
+                logger('warn', `AutoUpdater: Cannot run codesign check: ${e.message || e}`);
+            }
+        }
     } else {
         logger('warn', 'AutoUpdater: GitHub owner/repo not configured. Updates disabled.');
         return;
@@ -212,8 +227,22 @@ function installUpdateDirect() {
                 }
             }, 1000);
         } else {
-            // macOS and Linux - install immediately
-            autoUpdater.quitAndInstall(true, true);
+            // macOS and Linux
+            // On macOS we prefer a non-silent install to make Squirrel/MacUpdater behave more predictably.
+            // Also add a safety relaunch fallback in case the updater quits the app but doesn't relaunch it.
+            let relaunchTimer = null;
+            if (process.platform === 'darwin') {
+                relaunchTimer = setTimeout(() => {
+                    logger('warn', 'AutoUpdater: Relaunch fallback triggered (macOS).');
+                    try { app.relaunch(); } catch (e) { /* ignore */ }
+                    try { app.exit(0); } catch (e) { /* ignore */ }
+                }, 5000);
+            }
+
+            // Parameters: isSilent, isForceRunAfter
+            // NOTE: quitAndInstall is typically synchronous and returns immediately, so we must NOT clear
+            // the relaunch timer here. If the app actually quits, the process will exit before the timer fires.
+            autoUpdater.quitAndInstall(false, true);
         }
     } catch (error) {
         logger('error', `AutoUpdater: Failed to install update - ${error.message}`);
