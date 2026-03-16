@@ -180,6 +180,48 @@ function findHorizonExecutable(customPath) {
     if (customPath && fs.existsSync(customPath))
         return customPath;
 
+    // Prefer registry on Windows to locate the real installation path:
+    // HKLM\SOFTWARE\VMware, Inc.\VMware VDM\ClientInstallPath
+    if (process.platform === 'win32') {
+        const regKey = 'HKLM\\SOFTWARE\\VMware, Inc.\\VMware VDM';
+        const regValue = 'ClientInstallPath';
+
+        const tryParseReg = (stdout) => {
+            const s = (stdout || '').toString();
+            // Typical output:
+            // ClientInstallPath    REG_SZ    C:\Program Files\VMware\VMware Horizon Client\
+            const m = s.match(new RegExp(`${regValue}\\s+REG_\\w+\\s+(.+)`, 'i'));
+            return m ? m[1].trim() : '';
+        };
+
+        const tryRegQuery = (extraArgs = []) => {
+            try {
+                const res = spawnSync('reg', ['query', regKey, '/v', regValue, ...extraArgs], { encoding: 'utf8' });
+                if (res.status !== 0) return '';
+                return tryParseReg(res.stdout);
+            } catch {
+                return '';
+            }
+        };
+
+        const regPath = tryRegQuery(['/reg:64']) || tryRegQuery(['/reg:32']) || tryRegQuery([]);
+        if (regPath) {
+            const candidate = regPath.toLowerCase().endsWith('.exe')
+                ? regPath
+                : path.join(regPath, 'bin', 'vmware-view.exe');
+
+            try {
+                if (fs.existsSync(candidate)) {
+                    logger('info', `Found Horizon via registry: ${candidate}`);
+                    return candidate;
+                }
+                logger('warn', `Horizon registry path found but exe missing: ${candidate}`);
+            } catch {
+                // ignore
+            }
+        }
+    }
+
     const roots = [
         'C:\\Program Files\\VMware',
         'C:\\Program Files (x86)\\VMware'

@@ -22,7 +22,7 @@
           <input type="text" id="user-username" v-model="localSettings.user.username" placeholder="ivanov">
         </div>
 
-        <p class="preview-label">Итоговый логин: <strong>{{ previewUsername }}</strong></p>
+        <p class="preview-label">Итоговый логин: <strong>{{ previewUsername.toUpperCase() }}</strong></p>
       </div>
 
       <!-- RDP Settings -->
@@ -649,12 +649,12 @@ function saveSettings() {
 }
 
 .btn-primary {
-  background: var(--bg-tertiary);
+  background: var(--accent-danger);
   color: var(--text-inverse);
 }
 
 .btn-primary:hover {
-  background: var(--accent-danger);
+  background: var(--bg-tertiary);
 }
 
 .btn-secondary {
@@ -856,17 +856,6 @@ function saveSettings() {
 
 .update-info-text p {
   margin: 0;
-}
-
-/* Buttons */
-.btn-secondary {
-  background: var(--bg-tertiary);
-  color: var(--text-secondary);
-  border: 1px solid var(--border-color);
-}
-
-.btn-secondary:hover {
-  background: var(--accent-danger);
 }
 
 .btn:disabled {

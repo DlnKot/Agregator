@@ -81,7 +81,10 @@ function launchVpn() {
     // Primary requirement: start TrGUI.exe (typically installed in Program Files).
     const relCandidates = [
       path.join('TrGUI', 'TrGUI.exe'),
-      path.join('TrGUI', 'TrGUI', 'TrGUI.exe')
+      path.join('TrGUI', 'TrGUI', 'TrGUI.exe'),
+      // Check Point Endpoint Connect (common default install path)
+      path.join('CheckPoint', 'Endpoint Connect', 'TrGUI.exe'),
+      path.join('CheckPoint', 'Endpoint Security VPN', 'TrGUI.exe')
     ];
 
     const absCandidates = [];

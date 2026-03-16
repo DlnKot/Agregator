@@ -30,7 +30,7 @@
             >
           </div>
           
-          <p class="preview-label">Итоговый логин: <strong>{{ previewUsername }}</strong></p>
+          <p class="preview-label">Итоговый логин: <strong>{{ previewUsername.toUpperCase() }}</strong></p>
         </form>
       </div>
       <div class="modal-footer">
@@ -208,7 +208,7 @@ function save() {
 .form-group input {
   width: 100%;
   padding: 10px 14px;
-  background: var(--bg-tertiary);
+  background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
