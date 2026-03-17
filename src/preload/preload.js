@@ -32,5 +32,10 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.on('auto-update-event', (event, data) => callback(data));
   },
 
+  // Network check
+  networkRunFullCheck: (payload) => ipcRenderer.invoke('network-run-full-check', payload),
+  networkPing: (host, count) => ipcRenderer.invoke('network-run-ping', host, count),
+  networkGeo: () => ipcRenderer.invoke('network-geo'),
+
   // No credentials storage (username is stored in connection profile)
 });

@@ -289,6 +289,29 @@
         </div>
       </div>
 
+      <!-- Network Settings -->
+      <div v-if="activeTab === 'network'" class="settings-section">
+        <h3>Сеть</h3>
+
+        <div class="form-group">
+          <label for="net-latency-threshold">Порог задержки (мс)</label>
+          <select
+            class="select"
+            id="net-latency-threshold"
+            v-model.number="localSettings.networkCheck.latencyThresholdMs"
+          >
+            <option :value="50">50</option>
+            <option :value="80">80</option>
+            <option :value="100">100</option>
+            <option :value="150">150</option>
+            <option :value="200">200</option>
+            <option :value="300">300</option>
+            <option :value="500">500</option>
+          </select>
+          <small>Если средняя задержка (avg) выше порога, будет показано предупреждение о нестабильной связи</small>
+        </div>
+      </div>
+
       <!-- Updates Settings -->
       <div v-if="activeTab === 'updates'" class="settings-section">
         <h3>Автообновление</h3>
@@ -442,6 +465,7 @@ const tabs = [
   { id: 'horizon', label: 'Horizon' },
   { id: 'citrix', label: 'Citrix' },
   { id: 'general', label: 'Общие' },
+  { id: 'network', label: 'Сеть' },
   { id: 'updates', label: 'Обновление' }
 ]
 
@@ -501,6 +525,9 @@ const defaultSettings = {
   general: {
     minimizeToTray: false,
     startMinimized: false
+  },
+  networkCheck: {
+    latencyThresholdMs: 100
   }
 }
 
@@ -533,6 +560,10 @@ function initSettings() {
     // General settings
     if (newSettings.general) {
       merged.general = { ...defaultSettings.general, ...newSettings.general }
+    }
+    // Network settings
+    if (newSettings.networkCheck) {
+      merged.networkCheck = { ...defaultSettings.networkCheck, ...newSettings.networkCheck }
     }
 
     Object.assign(localSettings, merged)
@@ -694,6 +725,35 @@ function saveSettings() {
   color: var(--text-primary);
   font-size: 14px;
   transition: var(--transition);
+}
+
+.form-group select.select {
+  /* Make the dropdown look consistent across platforms and themes */
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 38px;
+
+  /* Simple chevron arrow */
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--text-muted) 50%),
+    linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) 50%,
+    calc(100% - 12px) 50%;
+  background-size:
+    6px 6px,
+    6px 6px;
+  background-repeat: no-repeat;
+}
+
+.form-group select.select:hover {
+  border-color: var(--border-light);
+}
+
+.form-group select.select:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
 .form-group input:focus,

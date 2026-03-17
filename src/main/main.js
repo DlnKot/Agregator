@@ -17,6 +17,7 @@ const horizonLauncher = require('./launchers/horizonLauncher');
 const citrixLauncher = require('./launchers/citrixLauncher');
 const vpnLauncher = require('./launchers/vpnLauncher');
 const autoUpdaterModule = require('./utils/autoUpdater');
+const networkCheck = require('./utils/networkCheck');
 const { version: appVersion } = require('../version');
 
 // Default configuration
@@ -63,6 +64,9 @@ const BUILTIN_DEFAULTS = {
     general: {
       minimizeToTray: false,
       startMinimized: false
+    },
+    networkCheck: {
+      latencyThresholdMs: 100
     }
   },
   connections: [],
@@ -346,6 +350,39 @@ function setupIpcHandlers() {
     }
   });
 
+  // Network check
+  ipcMain.handle('network-run-full-check', async (event, payload) => {
+    try {
+      const res = await networkCheck.runFullNetworkCheck(payload || {});
+      return { success: true, data: res };
+    } catch (error) {
+      logger('error', `Network check error: ${error.message}`);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('network-run-ping', async (event, host, count) => {
+    try {
+      const ping = await networkCheck.runPing(String(host || ''), count);
+      const settings = configStore ? (configStore.get('settings') || {}) : BUILTIN_DEFAULTS.settings;
+      const thresholdMs = settings?.networkCheck?.latencyThresholdMs ?? 100;
+      const evaluation = networkCheck.evaluatePing(ping, thresholdMs);
+      return { success: true, data: { ping, evaluation } };
+    } catch (error) {
+      logger('error', `Network ping error: ${error.message}`);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('network-geo', async () => {
+    try {
+      const res = await networkCheck.fetchGeo();
+      return { success: true, data: res };
+    } catch (error) {
+      logger('error', `Network geo error: ${error.message}`);
+      return { success: false, error: error.message };
+    }
+  });
   // Auto-updater handlers
   autoUpdaterModule.setupIpcHandlers();
 }

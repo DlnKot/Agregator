@@ -25,6 +25,16 @@
               </svg>
               Настройки
             </button>
+            <button class="nav-item" :class="{ active: currentView === 'network' }" @click="currentView = 'network'">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 19v-7"></path>
+                <path d="M8 19v-11"></path>
+                <path d="M12 19v-4"></path>
+                <path d="M16 19v-9"></path>
+                <path d="M20 19v-13"></path>
+              </svg>
+              Проверка сети
+            </button>
           </nav>
           <div class="sidebar-footer">
             <button class="theme-toggle" type="button" @click="toggleTheme" :title="theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'">
@@ -97,6 +107,14 @@
 
             <SettingsView :settings="settings" @save="handleSaveSettings" />
           </section>
+
+          <!-- Network Check View -->
+          <section v-if="currentView === 'network'" id="network-view" class="view">
+            <div class="view-header">
+              <h2>Проверка сети</h2>
+            </div>
+            <NetworkCheckView :settings="settings" />
+          </section>
         </main>
 
       </div>
@@ -125,6 +143,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useApp } from './composables/useApp.js'
 import ConnectionsList from './components/ConnectionsList.vue'
 import SettingsView from './components/SettingsView.vue'
+import NetworkCheckView from './components/NetworkCheckView.vue'
 import ConnectionModal from './components/ConnectionModal.vue'
 import FirstRunModal from './components/FirstRunModal.vue'
 import versionData from '../../version.js'
