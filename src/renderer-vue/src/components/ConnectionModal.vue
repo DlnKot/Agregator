@@ -181,10 +181,12 @@ function save() {
   bottom: 0;
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(4px);
+  z-index: 0;
 }
 
 .modal-content {
   position: relative;
+  z-index: 1;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);

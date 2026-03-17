@@ -204,7 +204,15 @@ function showToast(message, type = 'success') {
 
 // Connection modal
 function openConnectionModal(connection = null) {
-  editingConnection.value = connection ? { ...connection } : null
+  if (connection) {
+    editingConnection.value = { ...connection }
+  } else {
+    // When creating a new connection, preselect type based on current filter tab.
+    const t = (currentClientFilter.value && currentClientFilter.value !== 'all')
+      ? currentClientFilter.value
+      : 'rdp'
+    editingConnection.value = { type: t }
+  }
   showConnectionModal.value = true
 }
 

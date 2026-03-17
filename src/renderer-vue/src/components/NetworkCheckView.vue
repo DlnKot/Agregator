@@ -7,6 +7,9 @@
       </div>
       <div class="net-meta">
         <span>Порог: <span class="mono">{{ thresholdMs }}</span> мс</span>
+        <button class="btn btn-primary" type="button" @click="runAll" :disabled="runAllLoading">
+          {{ runAllLoading ? 'Проверяем...' : 'Проверить все' }}
+        </button>
         <button class="btn btn-secondary" type="button" @click="refreshGeo" :disabled="geoLoading">
           {{ geoLoading ? 'Обновление...' : 'Обновить гео' }}
         </button>
@@ -109,6 +112,7 @@ const geoError = ref('')
 const geo = ref(null)
 
 const results = ref({})
+const runAllLoading = ref(false)
 
 const thresholdMs = computed(() => {
   const v = props.settings?.networkCheck?.latencyThresholdMs
@@ -185,15 +189,18 @@ async function refreshGeo() {
 
 async function runTarget(t) {
   globalError.value = ''
-  const m = { ...results.value }
-  const prev = m[t.id] || {}
-  m[t.id] = { ...prev, loading: true, error: '' }
-  results.value = m
+  // Avoid race conditions when multiple checks run in parallel.
+  results.value = {
+    ...results.value,
+    [t.id]: { ...(results.value[t.id] || {}), loading: true, error: '' }
+  }
 
   try {
     if (!window.api?.networkPing) {
-      m[t.id] = { ...m[t.id], loading: false, error: 'Проверка доступна только в Electron' }
-      results.value = { ...m }
+      results.value = {
+        ...results.value,
+        [t.id]: { ...(results.value[t.id] || {}), loading: false, error: 'Проверка доступна только в Electron' }
+      }
       return
     }
 
@@ -204,22 +211,40 @@ async function runTarget(t) {
 
     const res = await window.api.networkPing(t.host, packets)
     if (!res?.success) {
-      m[t.id] = { ...m[t.id], loading: false, error: res?.error || 'Ошибка' }
-      results.value = { ...m }
+      results.value = {
+        ...results.value,
+        [t.id]: { ...(results.value[t.id] || {}), loading: false, error: res?.error || 'Ошибка' }
+      }
       return
     }
 
-    m[t.id] = {
-      loading: false,
-      error: '',
-      ping: res.data.ping,
-      evaluation: res.data.evaluation,
-      lastRunAt: Date.now()
+    results.value = {
+      ...results.value,
+      [t.id]: {
+        ...(results.value[t.id] || {}),
+        loading: false,
+        error: '',
+        ping: res.data.ping,
+        evaluation: res.data.evaluation,
+        lastRunAt: Date.now()
+      }
     }
-    results.value = { ...m }
   } catch (e) {
-    m[t.id] = { ...m[t.id], loading: false, error: e?.message || String(e) }
-    results.value = { ...m }
+    results.value = {
+      ...results.value,
+      [t.id]: { ...(results.value[t.id] || {}), loading: false, error: e?.message || String(e) }
+    }
+  }
+}
+
+async function runAll() {
+  globalError.value = ''
+  runAllLoading.value = true
+  try {
+    // Run all checks in parallel; per-target updates are race-safe.
+    await Promise.allSettled(targets.map(t => runTarget(t)))
+  } finally {
+    runAllLoading.value = false
   }
 }
 
@@ -286,11 +311,11 @@ onMounted(() => {
 }
 
 .net-error {
-  color: var(--accent-danger);
+  color: #7f1d1d;
   font-size: 13px;
   padding: 10px 12px;
-  border: 1px solid rgba(239, 68, 68, 0.25);
-  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.10);
   border-radius: var(--radius);
 }
 
@@ -304,14 +329,27 @@ onMounted(() => {
 
 .hint-ok {
   color: #065f46;
-  border: 1px solid rgba(16, 185, 129, 0.35);
-  background: rgba(16, 185, 129, 0.10);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  background: rgba(16, 185, 129, 0.12);
 }
 
 .hint-bad {
   color: #7f1d1d;
-  border: 1px solid rgba(239, 68, 68, 0.30);
-  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.10);
+}
+
+html[data-theme="dark"] .net-error,
+html[data-theme="dark"] .hint-bad {
+  color: rgba(255, 255, 255, 0.88);
+  border-color: rgba(239, 68, 68, 0.42);
+  background: rgba(239, 68, 68, 0.14);
+}
+
+html[data-theme="dark"] .hint-ok {
+  color: rgba(255, 255, 255, 0.90);
+  border-color: rgba(16, 185, 129, 0.45);
+  background: rgba(16, 185, 129, 0.16);
 }
 
 .net-grid {

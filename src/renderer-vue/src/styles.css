@@ -159,6 +159,11 @@ html[data-theme="dark"] {
   box-sizing: border-box;
 }
 
+button {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 html, body, #app {
   height: 100%;
   width: 100%;
