@@ -237,7 +237,8 @@ const filteredConnections = computed(() =>
 const updateStatus = ref({
   updateAvailable: false,
   updateDownloaded: false,
-  version: null
+  version: null,
+  macReleaseUrl: null
 })
 
 const updateProgress = ref({
@@ -257,6 +258,7 @@ function initAutoUpdater() {
         case 'update-available':
           updateStatus.value.updateAvailable = true
           updateStatus.value.version = data.version
+          updateStatus.value.macReleaseUrl = data.macReleaseUrl || null
           break
         case 'download-progress':
           updateProgress.value = data
@@ -264,6 +266,7 @@ function initAutoUpdater() {
         case 'update-downloaded':
           updateStatus.value.updateDownloaded = true
           updateStatus.value.version = data.version
+          updateStatus.value.macReleaseUrl = data.macReleaseUrl || updateStatus.value.macReleaseUrl || null
           break
         case 'update-error':
           updateError.value = data.message

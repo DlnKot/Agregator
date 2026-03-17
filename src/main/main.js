@@ -2,7 +2,7 @@
  * Remote Desktop Manager - Main Process
  * Electron application for managing RDP, VMware Horizon, and Citrix Workspace connections
  */
-const { app, BrowserWindow, ipcMain, nativeImage, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, nativeImage, Menu, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -405,6 +405,21 @@ function setupIpcHandlers() {
     } catch (error) {
       logger('error', `VPN launch error: ${error.message}`);
       return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('get-platform', () => {
+    return process.platform;
+  });
+
+  ipcMain.handle('open-external', async (event, url) => {
+    const u = String(url || '').trim();
+    if (!u) return { success: false, error: 'Empty URL' };
+    try {
+      await shell.openExternal(u);
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e?.message || String(e) };
     }
   });
 

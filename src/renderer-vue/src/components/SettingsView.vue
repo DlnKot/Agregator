@@ -328,7 +328,7 @@
               <span class="update-value version-new">{{ updateStatus.version }}</span>
             </div>
 
-            <div v-if="updateProgress.percent > 0" class="update-progress">
+            <div v-if="!isMac && updateProgress.percent > 0" class="update-progress">
               <div class="progress-bar">
                 <div class="progress-fill" :style="{ width: updateProgress.percent + '%' }"></div>
               </div>
@@ -336,8 +336,11 @@
                 formatBytes(updateProgress.bytesPerSecond) }}/с)</span>
             </div>
 
-            <button class="btn btn-primary" @click="handleDownloadUpdate" :disabled="isDownloading">
+            <button v-if="!isMac" class="btn btn-primary" @click="handleDownloadUpdate" :disabled="isDownloading">
               {{ isDownloading ? 'Загрузка...' : 'Скачать обновление' }}
+            </button>
+            <button v-else class="btn btn-primary" @click="handleOpenMacInstaller">
+              Скачать установщик (.pkg)
             </button>
           </div>
 
@@ -403,6 +406,7 @@ const {
 const isChecking = ref(false)
 const isDownloading = ref(false)
 const appVersion = ref(versionData.version)
+const isMac = ref(false)
 
 // Initialize auto-updater on mount
 onMounted(async () => {
@@ -427,6 +431,13 @@ onMounted(async () => {
   } catch (e) {
     // Ignore - may not be available in dev mode
   }
+
+  try {
+    const p = await window.api?.getPlatform?.()
+    isMac.value = p === 'darwin'
+  } catch (e) {
+    isMac.value = /Mac|iPhone|iPad/i.test(navigator.userAgent)
+  }
 })
 
 async function handleCheckUpdates() {
@@ -449,6 +460,18 @@ async function handleDownloadUpdate() {
 
 function handleInstallUpdate() {
   installUpdate()
+}
+
+async function handleOpenMacInstaller() {
+  const url = updateStatus.value?.macReleaseUrl
+  if (!url) {
+    alert('Не удалось определить ссылку на релиз. Попробуйте проверить обновления ещё раз.')
+    return
+  }
+  const res = await window.api?.openExternal?.(url)
+  if (res && res.success === false) {
+    alert(res.error || 'Не удалось открыть ссылку')
+  }
 }
 
 function formatBytes(bytes) {

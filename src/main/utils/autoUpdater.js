@@ -27,6 +27,7 @@ if (process.env.NODE_ENV === 'development') {
 let updateAvailable = false;
 let updateDownloaded = false;
 let updateInfo = null;
+let publishConfig = null;
 
 function getExpectedUpdateConfigPath() {
     // electron-updater:
@@ -43,6 +44,8 @@ function getExpectedUpdateConfigPath() {
  * @param {Object} config - Configuration with publish settings
  */
 function initAutoUpdater(config = {}) {
+    publishConfig = config && typeof config === 'object' ? { ...config } : null;
+
     // Prevent a noisy ENOENT on macOS/Windows if the app was built without update metadata.
     // In production electron-updater always tries to read process.resourcesPath/app-update.yml.
     const updateConfigPath = getExpectedUpdateConfigPath();
@@ -99,11 +102,19 @@ function initAutoUpdater(config = {}) {
         updateAvailable = true;
         updateInfo = info;
 
+        const owner = publishConfig?.owner;
+        const repo = publishConfig?.repo;
+        const tag = info?.version ? `v${info.version}` : null;
+        const macReleaseUrl = (owner && repo && tag)
+            ? `https://github.com/${owner}/${repo}/releases/tag/${tag}`
+            : null;
+
         // Notify renderer process
         notifyRenderer('update-available', {
             version: info.version,
             releaseDate: info.releaseDate,
-            releaseNotes: info.releaseNotes
+            releaseNotes: info.releaseNotes,
+            macReleaseUrl
         });
     });
 
@@ -270,6 +281,12 @@ async function checkForUpdates() {
  */
 async function downloadUpdate() {
     try {
+        if (process.platform === 'darwin') {
+            return {
+                success: false,
+                error: 'На macOS обновление устанавливается через установщик .pkg. Откройте страницу релиза и скачайте .pkg файл.'
+            };
+        }
         logger('info', 'AutoUpdater: Starting update download');
         await autoUpdater.downloadUpdate();
         return { success: true };
@@ -298,10 +315,18 @@ function installUpdate() {
  * Get current update status
  */
 function getUpdateStatus() {
+    const owner = publishConfig?.owner;
+    const repo = publishConfig?.repo;
+    const tag = updateInfo?.version ? `v${updateInfo.version}` : null;
+    const macReleaseUrl = (owner && repo && tag)
+        ? `https://github.com/${owner}/${repo}/releases/tag/${tag}`
+        : null;
+
     return {
         updateAvailable,
         updateDownloaded,
-        version: updateInfo?.version || null
+        version: updateInfo?.version || null,
+        macReleaseUrl
     };
 }
 

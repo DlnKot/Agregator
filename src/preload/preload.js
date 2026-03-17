@@ -28,6 +28,8 @@ contextBridge.exposeInMainWorld('api', {
   downloadUpdate: () => ipcRenderer.invoke('download-update'),
   installUpdate: () => ipcRenderer.invoke('install-update'),
   getUpdateStatus: () => ipcRenderer.invoke('get-update-status'),
+  getPlatform: () => ipcRenderer.invoke('get-platform'),
+  openExternal: (url) => ipcRenderer.invoke('open-external', url),
   onAutoUpdateEvent: (callback) => {
     ipcRenderer.on('auto-update-event', (event, data) => callback(data));
   },
