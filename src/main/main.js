@@ -2,7 +2,7 @@
  * Remote Desktop Manager - Main Process
  * Electron application for managing RDP, VMware Horizon, and Citrix Workspace connections
  */
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, nativeImage, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -18,7 +18,16 @@ const citrixLauncher = require('./launchers/citrixLauncher');
 const vpnLauncher = require('./launchers/vpnLauncher');
 const autoUpdaterModule = require('./utils/autoUpdater');
 const networkCheck = require('./utils/networkCheck');
-const { version: appVersion } = require('../version');
+const { version: appVersion, name: appNameFromFile } = require('../version');
+
+// Ensure the macOS Dock shows our app name even in dev runs (otherwise it can show "Electron").
+try {
+  const desiredName = appNameFromFile || 'Alfa Remote Client';
+  if (typeof app.setName === 'function') app.setName(desiredName);
+  // Best-effort: some surfaces in dev use process title or app.name.
+  process.title = desiredName;
+  app.name = desiredName;
+} catch { /* ignore */ }
 
 // Default configuration
 const BUILTIN_DEFAULTS = {
@@ -75,6 +84,43 @@ const BUILTIN_DEFAULTS = {
 
 let configStore = null;
 let mainWindow = null;
+
+function resolveAssetPath(relPath) {
+  const candidates = [
+    // Packaged: Resources folder (macOS/Windows)
+    path.join(process.resourcesPath || '', relPath),
+    // Dev: project root
+    path.join(app.getAppPath(), relPath),
+    // Dev: based on src/main
+    path.join(__dirname, '..', '..', relPath)
+  ];
+
+  for (const p of candidates) {
+    try {
+      if (p && fs.existsSync(p)) return p;
+    } catch { /* ignore */ }
+  }
+  return null;
+}
+
+function trySetDockIcon() {
+  // In dev (`npm run start` / `electron .`) macOS Dock icon stays Electron's
+  // unless we override it programmatically.
+  if (process.platform !== 'darwin') return;
+  if (!app.dock || typeof app.dock.setIcon !== 'function') return;
+
+  const iconPath = resolveAssetPath(path.join('assets', 'icon.png'));
+  if (!iconPath) return;
+
+  try {
+    const img = nativeImage.createFromPath(iconPath);
+    if (!img || img.isEmpty()) return;
+    app.dock.setIcon(img);
+    logger('info', `Dock icon set from: ${iconPath}`);
+  } catch (e) {
+    logger('warn', `Cannot set Dock icon: ${e?.message || String(e)}`);
+  }
+}
 
 // ==================== Deployment Config ====================
 
@@ -181,12 +227,17 @@ function initializeStores() {
 function createWindow() {
   logger('info', 'Creating main window...');
 
+  const windowIconPath = resolveAssetPath(path.join('assets', 'icon.png'));
+
   mainWindow = new BrowserWindow({
     width: 1100,
     height: 880,
     minWidth: 900,
     minHeight: 600,
     backgroundColor: '#0f0f0f',
+    title: appNameFromFile || 'Alfa Remote Client',
+    // On Windows/Linux this sets the taskbar/window icon. On macOS it doesn't affect the Dock icon.
+    ...(windowIconPath ? { icon: windowIconPath } : {}),
     webPreferences: {
       preload: path.join(__dirname, '../preload/preload.js'),
       contextIsolation: true,
@@ -197,6 +248,13 @@ function createWindow() {
     frame: true,
     titleBarStyle: 'default'
   });
+
+  // Remove menu bar everywhere (File/Help/etc).
+  try {
+    mainWindow.setMenu(null);
+    mainWindow.setMenuBarVisibility(false);
+    mainWindow.setAutoHideMenuBar(true);
+  } catch { /* ignore */ }
 
   // Dev: load Vite dev server for hot reload.
   if (!app.isPackaged && process.env.ELECTRON_DEV) {
@@ -396,6 +454,9 @@ app.whenReady().then(() => {
   logger('info', `Node: ${process.versions.node}`);
 
   try {
+    // Remove menu bar everywhere (including macOS app menu).
+    try { Menu.setApplicationMenu(null); } catch { /* ignore */ }
+
     // Initialize logger with app reference
     initLogger(app);
 
@@ -407,6 +468,7 @@ app.whenReady().then(() => {
 
     logger('info', `Log file: ${logFilePath}`);
 
+    trySetDockIcon();
     initializeStores();
     setupIpcHandlers();
     createWindow();

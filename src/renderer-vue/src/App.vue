@@ -2,7 +2,8 @@
   <div class="app">
     <div class="app-container">
       <div class="header">
-        <h1>Alfa Remote Client</h1>
+        <img class="header-mark" :src="headerMarkSrc" alt="" aria-hidden="true" />
+        <img class="header-logo" :src="headerLogoSrc" alt="Alfa Remote Client" />
       </div>
       <div class="app-content">
         <!-- Sidebar -->
@@ -147,9 +148,15 @@ import NetworkCheckView from './components/NetworkCheckView.vue'
 import ConnectionModal from './components/ConnectionModal.vue'
 import FirstRunModal from './components/FirstRunModal.vue'
 import versionData from '../../version.js'
+import headerLogoBlack from './assets/icons/logo-black.svg'
+import headerLogoWhite from './assets/icons/logo-white.svg'
+import headerMarkBlack from './assets/icons/arc-black.svg'
+import headerMarkWhite from './assets/icons/arc-white.svg'
 
 const appVersion = ref(versionData.version)  // Will be loaded from API when running in Electron
 const theme = ref('light')
+const headerLogoSrc = computed(() => (theme.value === 'dark' ? headerLogoWhite : headerLogoBlack))
+const headerMarkSrc = computed(() => (theme.value === 'dark' ? headerMarkWhite : headerMarkBlack))
 
 const {
   connections,
@@ -367,16 +374,31 @@ try {
 
 .header {
   background: var(--bg-secondary);
-  padding: 20px 10px;
+  padding: 20px 8px;
   display: flex;
   align-items: center;
   border-radius: 30px;
   flex-shrink: 0;
 }
 
+.header-mark {
+  width: 28px;
+  height: 28px;
+  margin-left: 14px;
+  flex: 0 0 auto;
+  display: block;
+}
+
+.header-logo {
+  height: 28px;
+  width: auto;
+  margin-left: 10px;
+  display: block;
+}
+
 .header h1 {
   font-size: 24px;
-  margin-inline: 15px;
+  margin-inline: 12px;
   font-weight: 300;
   color: var(--text-primary);
 }

@@ -98,6 +98,11 @@ function parseWindowsPing(output) {
     }
   }
 
+  // If we got per-reply times, treat that as received count (most reliable).
+  if (result.received === null && times.length) {
+    result.received = times.length;
+  }
+
   // English:
   // Minimum = 1ms, Maximum = 2ms, Average = 1ms
   // Russian:
@@ -155,7 +160,8 @@ function runPing(host, count = 10) {
       // Force UTF-8 for stable display/parsing.
       // -n count, -w timeout-per-reply(ms)
       const pingCmd = `chcp 65001>nul & ping -n ${packets} -w 1000 ${safeHost}`;
-      cmd = 'cmd.exe';
+      // Use ComSpec to reliably locate cmd.exe even if PATH is restricted.
+      cmd = process.env.ComSpec || process.env.comspec || 'cmd.exe';
       args = ['/d', '/s', '/c', pingCmd];
     } else {
       args = ['-c', String(packets), safeHost];
@@ -163,8 +169,51 @@ function runPing(host, count = 10) {
 
     logger('info', `NetworkCheck: ping ${safeHost} (${packets} packets)`);
 
-    const child = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'], shell: false });
+    const child = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'], shell: false, windowsHide: true });
     child.on('error', (err) => {
+      // Fallback for Windows environments where cmd.exe can't be spawned for some reason.
+      if (process.platform === 'win32') {
+        try {
+          const pingChild = spawn('ping', ['-n', String(packets), '-w', '1000', safeHost], {
+            stdio: ['ignore', 'pipe', 'pipe'],
+            shell: false,
+            windowsHide: true
+          });
+
+          let out = '';
+          let errOut = '';
+          pingChild.stdout.on('data', (d) => { out += d.toString(); });
+          pingChild.stderr.on('data', (d) => { errOut += d.toString(); });
+
+          const timeout2 = setTimeout(() => {
+            try { pingChild.kill('SIGKILL'); } catch { /* ignore */ }
+          }, 20000);
+
+          pingChild.on('close', (code) => {
+            clearTimeout(timeout2);
+            const parsed = parseWindowsPing(out + '\n' + errOut);
+            const sent = parsed.sent ?? packets;
+            const received = parsed.received ?? null;
+            const lossPercent = parsed.lossPercent ?? (received === null ? null : Math.max(0, Math.min(100, ((sent - received) / sent) * 100)));
+
+            resolve({
+              host: safeHost,
+              ok: true,
+              exitCode: typeof code === 'number' ? code : null,
+              durationMs: Date.now() - startedAt,
+              sent,
+              received,
+              lossPercent,
+              minMs: parsed.minMs,
+              avgMs: parsed.avgMs,
+              maxMs: parsed.maxMs,
+              raw: (out + '\n' + errOut).trim()
+            });
+          });
+          return;
+        } catch { /* ignore */ }
+      }
+
       resolve({
         host: safeHost,
         ok: false,

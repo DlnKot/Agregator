@@ -13,6 +13,14 @@
       </div>
     </div>
 
+    <div v-if="geoOk && geo.countryCode !== 'RU'" class="net-alert net-alert-warning">
+      <div class="net-alert-title">Возможно, у вас включен VPN</div>
+      <div class="net-alert-text">
+        Мы определили страну подключения как <span class="mono">{{ geo.country }} ({{ geo.countryCode }})</span>.
+        Если вы не из России или у вас включен VPN, доступ к VDI может быть медленнее или нестабильным.
+      </div>
+    </div>
+
     <p v-if="globalError" class="net-error">{{ globalError }}</p>
 
     <div class="net-grid">
@@ -30,13 +38,6 @@
           {{ geoLoading ? 'Загрузка...' : 'Не удалось получить данные ip-api' }}
           <span v-if="geoError" class="mono">({{ geoError }})</span>
         </div>
-      </div>
-
-      <div v-if="geoOk && geo.countryCode !== 'RU'" class="card warning">
-        <h3>Важное</h3>
-        <p class="warning-text">
-          Похоже, вы подключены не из России или у вас включен VPN. В таком режиме доступ к VDI может быть медленнее или нестабильным.
-        </p>
       </div>
 
       <div v-for="t in targets" :key="t.id" class="card host">
@@ -76,6 +77,10 @@
 
         <p v-if="results[t.id]?.evaluation?.recommendation" class="recommendation">
           {{ results[t.id].evaluation.recommendation }}
+        </p>
+
+        <p v-if="results[t.id]?.evaluation" class="hint" :class="hintClass(results[t.id].evaluation.status)">
+          {{ hintText(results[t.id].evaluation.status) }}
         </p>
 
         <details v-if="results[t.id]?.ping" class="details">
@@ -142,6 +147,18 @@ function fmtMinMax(min, max) {
 
 function fmtTime(ts) {
   try { return new Date(ts).toLocaleString() } catch { return '—' }
+}
+
+function hintClass(status) {
+  return status === 'ok' ? 'hint-ok' : 'hint-bad'
+}
+
+function hintText(status) {
+  if (status === 'ok') return 'Все хорошо: сервис доступен, задержек нет.'
+  if (status === 'high_latency') return 'Есть проблемы: задержка выше нормы, возможны лаги.'
+  if (status === 'loss') return 'Есть проблемы: обнаружены потери пакетов, возможны обрывы.'
+  if (status === 'down') return 'Есть проблемы: сервер не отвечает, проверьте интернет/VPN и доступность сервиса.'
+  return 'Есть проблемы: не удалось корректно выполнить проверку.'
 }
 
 async function refreshGeo() {
@@ -221,6 +238,25 @@ onMounted(() => {
   min-height: 0;
 }
 
+.net-alert {
+  border-radius: var(--radius);
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  background: rgba(245, 158, 11, 0.10);
+  padding: 12px 14px;
+}
+
+.net-alert-title {
+  font-weight: 750;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.net-alert-text {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .net-head {
   display: flex;
   align-items: center;
@@ -256,6 +292,26 @@ onMounted(() => {
   border: 1px solid rgba(239, 68, 68, 0.25);
   background: rgba(239, 68, 68, 0.08);
   border-radius: var(--radius);
+}
+
+.hint {
+  margin-top: 10px;
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.hint-ok {
+  color: #065f46;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  background: rgba(16, 185, 129, 0.10);
+}
+
+.hint-bad {
+  color: #7f1d1d;
+  border: 1px solid rgba(239, 68, 68, 0.30);
+  background: rgba(239, 68, 68, 0.08);
 }
 
 .net-grid {

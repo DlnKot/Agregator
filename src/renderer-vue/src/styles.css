@@ -36,49 +36,97 @@
 
 /* ==================== Fonts ==================== */
 @font-face {
-  font-family: "Ubuntu";
-  src: url("./assets/fonts/ubuntu/Ubuntu-Regular.ttf") format("truetype");
+  font-family: "Styrene A Web";
+  src: url("./assets/fonts/styrene-a/StyreneAWeb-Regular.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: "Ubuntu";
-  src: url("./assets/fonts/ubuntu/Ubuntu-Italic.ttf") format("truetype");
+  font-family: "Styrene A Web";
+  src: url("./assets/fonts/styrene-a/StyreneAWeb-Italic.woff2") format("woff2");
   font-weight: 400;
   font-style: italic;
   font-display: swap;
 }
 
 @font-face {
-  font-family: "Ubuntu";
-  src: url("./assets/fonts/ubuntu/Ubuntu-Medium.ttf") format("truetype");
+  font-family: "Styrene A Web";
+  src: url("./assets/fonts/styrene-a/StyreneAWeb-Medium.woff2") format("woff2");
   font-weight: 500;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: "Ubuntu";
-  src: url("./assets/fonts/ubuntu/Ubuntu-MediumItalic.ttf") format("truetype");
+  font-family: "Styrene A Web";
+  src: url("./assets/fonts/styrene-a/StyreneAWeb-MediumItalic.woff2") format("woff2");
   font-weight: 500;
   font-style: italic;
   font-display: swap;
 }
 
 @font-face {
-  font-family: "Ubuntu";
-  src: url("./assets/fonts/ubuntu/Ubuntu-Bold.ttf") format("truetype");
+  font-family: "Styrene A Web";
+  src: url("./assets/fonts/styrene-a/StyreneAWeb-Bold.woff2") format("woff2");
   font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: "Ubuntu";
-  src: url("./assets/fonts/ubuntu/Ubuntu-BoldItalic.ttf") format("truetype");
+  font-family: "Styrene A Web";
+  src: url("./assets/fonts/styrene-a/StyreneAWeb-BoldItalic.woff2") format("woff2");
   font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Styrene A Web";
+  src: url("./assets/fonts/styrene-a/StyreneAWeb-Light.woff2") format("woff2");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Styrene A Web";
+  src: url("./assets/fonts/styrene-a/StyreneAWeb-LightItalic.woff2") format("woff2");
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Styrene A Web";
+  src: url("./assets/fonts/styrene-a/StyreneAWeb-Black.woff2") format("woff2");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Styrene A Web";
+  src: url("./assets/fonts/styrene-a/StyreneAWeb-BlackItalic.woff2") format("woff2");
+  font-weight: 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Styrene A Web";
+  src: url("./assets/fonts/styrene-a/StyreneAWeb-Thin.woff2") format("woff2");
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Styrene A Web";
+  src: url("./assets/fonts/styrene-a/StyreneAWeb-ThinItalic.woff2") format("woff2");
+  font-weight: 100;
   font-style: italic;
   font-display: swap;
 }
@@ -86,10 +134,11 @@
 /* Dark theme */
 html[data-theme="dark"] {
   color-scheme: dark;
-  --bg-primary: #161a22;
-  --bg-secondary: #1d2230;
-  --bg-tertiary: #2a3142;
-  --bg-hover: #353e54;
+  /* Deeper charcoal palette (less blue tint) */
+  --bg-primary: #0b0d10;
+  --bg-secondary: #111318;
+  --bg-tertiary: #1b1f27;
+  --bg-hover: #242a35;
 
   --text-primary: #e7eaf0;
   --text-secondary: #c6cddd;
@@ -117,7 +166,7 @@ html, body, #app {
 }
 
 body {
-  font-family: "Ubuntu", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "Styrene A Web", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 14px;
   line-height: 1.5;
   color: var(--text-primary);
