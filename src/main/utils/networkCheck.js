@@ -59,6 +59,18 @@ function parseWindowsPing(output) {
     maxMs: null
   };
 
+  // Parse per-reply times as a robust fallback (works even if summary is missing).
+  // Examples:
+  // "Reply from ...: bytes=32 time=12ms TTL=..."
+  // "Ответ от ...: число байт=32 время=12мс TTL=..."
+  const times = [];
+  const timeRe = /(?:\btime|\bвремя)\s*(?:=|<)\s*(\d+)\s*(?:ms|мс)/gi;
+  let tm;
+  while ((tm = timeRe.exec(text)) !== null) {
+    const t = toNumber(tm[1]);
+    if (t !== null) times.push(t);
+  }
+
   // English:
   // Packets: Sent = 10, Received = 10, Lost = 0 (0% loss),
   // Russian:
@@ -77,6 +89,15 @@ function parseWindowsPing(output) {
     if (lm) result.lossPercent = toNumber(lm[1]);
   }
 
+  // Fallback: count reply lines when summary can't be parsed.
+  // Useful when ping output is localized/trimmed or the summary block is missing.
+  if (result.received === null) {
+    const replyMatches = text.match(/(?:^|\r?\n)\s*(?:Reply from|Ответ от)\b/gi);
+    if (replyMatches && replyMatches.length) {
+      result.received = replyMatches.length;
+    }
+  }
+
   // English:
   // Minimum = 1ms, Maximum = 2ms, Average = 1ms
   // Russian:
@@ -91,6 +112,21 @@ function parseWindowsPing(output) {
     result.avgMs = toNumber(m[3]);
   }
 
+  // Fallback: compute min/avg/max from per-reply times.
+  if ((result.minMs === null || result.avgMs === null || result.maxMs === null) && times.length) {
+    let min = times[0];
+    let max = times[0];
+    let sum = 0;
+    for (const t of times) {
+      if (t < min) min = t;
+      if (t > max) max = t;
+      sum += t;
+    }
+    result.minMs = result.minMs ?? min;
+    result.maxMs = result.maxMs ?? max;
+    result.avgMs = result.avgMs ?? (sum / times.length);
+  }
+
   return result;
 }
 
@@ -99,22 +135,38 @@ function runPing(host, count = 10) {
   return new Promise((resolve) => {
     const startedAt = Date.now();
 
+    const safeHost = String(host || '').trim();
+    // Avoid command injection on Windows where we wrap ping with cmd.exe.
+    // Accept typical hostnames, IPv4, and IPv6 literals.
+    if (!safeHost || !/^[a-zA-Z0-9.\-_:]+$/.test(safeHost)) {
+      resolve({
+        host: safeHost,
+        ok: false,
+        error: 'Некорректный хост для ping',
+        durationMs: Date.now() - startedAt
+      });
+      return;
+    }
     let cmd = 'ping';
     let args = [];
 
     if (process.platform === 'win32') {
+      // Windows ping output is often in OEM code page (e.g. CP866 on RU systems).
+      // Force UTF-8 for stable display/parsing.
       // -n count, -w timeout-per-reply(ms)
-      args = ['-n', String(packets), '-w', '1000', host];
+      const pingCmd = `chcp 65001>nul & ping -n ${packets} -w 1000 ${safeHost}`;
+      cmd = 'cmd.exe';
+      args = ['/d', '/s', '/c', pingCmd];
     } else {
-      args = ['-c', String(packets), host];
+      args = ['-c', String(packets), safeHost];
     }
 
-    logger('info', `NetworkCheck: ping ${host} (${packets} packets)`);
+    logger('info', `NetworkCheck: ping ${safeHost} (${packets} packets)`);
 
     const child = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'], shell: false });
     child.on('error', (err) => {
       resolve({
-        host,
+        host: safeHost,
         ok: false,
         error: err.message,
         durationMs: Date.now() - startedAt
@@ -123,11 +175,13 @@ function runPing(host, count = 10) {
 
     let stdout = '';
     let stderr = '';
+    let timedOut = false;
 
     child.stdout.on('data', (d) => { stdout += d.toString(); });
     child.stderr.on('data', (d) => { stderr += d.toString(); });
 
     const timeout = setTimeout(() => {
+      timedOut = true;
       try { child.kill('SIGKILL'); } catch { /* ignore */ }
     }, 20000);
 
@@ -140,8 +194,9 @@ function runPing(host, count = 10) {
       const lossPercent = parsed.lossPercent ?? (received === null ? null : Math.max(0, Math.min(100, ((sent - received) / sent) * 100)));
 
       resolve({
-        host,
-        ok: true,
+        host: safeHost,
+        ok: timedOut ? false : true,
+        timedOut,
         exitCode: typeof code === 'number' ? code : null,
         durationMs: Date.now() - startedAt,
         sent,
