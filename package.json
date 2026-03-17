@@ -9,6 +9,7 @@
     "build:vue": "vite build",
     "build:win": "npm run build:vue && electron-builder --win --publish never",
     "build:mac": "npm run build:vue && electron-builder --mac --publish never && node scripts/sync-mac-artifact-names.js",
+    "build:mac:pkg": "npm run build:vue && electron-builder --mac pkg --x64 --publish never && electron-builder --mac pkg --arm64 --publish never",
     "pack": "electron-builder --dir",
     "publish:win": "npm run build:vue && electron-builder --win --publish always",
     "publish:mac": "npm run build:vue && electron-builder --mac --publish always"
@@ -55,13 +56,6 @@
         },
         {
           "target": "zip",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
-        },
-        {
-          "target": "pkg",
           "arch": [
             "x64",
             "arm64"
