@@ -104,12 +104,15 @@ alfa-remote-client/
 │   │   ├── launchers/           # Запуск внешних клиентов
 │   │   │   ├── rdpLauncher.js   # Запуск RDP (mstsc)
 │   │   │   ├── horizonLauncher.js # Запуск VMware Horizon
-│   │   │   └── citrixLauncher.js  # Запуск Citrix Workspace
+│   │   │   ├── citrixLauncher.js  # Запуск Citrix Workspace
+│   │   │   └── vpnLauncher.js    # Запуск VPN (CheckPoint)
 │   │   ├── stores/              # Хранение данных
 │   │   │   └── simpleStore.js   # JSON-хранилище
-│   │   └── utils/               # Утилиты
-│   │       ├── logger.js        # Логирование
-│   │       └── autoUpdater.js   # Автообновление
+│   │   ├── utils/               # Утилиты
+│   │   │   ├── logger.js        # Логирование
+│   │   │   ├── autoUpdater.js   # Автообновление
+│   │   │   └── networkCheck.js  # Проверка сети
+│   │   └── version.js           # Управление версией
 │   │
 │   ├── preload/
 │   │   └── preload.js           # Безопасный мост между процессами
@@ -126,7 +129,9 @@ alfa-remote-client/
 │               ├── ConnectionsList.vue  # Список подключений
 │               ├── ConnectionModal.vue  # Модальное окно подключения
 │               ├── FirstRunModal.vue    # Первоначальная настройка
-│               └── SettingsView.vue     # Панель настроек
+│               ├── SettingsView.vue     # Панель настроек
+│               ├── NetworkCheckView.vue # Проверка сети
+│               └── HelpView.vue         # Раздел помощи
 │
 ├── package.json                 # Зависимости и скрипты
 ├── vite.config.js               # Конфигурация Vite
@@ -587,6 +592,9 @@ logger('error', 'ошибка: ' + error.message)
 | 0.1.9 | 2025-03 | Добавлено автообновление |
 | 0.2.0 | 2025-03 | Исправления URL для Horizon |
 | 0.2.1 | 2025-03 | Финальные исправления |
+| 0.4.0 | 2026-03 | Добавлена проверка сети, улучшен UI |
+| 0.4.7 | 2026-03 | Исправления безопасности и RDP настроек |
+| 0.4.8 | 2026-03 | Добавлен раздел "Помощь" с HelpDesk, Indeed, Виды удалёнки, Чатбот |
 
 ---
 

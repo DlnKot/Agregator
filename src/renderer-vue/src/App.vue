@@ -36,6 +36,14 @@
               </svg>
               Проверка сети
             </button>
+            <button class="nav-item" :class="{ active: currentView === 'help' }" @click="currentView = 'help'">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+              Помощь
+            </button>
           </nav>
           <div class="sidebar-footer">
             <button class="theme-toggle" type="button" @click="toggleTheme" :title="theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'">
@@ -116,6 +124,11 @@
             </div>
             <NetworkCheckView :settings="settings" />
           </section>
+
+          <!-- Help View -->
+          <section v-if="currentView === 'help'" id="help-view" class="view">
+            <HelpView />
+          </section>
         </main>
 
       </div>
@@ -145,6 +158,7 @@ import { useApp } from './composables/useApp.js'
 import ConnectionsList from './components/ConnectionsList.vue'
 import SettingsView from './components/SettingsView.vue'
 import NetworkCheckView from './components/NetworkCheckView.vue'
+import HelpView from './components/HelpView.vue'
 import ConnectionModal from './components/ConnectionModal.vue'
 import FirstRunModal from './components/FirstRunModal.vue'
 import versionData from '../../version.js'
