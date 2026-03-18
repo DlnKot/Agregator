@@ -164,9 +164,45 @@ function storefrontKey(raw = '') {
 function makeCitrixProviderName(rawStoreUrl = '') {
     // Provider name must be stable per StoreFront and not collide across different stores.
     // Use a short hash so we don't depend on path length/characters.
-    const k = storefrontKey(rawStoreUrl) || String(rawStoreUrl || '').trim().toLowerCase();
-    const h = crypto.createHash('sha1').update(k).digest('hex').slice(0, 12);
-    return `ARC_${h}`;
+    const raw = String(rawStoreUrl || '').trim();
+    const k = storefrontKey(raw) || raw.toLowerCase();
+    const h = crypto.createHash('sha1').update(k).digest('hex').slice(0, 6).toUpperCase();
+
+    // Try to build a readable provider name: ARC_<STORE>_<HOST>_<HASH>
+    // Examples:
+    //   https://sf-vdi.moscow.alfaintra.net/Citrix/VDI/discovery      -> ARC_VDI_SF_VDI_ABC123
+    //   http://citrixweb/Citrix/CitrixWeb/discovery                  -> ARC_CITRIXWEB_CITRIXWEB_ABC123
+    let store = '';
+    let host = '';
+    try {
+        const u = new URL(normalizeHttpsUrl(raw) || raw);
+        host = (u.hostname || '').split('.')[0] || (u.hostname || '');
+
+        const p = (u.pathname || '').replace(/\/+$/, '');
+        const segs = p.split('/').filter(Boolean);
+        const citrixIdx = segs.findIndex(s => String(s).toLowerCase() === 'citrix');
+        if (citrixIdx >= 0 && segs[citrixIdx + 1]) {
+            store = segs[citrixIdx + 1];
+        } else if (segs.length) {
+            store = segs[segs.length - 1];
+        }
+
+        if (String(store).toLowerCase() === 'discovery' && segs.length >= 2) {
+            store = segs[segs.length - 2] || store;
+        }
+    } catch {
+        // ignore parse failures
+    }
+
+    const sanitize = (s) => String(s || '')
+        .toUpperCase()
+        .replace(/[^A-Z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .slice(0, 16);
+
+    const storePart = sanitize(store) || 'STORE';
+    const hostPart = sanitize(host) || 'HOST';
+    return `ARC_${storePart}_${hostPart}_${h}`;
 }
 
 function execCapture(command, args = [], { timeoutMs = 4000 } = {}) {
@@ -814,16 +850,6 @@ function launchCitrix(connection, settings) {
                 logger('info', `Citrix Launcher: Storefront not found in registry (win). Registering: ${toRegister}`);
                 const prov = makeCitrixProviderName(toRegister);
                 initializeCitrixStorefront(exePath, toRegister, prov);
-
-                // Fallback: some environments want base URL instead of /discovery (or vice versa).
-                // Try the alternative once; Citrix will ignore duplicates if it succeeds.
-                const alt = toRegister.toLowerCase().endsWith('/discovery')
-                    ? normalizeStorefrontAddress(toRegister)
-                    : normalizeStorefrontDiscoveryAddress(toRegister);
-                if (alt && storefrontKey(alt) === storefrontKey(toRegister) && alt !== toRegister) {
-                    logger('info', `Citrix Launcher: Register fallback (alt URL): ${alt}`);
-                    initializeCitrixStorefront(exePath, alt, prov);
-                }
             })().catch(() => {});
         }
 
