@@ -897,21 +897,27 @@ function launchCitrix(connection, settings) {
             if (result.status === 0) {
                 logger('info', `Citrix Launcher: Found app ${appName}`);
 
-                // macOS (temporary): just open Citrix Workspace/Receiver without StoreFront automation.
-                // The registration logic we experimented with is intentionally kept in the codebase,
-                // but disabled for stability. We'll re-enable it once we have a reliable flow.
-                /*
-                const storeUrl = effectiveStoreUrl;
-                const accountName = ((citrixSettings.accountName || '').trim() || 'Store');
-                if (storeUrl) {
-                    const res = ensureStorefrontAccountMac(accountName, effectiveStoreUrlRaw);
-                    if (res.ensured && !res.already) {
-                        logger('info', 'Citrix Launcher: Waiting for Storefront registration (mac)...');
-                        // ... waitForStorefrontRegistrationMac + retries ...
-                        return;
+                // macOS: best-effort StoreFront registration (same flow as when it "worked").
+                // We don't block the UI: trigger registration, then open the app shortly after.
+                const storeUrlRaw = (effectiveStoreUrlRaw || '').trim();
+                const accountName = ((citrixSettings.accountName || '').trim() || (connection?.name || '').trim() || 'Store');
+
+                if (storeUrlRaw) {
+                    try {
+                        const res = ensureStorefrontAccountMac(accountName, storeUrlRaw);
+                        if (res.ensured && !res.already) {
+                            // Give Workspace a moment to process the createaccount URL.
+                            setTimeout(() => {
+                                launchDetached('open', ['-a', appName]);
+                            }, 1200);
+                            return;
+                        }
+                    } catch (e) {
+                        logger('warn', `Citrix Launcher: StoreFront register attempt failed (mac): ${e?.message || String(e)}`);
+                        // continue to opening the app below
                     }
                 }
-                */
+
                 launchDetached('open', ['-a', appName]);
                 return;
             }
