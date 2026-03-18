@@ -187,7 +187,15 @@ async function citrixStorefrontExistsWindows(storeUrlRaw = '') {
     const key = 'HKCU\\SOFTWARE\\Citrix\\Dazzle\\Sites';
     const res = await execCapture('reg', ['query', key, '/s', '/v', 'configUrl'], { timeoutMs: 5000 });
     if (!res.ok) {
-        logger('warn', `Citrix Launcher: reg query failed (code=${res.code} timedOut=${res.timedOut}) stderr=${(res.stderr || '').trim()}`);
+        const stderr = (res.stderr || '').trim();
+        // On a fresh Citrix install (or before first add), the key may not exist yet.
+        // reg.exe returns exit code 1 with: "ERROR: The system was unable to find the specified registry key or value."
+        if (Number(res.code) === 1 && /unable to find the specified registry key or value/i.test(stderr)) {
+            logger('info', 'Citrix Launcher: Citrix Sites registry key not found yet (win). Treating as empty and will register StoreFront.');
+            return { ok: true, exists: false, reason: 'key_not_found' };
+        }
+
+        logger('warn', `Citrix Launcher: reg query failed (code=${res.code} timedOut=${res.timedOut}) stderr=${stderr}`);
         // If we can't check, better to skip auto-registration to avoid duplicates.
         return { ok: false, exists: false, reason: 'reg_query_failed' };
     }
