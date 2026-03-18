@@ -142,6 +142,24 @@ function normalizeForUrlCompare(raw = '') {
     }
 }
 
+function storefrontKey(raw = '') {
+    const normalized = normalizeHttpsUrl(raw);
+    if (!normalized) return '';
+    try {
+        const u = new URL(normalized);
+        // Ignore scheme (http/https) for equality; Citrix may store either.
+        const host = (u.host || u.hostname || '').toLowerCase();
+        let p = (u.pathname || '').replace(/\/+$/, '');
+        if (p.toLowerCase().endsWith('/discovery')) p = p.slice(0, -'/discovery'.length);
+        p = (p || '/').replace(/\/+$/, '') || '/';
+        p = p.toLowerCase();
+        return `${host}${p}`;
+    } catch {
+        // Fall back to a conservative key; if parsing fails we don't treat it as equal.
+        return '';
+    }
+}
+
 function execCapture(command, args = [], { timeoutMs = 4000 } = {}) {
     return new Promise((resolve) => {
         try {
@@ -181,8 +199,11 @@ async function citrixStorefrontExistsWindows(storeUrlRaw = '') {
     const raw = (storeUrlRaw || '').trim();
     if (!raw) return { ok: true, exists: false, reason: 'no_store_url' };
 
-    const expectedDiscovery = normalizeForUrlCompare(normalizeStorefrontDiscoveryAddress(raw) || normalizeHttpsUrl(raw));
-    const expectedStoreBase = normalizeForUrlCompare(normalizeStorefrontAddress(raw));
+    // Compare by StoreFront "store root" (host + path without /discovery).
+    // This correctly distinguishes different stores on the same host:
+    //   /Citrix/VDI-Apps vs /Citrix/VDI
+    // and also ignores http/https differences.
+    const expectedKey = storefrontKey(raw) || storefrontKey(normalizeStorefrontDiscoveryAddress(raw)) || storefrontKey(normalizeStorefrontAddress(raw));
 
     const key = 'HKCU\\SOFTWARE\\Citrix\\Dazzle\\Sites';
     const res = await execCapture('reg', ['query', key, '/s', '/v', 'configUrl'], { timeoutMs: 5000 });
@@ -205,17 +226,10 @@ async function citrixStorefrontExistsWindows(storeUrlRaw = '') {
         if (!/configUrl/i.test(line)) continue;
         const parts = line.trim().split(/\s{2,}/);
         const value = parts[parts.length - 1] || '';
-        const normalizedValue = normalizeForUrlCompare(value);
-        if (!normalizedValue) continue;
-
-        if (expectedDiscovery && normalizedValue === expectedDiscovery) {
-            return { ok: true, exists: true, match: 'discovery', value };
-        }
-        if (expectedStoreBase && normalizedValue === expectedStoreBase) {
-            return { ok: true, exists: true, match: 'storeBase', value };
-        }
-        if (expectedStoreBase && normalizedValue.endsWith('/discovery') && normalizedValue.slice(0, -'/discovery'.length) === expectedStoreBase) {
-            return { ok: true, exists: true, match: 'base_plus_discovery', value };
+        const k = storefrontKey(value);
+        if (!k) continue;
+        if (expectedKey && k === expectedKey) {
+            return { ok: true, exists: true, match: 'storeKey', value };
         }
     }
 
@@ -642,6 +656,29 @@ function initializeCitrixStorefront(exePath, storeUrl) {
     }
 }
 
+function tryBringCitrixToFrontWindows() {
+    // Best-effort: if SelfService has a normal window, bring it to foreground.
+    // If it's a tray-only instance (MainWindowHandle=0), this won't help, but it's harmless.
+    try {
+        const script = [
+            '$p = Get-Process -Name SelfService -ErrorAction SilentlyContinue | Select-Object -First 1;',
+            'if ($p -and $p.MainWindowHandle -ne 0) {',
+            '  Add-Type -Name Win32 -Namespace ARC -MemberDefinition "[DllImport(\\"user32.dll\\")]public static extern bool ShowWindowAsync(IntPtr hWnd,int nCmdShow);[DllImport(\\"user32.dll\\")]public static extern bool SetForegroundWindow(IntPtr hWnd);" -ErrorAction SilentlyContinue;',
+            '  [ARC.Win32]::ShowWindowAsync($p.MainWindowHandle, 9) | Out-Null;',
+            '  [ARC.Win32]::SetForegroundWindow($p.MainWindowHandle) | Out-Null;',
+            '}'
+        ].join(' ');
+
+        const child = spawn('powershell', ['-NoProfile', '-WindowStyle', 'Hidden', '-Command', script], {
+            detached: true,
+            stdio: 'ignore',
+            windowsHide: true
+        });
+        child.on('error', () => {});
+        child.unref();
+    } catch { /* ignore */ }
+}
+
 // Citrix Workspace launcher
 function launchCitrix(connection, settings) {
     // Extract citrix settings from full settings object
@@ -737,8 +774,11 @@ function launchCitrix(connection, settings) {
             logger('info', `Citrix Launcher: Launching resource: ${citrixSettings.resourceName}`);
         }
 
-        // Run quietly (no UI)
-        args.push('-quiet');
+        // If we're launching a specific published resource, keep it quiet.
+        // If not, we want the UI visible (otherwise it often stays in tray and users think nothing happened).
+        if (citrixSettings.resourceName) {
+            args.push('-quiet');
+        }
 
         // Custom flags
         if (citrixSettings.customFlags) {
@@ -747,6 +787,7 @@ function launchCitrix(connection, settings) {
 
         logger('info', `Citrix Launcher: Launching ${exePath} with args: ${args.join(' ')}`);
         launchDetached(exePath, args);
+        tryBringCitrixToFrontWindows();
         logger('info', `Citrix Launcher: Launched from ${exePath}`);
         return;
     }
