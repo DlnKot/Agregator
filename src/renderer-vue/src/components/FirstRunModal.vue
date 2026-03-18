@@ -11,12 +11,11 @@
         <form @submit.prevent="save">
           <div class="form-group">
             <label for="user-domain">Домен</label>
-            <input 
-              type="text" 
-              id="user-domain" 
-              v-model="form.domain" 
-              placeholder="MOSCOW"
-            >
+            <select id="user-domain" v-model="form.domain" required>
+              <option value="MOSCOW">MOSCOW</option>
+              <option value="REGIONS">REGIONS</option>
+              <option value="E-BUSINESS">E-BUSINESS</option>
+            </select>
           </div>
           
           <div class="form-group">
@@ -46,7 +45,7 @@ import { reactive, computed } from 'vue'
 const emit = defineEmits(['save'])
 
 const form = reactive({
-  domain: '',
+  domain: 'MOSCOW',
   username: ''
 })
 
@@ -205,7 +204,8 @@ function save() {
   margin-bottom: 8px;
 }
 
-.form-group input {
+.form-group input,
+.form-group select {
   width: 100%;
   padding: 10px 14px;
   background: var(--bg-secondary);
@@ -216,9 +216,14 @@ function save() {
   transition: var(--transition);
 }
 
-.form-group input:focus {
+.form-group input:focus,
+.form-group select:focus {
   outline: none;
   border-color: var(--accent-primary);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.form-group select {
+  cursor: pointer;
 }
 </style>

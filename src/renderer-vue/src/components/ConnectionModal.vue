@@ -1,6 +1,6 @@
 <template>
   <div class="modal active" @click.self="$emit('close')">
-    <div class="modal-overlay" @click="$emit('close')"></div>
+    <div class="modal-overlay"></div>
     <div class="modal-content">
       <div class="modal-header">
         <h3 id="modal-title">{{ isEditing ? 'Редактировать подключение' : 'Новое подключение' }}</h3>
@@ -129,6 +129,11 @@ function normalizeServerUrl(url) {
   return trimmed
 }
 
+function normalizeCitrixStoreUrl(url) {
+  // Keep whatever the user pasted (including /discovery), but normalize scheme and trailing slashes.
+  return normalizeServerUrl(url).trim().replace(/\/+$/, '')
+}
+
 function save() {
   if (!form.name || !form.host) {
     alert('Заполните обязательные поля')
@@ -147,7 +152,7 @@ function save() {
     name: form.name.trim(),
     host: normalizedHost,
     desktopPool: form.desktopPool.trim(),
-    storeUrl: (form.storeUrl || '').trim(),
+    storeUrl: form.type === 'citrix' ? normalizeCitrixStoreUrl(form.storeUrl || '') : (form.storeUrl || '').trim(),
     username: form.username.trim(),
     description: form.description.trim()
   }
@@ -181,12 +186,14 @@ function save() {
   bottom: 0;
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(4px);
-  z-index: 0;
+  z-index: 1;
+  /* Purely visual. Closing handled by @click.self on .modal */
+  pointer-events: none;
 }
 
 .modal-content {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);

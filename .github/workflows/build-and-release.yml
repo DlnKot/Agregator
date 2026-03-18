@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - dev
     tags:
       - 'v*'
 
@@ -84,7 +83,7 @@ jobs:
   create-release:
     needs: [build-windows, build-macos]
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || startsWith(github.ref, 'refs/tags/v'))
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
 
     steps:
     - name: Checkout code
@@ -111,25 +110,6 @@ jobs:
         VERSION=$(node -e "console.log(require('./package.json').version)")
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "Release version: $VERSION"
-
-    - name: Create/Update dev release
-      if: github.ref == 'refs/heads/dev'
-      uses: softprops/action-gh-release@v2
-      with:
-        files: release-files/*
-        tag_name: dev-build
-        name: Development Build (Latest)
-        draft: false
-        prerelease: true
-        body: |
-          **Development Build** - Latest from dev branch
-
-          Version: ${{ steps.version.outputs.version }}
-
-          Build: ${{ github.run_number }}
-          Commit: ${{ github.sha }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Verify update metadata exists
       if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
