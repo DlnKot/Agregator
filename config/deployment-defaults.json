@@ -68,6 +68,7 @@
       "host": "telework.alfabank.ru",
       "description": "Рабочее место через Horizon",
       "isDefault": true,
+      "isUserModified": false,
       "desktopPool": "workspace-fullwm",
       "defaultSettings": {
         "serverUrl": "https://telework.alfabank.ru",
@@ -91,6 +92,7 @@
       "host": "telework.moscow.alfaintra.net",
       "description": "Рабочее место через Horizon (Москва)",
       "isDefault": true,
+      "isUserModified": false,
       "desktopPool": "workspace-fullvm",
       "defaultSettings": {
         "serverUrl": "https://telework.moscow.alfaintra.net",
@@ -114,6 +116,7 @@
       "host": "mypc.moscow.alfaintra.net",
       "description": "Удалённый рабочий стол",
       "isDefault": true,
+      "isUserModified": false,
       "defaultSettings": {
         "resolution": "800x600",
         "colorDepth": "32",
@@ -149,6 +152,7 @@
       "host": "sf-vdi.moscow.alfaintra.net",
       "description": "Виртуальные приложения Citrix",
       "isDefault": true,
+      "isUserModified": false,
       "defaultSettings": {
         "storeUrl": "https://sf-vdi.moscow.alfaintra.net/Citrix/VDI-Apps/discovery",
         "resourceName": "",
