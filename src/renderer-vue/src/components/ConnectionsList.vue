@@ -17,7 +17,12 @@
       class="connection-card"
     >
       <div class="connection-card-header">
-        <span :class="['connection-type', conn.type]">{{ getTypeLabel(conn.type) }}</span>
+        <div class="connection-header-left">
+          <span :class="['connection-type', conn.type]">{{ getTypeLabel(conn.type) }}</span>
+          <span :class="['connection-status', conn.isUserModified ? 'user-modified' : 'default']">
+            {{ conn.isUserModified ? 'Пользовательские' : 'Эталонные' }}
+          </span>
+        </div>
         <div class="connection-actions">
           <button class="btn btn-icon" @click="$emit('launch', conn.id)" title="Подключиться">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
@@ -101,6 +106,13 @@ function escapeHtml(text) {
   margin-bottom: 12px;
 }
 
+.connection-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .connection-type {
   display: inline-flex;
   align-items: center;
@@ -125,6 +137,25 @@ function escapeHtml(text) {
 .connection-type.citrix {
   background: rgba(245, 158, 11, 0.15);
   color: #fbbf24;
+}
+
+.connection-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.connection-status.default {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+
+.connection-status.user-modified {
+  background: rgba(99, 102, 241, 0.15);
+  color: #818cf8;
 }
 
 .connection-actions {

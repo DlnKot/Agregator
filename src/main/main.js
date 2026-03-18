@@ -374,8 +374,16 @@ function setupIpcHandlers() {
   ipcMain.handle('save-connection', (event, connection) => {
     const connections = configStore.get('connections', []);
     const idx = connections.findIndex(c => c.id === connection.id);
-    if (idx >= 0) connections[idx] = connection;
-    else { connection.id = Date.now().toString(); connections.push(connection); }
+    if (idx >= 0) {
+      // При редактировании существующего подключения - помечаем как пользовательское
+      connection.isUserModified = true;
+      connections[idx] = connection;
+    } else {
+      // Новое подключение всегда пользовательское
+      connection.id = Date.now().toString();
+      connection.isUserModified = true;
+      connections.push(connection);
+    }
     configStore.set('connections', connections);
     return connection;
   });
