@@ -6,6 +6,7 @@ const { spawn, spawnSync } = require('child_process');
 const os = require('os');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { log: logger } = require('../utils/logger');
 
 const launchedProcesses = [];
@@ -158,6 +159,14 @@ function storefrontKey(raw = '') {
         // Fall back to a conservative key; if parsing fails we don't treat it as equal.
         return '';
     }
+}
+
+function makeCitrixProviderName(rawStoreUrl = '') {
+    // Provider name must be stable per StoreFront and not collide across different stores.
+    // Use a short hash so we don't depend on path length/characters.
+    const k = storefrontKey(rawStoreUrl) || String(rawStoreUrl || '').trim().toLowerCase();
+    const h = crypto.createHash('sha1').update(k).digest('hex').slice(0, 12);
+    return `ARC_${h}`;
 }
 
 function execCapture(command, args = [], { timeoutMs = 4000 } = {}) {
@@ -643,7 +652,7 @@ function launchHorizon(connection, settings) {
  * Registers/configures a Storefront provider for Citrix client
  * Command: SelfService.exe -init -createprovider PROVIDER_NAME STORE_URL
  */
-function initializeCitrixStorefront(exePath, storeUrl) {
+function initializeCitrixStorefront(exePath, storeUrl, providerName) {
     try {
         // Normalize store URL
         let normalizedUrl = storeUrl.trim();
@@ -651,35 +660,54 @@ function initializeCitrixStorefront(exePath, storeUrl) {
             normalizedUrl = 'https://' + normalizedUrl;
         }
 
-        // Use a descriptive provider name for the Storefront
-        const providerName = 'StoreFront';
+        const prov = String(providerName || '').trim() || makeCitrixProviderName(normalizedUrl);
 
         logger('info', `Citrix Launcher: Initializing Storefront`);
         logger('info', `Citrix Launcher: Store URL: ${normalizedUrl}`);
-        logger('info', `Citrix Launcher: Provider Name: ${providerName}`);
+        logger('info', `Citrix Launcher: Provider Name: ${prov}`);
 
         // Build initialization arguments
         const initArgs = [
             '-init',
             '-createprovider',
-            providerName,
+            prov,
             normalizedUrl
         ];
 
         logger('info', `Citrix Launcher: Running initialization: ${exePath} ${initArgs.join(' ')}`);
 
-        // Do not block the main process here (it freezes the UI for 10-15 seconds).
-        // Run this in background and let the app stay responsive.
+        // Async (non-blocking) run, but we still capture result for troubleshooting.
         const child = spawn(exePath, initArgs, {
-            detached: true,
-            stdio: 'ignore',
-            windowsHide: true
+            windowsHide: true,
+            stdio: ['ignore', 'pipe', 'pipe']
         });
+
+        let out = '';
+        let err = '';
+        const limit = 16 * 1024;
+        child.stdout?.on('data', (d) => { out = (out + d.toString('utf8')).slice(-limit); });
+        child.stderr?.on('data', (d) => { err = (err + d.toString('utf8')).slice(-limit); });
+
+        const t = setTimeout(() => {
+            try { child.kill(); } catch { /* ignore */ }
+            logger('warn', 'Citrix Launcher: Storefront initialization timed out (killed)');
+        }, 30000);
+
         child.on('error', (e) => {
+            clearTimeout(t);
             logger('warn', `Citrix Launcher: Initialization process error: ${e.message}`);
         });
-        child.unref();
-        logger('info', 'Citrix Launcher: Storefront initialization started in background');
+
+        child.on('close', (code) => {
+            clearTimeout(t);
+            logger('info', `Citrix Launcher: Initialization exited with code ${code}`);
+            const sOut = (out || '').trim();
+            const sErr = (err || '').trim();
+            if (sOut) logger('info', `Citrix Launcher: init stdout: ${sOut}`);
+            if (sErr) logger('warn', `Citrix Launcher: init stderr: ${sErr}`);
+        });
+
+        logger('info', 'Citrix Launcher: Storefront initialization started (async)');
 
     } catch (error) {
         logger('warn', `Citrix Launcher: Storefront initialization failed: ${error.message}`);
@@ -784,7 +812,18 @@ function launchCitrix(connection, settings) {
 
                 const toRegister = normalizeStorefrontDiscoveryAddress(effectiveStoreUrlRaw) || normalizeHttpsUrl(effectiveStoreUrlRaw).replace(/\/+$/, '');
                 logger('info', `Citrix Launcher: Storefront not found in registry (win). Registering: ${toRegister}`);
-                initializeCitrixStorefront(exePath, toRegister);
+                const prov = makeCitrixProviderName(toRegister);
+                initializeCitrixStorefront(exePath, toRegister, prov);
+
+                // Fallback: some environments want base URL instead of /discovery (or vice versa).
+                // Try the alternative once; Citrix will ignore duplicates if it succeeds.
+                const alt = toRegister.toLowerCase().endsWith('/discovery')
+                    ? normalizeStorefrontAddress(toRegister)
+                    : normalizeStorefrontDiscoveryAddress(toRegister);
+                if (alt && storefrontKey(alt) === storefrontKey(toRegister) && alt !== toRegister) {
+                    logger('info', `Citrix Launcher: Register fallback (alt URL): ${alt}`);
+                    initializeCitrixStorefront(exePath, alt, prov);
+                }
             })().catch(() => {});
         }
 
