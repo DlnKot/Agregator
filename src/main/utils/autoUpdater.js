@@ -1,5 +1,5 @@
 /**
- * Auto Updater Module - handles automatic updates from GitHub releases
+ * Auto Updater Module - handles automatic updates from custom server
  */
 const { autoUpdater } = require('electron-updater');
 const { BrowserWindow, dialog, ipcMain, app } = require('electron');
@@ -29,6 +29,9 @@ let updateDownloaded = false;
 let updateInfo = null;
 let publishConfig = null;
 
+// Custom server URL for updates
+const CUSTOM_UPDATE_URL = 'https://10.230.121.212/electron/latest/';
+
 // Храним ссылки на функции-обработчики для возможности удаления
 const eventHandlers = new Map();
 
@@ -43,8 +46,8 @@ function getExpectedUpdateConfigPath() {
 }
 
 /**
- * Initialize auto-updater with GitHub settings
- * @param {Object} config - Configuration with publish settings
+ * Initialize auto-updater with custom server settings
+ * @param {Object} config - Configuration with server settings
  */
 function initAutoUpdater(config = {}) {
     publishConfig = config && typeof config === 'object' ? { ...config } : null;
@@ -86,12 +89,20 @@ function initAutoUpdater(config = {}) {
         }
     }
 
-    // Configure GitHub publish settings
-    if (config.owner && config.repo) {
+    // Configure custom server publish settings
+    const updateUrl = config.updateUrl || CUSTOM_UPDATE_URL;
+
+    if (updateUrl) {
         autoUpdater.autoDownload = false;
         autoUpdater.autoInstallOnAppQuit = true;
 
-        logger('info', `AutoUpdater: Initialized for ${config.owner}/${config.repo}`);
+        // Set feed URL for generic provider (custom server)
+        autoUpdater.setFeedURL({
+            provider: 'generic',
+            url: updateUrl
+        });
+
+        logger('info', `AutoUpdater: Initialized with custom server: ${updateUrl}`);
         logger('info', `AutoUpdater: Current version - ${config.currentVersion}`);
 
         // Best-effort diagnostics: macOS auto-update requires a signed app.
@@ -108,7 +119,7 @@ function initAutoUpdater(config = {}) {
             }
         }
     } else {
-        logger('warn', 'AutoUpdater: GitHub owner/repo not configured. Updates disabled.');
+        logger('warn', 'AutoUpdater: Update server URL not configured. Updates disabled.');
         return;
     }
 
@@ -124,19 +135,11 @@ function initAutoUpdater(config = {}) {
         updateAvailable = true;
         updateInfo = info;
 
-        const owner = publishConfig?.owner;
-        const repo = publishConfig?.repo;
-        const tag = info?.version ? `v${info.version}` : null;
-        const macReleaseUrl = (owner && repo && tag)
-            ? `https://github.com/${owner}/${repo}/releases/tag/${tag}`
-            : null;
-
         // Notify renderer process
         notifyRenderer('update-available', {
             version: info.version,
             releaseDate: info.releaseDate,
-            releaseNotes: info.releaseNotes,
-            macReleaseUrl
+            releaseNotes: info.releaseNotes
         });
     });
 
@@ -175,16 +178,7 @@ function initAutoUpdater(config = {}) {
 
     autoUpdater.on('error', (error) => {
         const rawMessage = error?.message || String(error);
-        const message = /Cannot find latest-mac\.yml/i.test(rawMessage) || /\b404\b/.test(rawMessage)
-            ? (
-                'AutoUpdater: Cannot download update metadata (latest-mac.yml).\n' +
-                'Checklist:\n' +
-                '1) GitHub Release for the current channel is published (not Draft).\n' +
-                '2) Release assets contain `latest-mac.yml` and the corresponding `*-mac.zip`.\n' +
-                '3) If the repo is private, the app must be configured with an auth token to download assets.\n' +
-                `Original error: ${rawMessage}`
-            )
-            : `AutoUpdater: Error - ${rawMessage}`;
+        const message = `AutoUpdater: Error - ${rawMessage}`;
 
         logger('error', message);
         notifyRenderer('update-error', { message });
@@ -337,18 +331,13 @@ function installUpdate() {
  * Get current update status
  */
 function getUpdateStatus() {
-    const owner = publishConfig?.owner;
-    const repo = publishConfig?.repo;
-    const tag = updateInfo?.version ? `v${updateInfo.version}` : null;
-    const macReleaseUrl = (owner && repo && tag)
-        ? `https://github.com/${owner}/${repo}/releases/tag/${tag}`
-        : null;
+    const updateUrl = publishConfig?.updateUrl || CUSTOM_UPDATE_URL;
 
     return {
         updateAvailable,
         updateDownloaded,
         version: updateInfo?.version || null,
-        macReleaseUrl
+        updateUrl
     };
 }
 

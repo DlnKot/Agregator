@@ -553,12 +553,12 @@ app.whenReady().then(() => {
 
     // Initialize auto-updater (only in production)
     if (!process.env.ELECTRON_DEV && app.isPackaged) {
-      const githubConfig = {
-        owner: 'DlnKot',
-        repo: 'Agregator',
-        currentVersion: app.getVersion()
+      // Используем кастомный сервер обновлений
+      const updateConfig = {
+        currentVersion: app.getVersion(),
+        updateUrl: 'https://10.230.121.212/electron/latest/'
       };
-      autoUpdaterModule.initAutoUpdater(githubConfig);
+      autoUpdaterModule.initAutoUpdater(updateConfig);
 
       // Check for updates after startup (with delay)
       setTimeout(() => {

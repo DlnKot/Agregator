@@ -75,12 +75,12 @@
       "src/**/*",
       "dist-renderer/**/*",
       "assets/**/*",
-      "config/**/*"
+      "config/**/*",
+      "build/**/*"
     ],
     "publish": {
-      "provider": "github",
-      "owner": "DlnKot",
-      "repo": "Agregator"
+      "provider": "generic",
+      "url": "https://10.230.121.212/electron/latest/"
     }
   }
 }
