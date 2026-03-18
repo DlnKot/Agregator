@@ -129,6 +129,11 @@ function normalizeServerUrl(url) {
   return trimmed
 }
 
+function normalizeCitrixStoreUrl(url) {
+  // Keep whatever the user pasted (including /discovery), but normalize scheme and trailing slashes.
+  return normalizeServerUrl(url).trim().replace(/\/+$/, '')
+}
+
 function save() {
   if (!form.name || !form.host) {
     alert('Заполните обязательные поля')
@@ -147,7 +152,7 @@ function save() {
     name: form.name.trim(),
     host: normalizedHost,
     desktopPool: form.desktopPool.trim(),
-    storeUrl: (form.storeUrl || '').trim(),
+    storeUrl: form.type === 'citrix' ? normalizeCitrixStoreUrl(form.storeUrl || '') : (form.storeUrl || '').trim(),
     username: form.username.trim(),
     description: form.description.trim()
   }

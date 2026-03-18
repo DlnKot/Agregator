@@ -14,7 +14,11 @@
 
         <div class="form-group">
           <label for="user-domain">Домен</label>
-          <input type="text" id="user-domain" v-model="localSettings.user.domain" placeholder="CORP или CORP.RU">
+          <select id="user-domain" v-model="localSettings.user.domain" required>
+            <option value="MOSCOW">MOSCOW</option>
+            <option value="REGIONS">REGIONS</option>
+            <option value="E-BUSINESS">E-BUSINESS</option>
+          </select>
         </div>
 
         <div class="form-group">

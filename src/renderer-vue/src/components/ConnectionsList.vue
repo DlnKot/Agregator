@@ -41,12 +41,6 @@
       <h3 class="connection-name">{{ escapeHtml(conn.name) }}</h3>
       <p class="connection-host">{{ escapeHtml(conn.host) }}</p>
       <p v-if="conn.description" class="connection-description">{{ escapeHtml(conn.description) }}</p>
-      <div class="connection-footer">
-        <div class="connection-status">
-          <span class="status-dot"></span>
-          <span>Готово</span>
-        </div>
-      </div>
     </div>
   </div>
 </template>
@@ -156,29 +150,6 @@ function escapeHtml(text) {
   color: var(--text-muted);
   opacity: 0.8;
   margin-bottom: 16px;
-}
-
-.connection-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: 12px;
-  border-top: 1px solid var(--border-color);
-}
-
-.connection-status {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--text-muted);
 }
 
 /* Buttons */
