@@ -33,15 +33,47 @@ try {
 const BUILTIN_DEFAULTS = {
   settings: {
     rdp: {
+      // Базовые настройки
+      host: '',
       resolution: '1920x1080',
       colorDepth: '32',
+      
+      // Мониторы
       multimon: false,
+      span: false,
+      startFullScreen: false,
+      
+      // Перенаправление устройств
       clipboard: true,
       driveMapping: false,
-      useAdminSession: false,
+      
+      // Учётные данные
       promptCredentials: true,
-      startFullScreen: false,
-      span: false,
+      useAdminSession: false,
+      
+      // Аудио
+      audio: {
+        playback: true,
+        capture: false
+      },
+      
+      // Перенаправление
+      redirect: {
+        printers: true,
+        smartcards: true,
+        webauthn: true
+      },
+      
+      // Производительность
+      performance: {
+        wallpaper: true,
+        fontSmoothing: true,
+        desktopComposition: true,
+        fullWindowDrag: true,
+        menuAnimations: true
+      },
+      
+      // Кастомные флаги
       customFlags: ''
     },
     horizon: {
@@ -300,9 +332,19 @@ function createWindow() {
 
 function killAllLaunchedProcesses() {
   logger('info', 'Killing all launched processes...');
+
+  // Используем универсальный killAllProcesses - он убивает все процессы всех типов
+  // Это работает благодаря тому, что все launchers используют одинаковый массив launchedProcesses
+  // через require кэширование - это один и тот же массив в памяти
   rdpLauncher.killAllProcesses();
-  horizonLauncher.killAllProcesses();
-  citrixLauncher.killAllProcesses();
+
+  // Дополнительно пытаемся убить процессы других launchers, если они загружены
+  if (horizonLauncher && typeof horizonLauncher.killAllProcesses === 'function') {
+    try { horizonLauncher.killAllProcesses(); } catch (e) { /* ignore */ }
+  }
+  if (citrixLauncher && typeof citrixLauncher.killAllProcesses === 'function') {
+    try { citrixLauncher.killAllProcesses(); } catch (e) { /* ignore */ }
+  }
 }
 
 // ==================== Exception Handlers ====================
@@ -415,6 +457,19 @@ function setupIpcHandlers() {
   ipcMain.handle('open-external', async (event, url) => {
     const u = String(url || '').trim();
     if (!u) return { success: false, error: 'Empty URL' };
+
+    // Валидация URL - разрешаем только безопасные протоколы
+    try {
+      const parsedUrl = new URL(u);
+      const allowedProtocols = ['https:', 'http:', 'mailto:'];
+      if (!allowedProtocols.includes(parsedUrl.protocol)) {
+        logger('warn', `openExternal: Blocked unsafe protocol: ${parsedUrl.protocol}`);
+        return { success: false, error: 'Недопустимый протокол. Разрешены только http, https и mailto' };
+      }
+    } catch (e) {
+      return { success: false, error: 'Неверный формат URL' };
+    }
+
     try {
       await shell.openExternal(u);
       return { success: true };
@@ -522,6 +577,12 @@ app.on('window-all-closed', () => {
 app.on('before-quit', (event) => {
   logger('info', 'App is quitting...');
   killAllLaunchedProcesses();
+
+  // Принудительно сохраняем все данные перед закрытием
+  if (configStore && typeof configStore.flush === 'function') {
+    configStore.flush();
+  }
+
   // Give processes time to cleanup
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.destroy();

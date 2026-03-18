@@ -5,15 +5,32 @@
       "username": ""
     },
     "rdp": {
+      "host": "",
       "resolution": "1920x1080",
       "colorDepth": "32",
       "multimon": false,
+      "span": false,
+      "startFullScreen": false,
       "clipboard": true,
       "driveMapping": false,
-      "useAdminSession": false,
       "promptCredentials": true,
-      "startFullScreen": false,
-      "span": false,
+      "useAdminSession": false,
+      "audio": {
+        "playback": true,
+        "capture": false
+      },
+      "redirect": {
+        "printers": true,
+        "smartcards": true,
+        "webauthn": true
+      },
+      "performance": {
+        "wallpaper": true,
+        "fontSmoothing": true,
+        "desktopComposition": true,
+        "fullWindowDrag": true,
+        "menuAnimations": true
+      },
       "customFlags": ""
     },
     "horizon": {
@@ -98,15 +115,32 @@
       "description": "Удалённый рабочий стол",
       "isDefault": true,
       "defaultSettings": {
-        "resolution": "1920x1080",
+        "resolution": "800x600",
         "colorDepth": "32",
-        "multimon": false,
+        "multimon": true,
+        "startFullScreen": true,
+        "span": false,
         "clipboard": true,
         "driveMapping": false,
+        "promptCredentials": false,
         "useAdminSession": false,
-        "promptCredentials": true,
-        "startFullScreen": false,
-        "span": false
+        "audio": {
+          "playback": true,
+          "capture": true
+        },
+        "redirect": {
+          "printers": true,
+          "smartcards": true,
+          "webauthn": true
+        },
+        "performance": {
+          "wallpaper": true,
+          "fontSmoothing": false,
+          "desktopComposition": false,
+          "fullWindowDrag": false,
+          "menuAnimations": false
+        },
+        "customFlags": "compression:i:1\nnetworkautodetect:i:1\nbandwidthautodetect:i:1\nconnection type:i:7\nvideoplaybackmode:i:1\nautoreconnection enabled:i:1"
       }
     },
     {
@@ -124,3 +158,4 @@
     }
   ]
 }
+  

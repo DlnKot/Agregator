@@ -141,9 +141,16 @@ function runPing(host, count = 10) {
     const startedAt = Date.now();
 
     const safeHost = String(host || '').trim();
-    // Avoid command injection on Windows where we wrap ping with cmd.exe.
-    // Accept typical hostnames, IPv4, and IPv6 literals.
-    if (!safeHost || !/^[a-zA-Z0-9.\-_:]+$/.test(safeHost)) {
+    
+    // Улучшенная валидация хоста - предотвращение shell injection
+    // Принимаем: hostname, IPv4, IPv6
+    const ipv4Regex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+    const ipv6Regex = /^(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^::1$|^::$/;
+    const hostnameRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+    
+    if (!safeHost || 
+        safeHost.length > 253 ||
+        (!ipv4Regex.test(safeHost) && !ipv6Regex.test(safeHost) && !hostnameRegex.test(safeHost))) {
       resolve({
         host: safeHost,
         ok: false,
