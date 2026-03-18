@@ -195,6 +195,51 @@ function execCapture(command, args = [], { timeoutMs = 4000 } = {}) {
     });
 }
 
+async function getCitrixConfigUrlsWindows() {
+    // Prefer PowerShell: locale-independent, avoids reg.exe stderr/stdout quirks.
+    const ps = [
+        "$base = 'HKCU:\\SOFTWARE\\Citrix\\Dazzle\\Sites';",
+        '$urls = New-Object System.Collections.Generic.List[string];',
+        'try {',
+        '  Get-ChildItem -Path $base -ErrorAction Stop | ForEach-Object {',
+        '    try {',
+        '      $v = (Get-ItemProperty -Path $_.PsPath -Name configUrl -ErrorAction SilentlyContinue).configUrl;',
+        '      if ($v) { $urls.Add([string]$v) | Out-Null }',
+        '    } catch {}',
+        '  }',
+        '} catch {}',
+        '$urls | ConvertTo-Json -Compress'
+    ].join(' ');
+
+    const psRes = await execCapture('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', ps], { timeoutMs: 6000 });
+    if (psRes.ok) {
+        const s = (psRes.stdout || '').trim();
+        if (!s) return [];
+        try {
+            const parsed = JSON.parse(s);
+            if (Array.isArray(parsed)) return parsed.filter(Boolean).map(String);
+            if (typeof parsed === 'string') return [parsed];
+        } catch {
+            // If parsing fails, fall through to reg.exe fallback.
+        }
+    }
+
+    // Fallback to reg.exe (some environments restrict PowerShell)
+    const key = 'HKCU\\SOFTWARE\\Citrix\\Dazzle\\Sites';
+    const res = await execCapture('reg', ['query', key, '/s', '/v', 'configUrl'], { timeoutMs: 6000 });
+    if (!res.ok) return [];
+
+    const urls = [];
+    const lines = (res.stdout || '').split(/\r?\n/);
+    for (const line of lines) {
+        if (!/configUrl/i.test(line)) continue;
+        const parts = line.trim().split(/\s{2,}/);
+        const value = parts[parts.length - 1] || '';
+        if (value) urls.push(value);
+    }
+    return urls;
+}
+
 async function citrixStorefrontExistsWindows(storeUrlRaw = '') {
     const raw = (storeUrlRaw || '').trim();
     if (!raw) return { ok: true, exists: false, reason: 'no_store_url' };
@@ -205,27 +250,13 @@ async function citrixStorefrontExistsWindows(storeUrlRaw = '') {
     // and also ignores http/https differences.
     const expectedKey = storefrontKey(raw) || storefrontKey(normalizeStorefrontDiscoveryAddress(raw)) || storefrontKey(normalizeStorefrontAddress(raw));
 
-    const key = 'HKCU\\SOFTWARE\\Citrix\\Dazzle\\Sites';
-    const res = await execCapture('reg', ['query', key, '/s', '/v', 'configUrl'], { timeoutMs: 5000 });
-    if (!res.ok) {
-        const stderr = (res.stderr || '').trim();
-        // On a fresh Citrix install (or before first add), the key may not exist yet.
-        // reg.exe returns exit code 1 with: "ERROR: The system was unable to find the specified registry key or value."
-        if (Number(res.code) === 1 && /unable to find the specified registry key or value/i.test(stderr)) {
-            logger('info', 'Citrix Launcher: Citrix Sites registry key not found yet (win). Treating as empty and will register StoreFront.');
-            return { ok: true, exists: false, reason: 'key_not_found' };
-        }
-
-        logger('warn', `Citrix Launcher: reg query failed (code=${res.code} timedOut=${res.timedOut}) stderr=${stderr}`);
-        // If we can't check, better to skip auto-registration to avoid duplicates.
-        return { ok: false, exists: false, reason: 'reg_query_failed' };
+    const urls = await getCitrixConfigUrlsWindows();
+    if (!urls.length) {
+        // If there are no sites yet, we can safely register.
+        return { ok: true, exists: false, reason: 'no_sites' };
     }
 
-    const lines = (res.stdout || '').split(/\r?\n/);
-    for (const line of lines) {
-        if (!/configUrl/i.test(line)) continue;
-        const parts = line.trim().split(/\s{2,}/);
-        const value = parts[parts.length - 1] || '';
+    for (const value of urls) {
         const k = storefrontKey(value);
         if (!k) continue;
         if (expectedKey && k === expectedKey) {
