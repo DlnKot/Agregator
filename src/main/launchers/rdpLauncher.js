@@ -78,39 +78,115 @@ function createRdpFile(connection, settings) {
     const tempDir = require('electron').app.getPath('temp');
     const file = path.join(tempDir, `rdm_${connection.id}.rdp`);
 
-    const resolution = settings.resolution || '1920x1080';
-    const fullscreen = resolution === 'fullscreen' || settings.startFullScreen;
+    // Используем настройки из объекта или дефолтные значения
+    const s = settings || {};
 
-    const width = fullscreen ? 1920 : parseInt(resolution.split('x')[0]) || 1920;
-    const height = fullscreen ? 1080 : parseInt(resolution.split('x')[1]) || 1080;
+    // Разрешение
+    const resolution = s.resolution || '1920x1080';
+    const fullscreen = resolution === 'fullscreen' || s.startFullScreen;
 
-    const lines = [
+    let width = 1920;
+    let height = 1080;
 
-        `full address:s:${connection.host}`,
-        `username:s:${connection.username || ''}`,
+    if (!fullscreen && resolution.includes('x')) {
+        const parts = resolution.split('x');
+        width = parseInt(parts[0]) || 1920;
+        height = parseInt(parts[1]) || 1080;
+    }
 
-        `screen mode id:i:${fullscreen ? 2 : 1}`,
-        `desktopwidth:i:${width}`,
-        `desktopheight:i:${height}`,
+    const lines = [];
 
-        `session bpp:i:${parseInt(settings.colorDepth) || 32}`,
+    // Основные настройки
+    lines.push(`full address:s:${connection.host}`);
+    lines.push(`username:s:${connection.username || ''}`);
+    lines.push(`screen mode id:i:${fullscreen ? 2 : 1}`);
+    lines.push(`desktopwidth:i:${width}`);
+    lines.push(`desktopheight:i:${height}`);
+    lines.push(`session bpp:i:${parseInt(s.colorDepth) || 32}`);
 
-        `compression:i:1`,
-        `multimon:i:${settings.multimon ? 1 : 0}`,
-        `span monitors:i:${settings.span ? 1 : 0}`,
+    // WinPosStr - позиция и размер окна
+    lines.push(`winposstr:s:0,3,0,0,${width},${height}`);
 
-        `redirectclipboard:i:${settings.clipboard ? 1 : 0}`,
-        `drivestoredirect:s:${settings.driveMapping ? '*' : ''}`,
+    // Мониторы
+    lines.push(`use multimon:i:${s.multimon ? 1 : 0}`);
+    lines.push(`span monitors:i:${s.span ? 1 : 0}`);
+    lines.push(`displayconnectionbar:i:1`);
+    lines.push(`enableworkspacereconnect:i:0`);
 
-        `prompt for credentials:i:${settings.promptCredentials ? 1 : 0}`,
-        `administrative session:i:${settings.useAdminSession ? 1 : 0}`,
+    // Перенаправление устройств
+    lines.push(`redirectclipboard:i:${s.clipboard ? 1 : 0}`);
+    lines.push(`drivestoredirect:s:${s.driveMapping ? '*' : ''}`);
 
-        'authentication level:i:2',
-        'negotiate security layer:i:1'
-    ];
+    // Redirect - новый формат
+    const redirect = s.redirect || {};
+    lines.push(`redirectprinters:i:${redirect.printers !== false ? 1 : 0}`);
+    lines.push(`redirectsmartcards:i:${redirect.smartcards !== false ? 1 : 0}`);
+    lines.push(`redirectwebauthn:i:${redirect.webauthn !== false ? 1 : 0}`);
+    lines.push(`redirectcomports:i:0`);
+    lines.push(`redirectposdevices:i:0`);
+    lines.push(`redirectlocation:i:0`);
 
-    if (settings.customFlags) {
-        lines.push(...splitArgs(settings.customFlags));
+    // Аудио - новый формат
+    const audio = s.audio || {};
+    // audiomode: 0 - bring to this computer, 1 - leave at remote, 2 - do not play
+    lines.push(`audiomode:i:${audio.playback !== false ? 0 : 2}`);
+    lines.push(`audiocapturemode:i:${audio.capture ? 1 : 0}`);
+
+    // Видео
+    lines.push(`videoplaybackmode:i:1`);
+
+    // Производительность / отображение - новый формат
+    const perf = s.performance || {};
+    lines.push(`disable wallpaper:i:${perf.wallpaper === false ? 1 : 0}`);
+    lines.push(`allow font smoothing:i:${perf.fontSmoothing !== false ? 1 : 0}`);
+    lines.push(`allow desktop composition:i:${perf.desktopComposition !== false ? 1 : 0}`);
+    lines.push(`disable full window drag:i:${perf.fullWindowDrag === false ? 1 : 0}`);
+    lines.push(`disable menu anims:i:${perf.menuAnimations === false ? 1 : 0}`);
+    lines.push(`disable themes:i:0`);
+    lines.push(`disable cursor setting:i:0`);
+
+    // Сеть
+    lines.push(`compression:i:1`);
+    lines.push(`networkautodetect:i:1`);
+    lines.push(`bandwidthautodetect:i:1`);
+    lines.push(`connection type:i:7`);
+
+    // Перенаправление COM-портов
+    lines.push(`bitmapcachepersistenable:i:1`);
+
+    // Автопереподключение
+    lines.push(`autoreconnection enabled:i:1`);
+
+    // Учётные данные
+    lines.push(`prompt for credentials:i:${s.promptCredentials ? 1 : 0}`);
+    lines.push(`administrative session:i:${s.useAdminSession ? 1 : 0}`);
+
+    // Безопасность
+    lines.push(`authentication level:i:2`);
+    lines.push(`negotiate security layer:i:1`);
+    lines.push(`remoteapplicationmode:i:0`);
+
+    // Shell
+    lines.push(`alternate shell:s:`);
+    lines.push(`shell working directory:s:`);
+
+    // Gateway
+    lines.push(`gatewayhostname:s:`);
+    lines.push(`gatewayusagemethod:i:4`);
+    lines.push(`gatewaycredentialssource:i:4`);
+    lines.push(`gatewayprofileusagemethod:i:0`);
+    lines.push(`promptcredentialonce:i:0`);
+    lines.push(`gatewaybrokeringtype:i:0`);
+    lines.push(`use redirection server name:i:0`);
+    lines.push(`rdgiskdcproxy:i:0`);
+    lines.push(`kdcproxyname:s:`);
+    lines.push(`enablerdsaadauth:i:0`);
+    lines.push(`remoteappmousemoveinject:i:1`);
+
+    // Кастомные флаги
+    if (s.customFlags) {
+        const customLines = splitArgs(s.customFlags);
+        lines.push(...customLines);
     }
 
     fs.writeFileSync(file, lines.join('\n'), 'utf8');
@@ -123,7 +199,7 @@ function scheduleDelete(file, timeout = 10000) {
 
     setTimeout(() => {
         try { fs.unlinkSync(file); }
-        catch {}
+        catch { }
     }, timeout);
 }
 

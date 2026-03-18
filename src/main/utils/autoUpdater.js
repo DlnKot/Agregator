@@ -29,6 +29,9 @@ let updateDownloaded = false;
 let updateInfo = null;
 let publishConfig = null;
 
+// Храним ссылки на функции-обработчики для возможности удаления
+const eventHandlers = new Map();
+
 function getExpectedUpdateConfigPath() {
     // electron-updater:
     // - prod: process.resourcesPath/app-update.yml
@@ -46,8 +49,27 @@ function getExpectedUpdateConfigPath() {
 function initAutoUpdater(config = {}) {
     publishConfig = config && typeof config === 'object' ? { ...config } : null;
 
-    // Prevent a noisy ENOENT on macOS/Windows if the app was built without update metadata.
-    // In production electron-updater always tries to read process.resourcesPath/app-update.yml.
+    // Очищаем старые обработчики событий перед добавлением новых
+    // Это предотвращает утечку памяти при переинициализации
+    const events = [
+        'checking-for-update',
+        'update-available',
+        'update-not-available',
+        'download-progress',
+        'update-downloaded',
+        'error'
+    ];
+
+    for (const eventName of events) {
+        try {
+            autoUpdater.removeAllListeners(eventName);
+        } catch (e) {
+            // ignore - метод может не существовать в некоторых версиях
+        }
+    }
+
+    // Предотвращаем шумный ENOENT на macOS/Windows если приложение собрано без метаданных обновлений.
+    // В production electron-updater всегда пытается прочитать process.resourcesPath/app-update.yml.
     const updateConfigPath = getExpectedUpdateConfigPath();
     if (app.isPackaged) {
         try {

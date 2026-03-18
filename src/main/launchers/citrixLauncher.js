@@ -769,7 +769,7 @@ function tryBringCitrixToFrontWindows() {
             stdio: 'ignore',
             windowsHide: true
         });
-        child.on('error', () => {});
+        child.on('error', () => { });
         child.unref();
     } catch { /* ignore */ }
 }
@@ -850,7 +850,7 @@ function launchCitrix(connection, settings) {
                 logger('info', `Citrix Launcher: Storefront not found in registry (win). Registering: ${toRegister}`);
                 const prov = makeCitrixProviderName(toRegister);
                 initializeCitrixStorefront(exePath, toRegister, prov);
-            })().catch(() => {});
+            })().catch(() => { });
         }
 
         // Build args for launching resource or opening client
@@ -964,8 +964,24 @@ function killAllProcesses() {
     launchedProcesses.length = 0;
 }
 
+// Дублируем экспорт для совместимости - Citrix файл исторически содержит код всех launchers
+// Примечание: это временная мера для совместимости, рекомендуется разделить на отдельные файлы
+const rdpLauncher = require('./rdpLauncher');
+const horizonLauncher = require('./horizonLauncher');
+
 module.exports = {
+    // RDP
+    launchRdp: rdpLauncher.launchRdp,
+    killAllRdpProcesses: rdpLauncher.killAllProcesses,
+
+    // Horizon
     launchHorizon,
+    killAllHorizonProcesses: killAllProcesses,
+
+    // Citrix
     launchCitrix,
+    killAllCitrixProcesses: killAllProcesses,
+
+    // Общий killAll - убивает все процессы
     killAllProcesses
 };

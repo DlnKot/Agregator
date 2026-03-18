@@ -3,92 +3,131 @@ const path = require('path');
 
 class SimpleStore {
 
- constructor(filePath, defaults = {}) {
+  constructor(filePath, defaults = {}) {
 
-  this.filePath = filePath;
-  this.defaults = defaults;
-  this.data = this._load();
+    this.filePath = filePath;
+    this.defaults = defaults;
+    this.data = this._load();
 
- }
-
- _load() {
-
-  try {
-
-   if (!fs.existsSync(this.filePath))
-    return { ...this.defaults }
-
-   const content = fs.readFileSync(this.filePath, 'utf8')
-
-   try {
-
-    const parsed = JSON.parse(content)
-
-    return { ...this.defaults, ...parsed }
-
-   } catch {
-
-    console.error('Store corrupted, restoring backup')
-
-    fs.renameSync(
-     this.filePath,
-     this.filePath + '.broken'
-    )
-
-    return { ...this.defaults }
-
-   }
-
-  } catch (error) {
-
-   console.error('Error loading store:', error)
-
-   return { ...this.defaults }
+    // Debounce для предотвращения race condition при быстрых последовательных записях
+    this._saveTimeout = null;
+    this._savePending = false;
 
   }
- }
 
- _save() {
+  _load() {
 
-  try {
+    try {
 
-   const dir = path.dirname(this.filePath)
+      if (!fs.existsSync(this.filePath))
+        return { ...this.defaults }
 
-   if (!fs.existsSync(dir))
-    fs.mkdirSync(dir, { recursive: true })
+      const content = fs.readFileSync(this.filePath, 'utf8')
 
-   const tmp = this.filePath + '.tmp'
+      try {
 
-   const data = JSON.stringify(this.data, null, 2)
+        const parsed = JSON.parse(content)
 
-   fs.writeFileSync(tmp, data, 'utf8')
+        return { ...this.defaults, ...parsed }
 
-   fs.renameSync(tmp, this.filePath)
+      } catch {
 
-  } catch (error) {
+        console.error('Store corrupted, restoring backup')
 
-   console.error('Error saving store:', error)
+        fs.renameSync(
+          this.filePath,
+          this.filePath + '.broken'
+        )
+
+        return { ...this.defaults }
+
+      }
+
+    } catch (error) {
+
+      console.error('Error loading store:', error)
+
+      return { ...this.defaults }
+
+    }
+  }
+
+  _save() {
+
+    try {
+
+      const dir = path.dirname(this.filePath)
+
+      if (!fs.existsSync(dir))
+        fs.mkdirSync(dir, { recursive: true })
+
+      const tmp = this.filePath + '.tmp'
+
+      const data = JSON.stringify(this.data, null, 2)
+
+      fs.writeFileSync(tmp, data, 'utf8')
+
+      fs.renameSync(tmp, this.filePath)
+
+    } catch (error) {
+
+      console.error('Error saving store:', error)
+
+    }
+  }
+
+  _scheduleSave() {
+    // Debounce запись - ждем 100ms после последнего изменения
+    if (this._saveTimeout) {
+      clearTimeout(this._saveTimeout);
+    }
+    this._saveTimeout = setTimeout(() => {
+      this._saveTimeout = null;
+      this._savePending = false;
+      this._save();
+    }, 100);
+  }
+
+  get(key, defaultValue) {
+
+    const value = this.data[key]
+
+    return value !== undefined
+      ? value
+      : defaultValue
 
   }
- }
 
- get(key, defaultValue) {
+  set(key, value) {
 
-  const value = this.data[key]
+    this.data[key] = value
 
-  return value !== undefined
-   ? value
-   : defaultValue
+    // Используем debounced запись для предотвращения race condition
+    this._scheduleSave();
 
- }
+  }
 
- set(key, value) {
+  // Принудительная синхронная запись (для критических операций)
+  setSync(key, value) {
+    this.data[key] = value;
 
-  this.data[key] = value
+    // Отменяем отложенную запись и пишем сразу
+    if (this._saveTimeout) {
+      clearTimeout(this._saveTimeout);
+      this._saveTimeout = null;
+    }
 
-  this._save()
+    this._save();
+  }
 
- }
+  // При закрытии приложения - обязательно дождаться записи
+  flush() {
+    if (this._saveTimeout) {
+      clearTimeout(this._saveTimeout);
+      this._saveTimeout = null;
+      this._save();
+    }
+  }
 
 }
 
