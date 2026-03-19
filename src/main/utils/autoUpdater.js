@@ -54,6 +54,7 @@ let publishConfig = null;
 
 // Custom server URL for updates
 const CUSTOM_UPDATE_URL = 'https://10.230.121.212/electron/latest/';
+const CUSTOM_UPDATE_URL_HTTP = 'http://10.230.121.212/electron/latest/';
 
 // Храним ссылки на функции-обработчики для возможности удаления
 const eventHandlers = new Map();
@@ -114,15 +115,19 @@ function initAutoUpdater(config = {}) {
 
     // Configure custom server publish settings
     const updateUrl = config.updateUrl || CUSTOM_UPDATE_URL;
+    const updateUrlHttp = config.updateUrlHttp || CUSTOM_UPDATE_URL_HTTP;
 
     if (updateUrl) {
         autoUpdater.autoDownload = false;
         autoUpdater.autoInstallOnAppQuit = true;
 
-        // Set feed URL for generic provider (custom server)
+        // Try HTTPS first, then fallback to HTTP
+        let feedUrl = updateUrl;
+        
+        // Set initial feed URL (will retry with HTTP on error)
         autoUpdater.setFeedURL({
             provider: 'generic',
-            url: updateUrl,
+            url: feedUrl,
             channel: 'latest'
         });
 
@@ -202,8 +207,32 @@ function initAutoUpdater(config = {}) {
 
     autoUpdater.on('error', (error) => {
         const rawMessage = error?.message || String(error);
-        const message = `AutoUpdater: Error - ${rawMessage}`;
+        
+        // If HTTPS fails with certificate error, try HTTP fallback
+        if (updateUrl.startsWith('https') && rawMessage.includes('CERT_')) {
+            logger('warn', 'AutoUpdater: HTTPS failed with cert error, trying HTTP fallback...');
+            const feedUrl = updateUrlHttp;
+            try {
+                autoUpdater.setFeedURL({
+                    provider: 'generic',
+                    url: feedUrl,
+                    channel: 'latest'
+                });
+                // Retry check
+                autoUpdater.checkForUpdates().catch(err => {
+                    const msg = `AutoUpdater: HTTP fallback also failed: ${err.message}`;
+                    logger('error', msg);
+                    notifyRenderer('update-error', { message: msg });
+                });
+            } catch (e) {
+                const msg = `AutoUpdater: Error - ${rawMessage}`;
+                logger('error', msg);
+                notifyRenderer('update-error', { message: msg });
+            }
+            return;
+        }
 
+        const message = `AutoUpdater: Error - ${rawMessage}`;
         logger('error', message);
         notifyRenderer('update-error', { message });
     });

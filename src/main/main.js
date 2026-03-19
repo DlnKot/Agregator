@@ -557,10 +557,11 @@ app.whenReady().then(() => {
 
     // Initialize auto-updater (only in production)
     if (!process.env.ELECTRON_DEV && app.isPackaged) {
-      // Используем кастомный сервер обновлений
+      // Используем кастомный сервер обновлений (HTTPS с fallback на HTTP)
       const updateConfig = {
         currentVersion: app.getVersion(),
-        updateUrl: 'https://10.230.121.212/electron/latest/'
+        updateUrl: 'https://10.230.121.212/electron/latest/',
+        updateUrlHttp: 'http://10.230.121.212/electron/latest/'
       };
       autoUpdaterModule.initAutoUpdater(updateConfig);
 
