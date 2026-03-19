@@ -20,7 +20,7 @@
         <div class="connection-header-left">
           <span :class="['connection-type', conn.type]">{{ getTypeLabel(conn.type) }}</span>
           <span :class="['connection-status', conn.isUserModified ? 'user-modified' : 'default']">
-            {{ conn.isUserModified ? 'Пользовательские' : 'Эталонные' }}
+            {{ conn.isUserModified ? 'Пользовательские' : 'Рекомендуемые' }}
           </span>
         </div>
         <div class="connection-actions">
