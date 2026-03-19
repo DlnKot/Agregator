@@ -8,7 +8,7 @@ const fs = require('fs');
 const { spawnSync } = require('child_process');
 const { log: logger } = require('./logger');
 const https = require('https');
-const { URL } = require('url');
+const http = require('http');
 
 // Configure auto-updater logging
 autoUpdater.logger = {
@@ -22,6 +22,23 @@ autoUpdater.logger.transports = { level: 'info' };
 
 // Ignore SSL certificate errors for self-signed certificates
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
+// Override https.request to ignore SSL errors
+const originalHttpsRequest = https.request;
+https.request = function(options, callback) {
+    if (typeof options === 'object' && options !== null) {
+        options.rejectUnauthorized = false;
+    }
+    return originalHttpsRequest.call(this, options, callback);
+};
+
+const originalHttpsGet = https.get;
+https.get = function(options, callback) {
+    if (typeof options === 'object' && options !== null) {
+        options.rejectUnauthorized = false;
+    }
+    return originalHttpsGet.call(this, options, callback);
+};
 
 // Enable debugging only in development mode
 if (process.env.NODE_ENV === 'development') {
@@ -105,13 +122,7 @@ function initAutoUpdater(config = {}) {
         autoUpdater.setFeedURL({
             provider: 'generic',
             url: updateUrl,
-            channel: 'latest',
-            useMultipleResolvers: false
-        });
-
-        // Disable SSL certificate validation for self-signed certs
-        autoUpdater.httpAgent = new https.Agent({
-            rejectUnauthorized: false
+            channel: 'latest'
         });
 
         logger('info', `AutoUpdater: Initialized with custom server: ${updateUrl}`);
