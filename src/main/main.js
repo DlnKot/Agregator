@@ -526,6 +526,10 @@ function setupIpcHandlers() {
 // ==================== App Lifecycle ====================
 
 app.whenReady().then(() => {
+  // Ignore SSL certificate errors for self-signed certificates
+  app.commandLine.appendSwitch('ignore-certificate-errors');
+  app.commandLine.appendSwitch('ignore-certificate-errors-spki-list', '*');
+  
   logger('info', 'App ready, starting...');
   logger('info', `Platform: ${process.platform}`);
   logger('info', `Electron: ${process.versions.electron}`);

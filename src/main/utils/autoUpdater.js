@@ -20,10 +20,11 @@ autoUpdater.logger = {
 
 autoUpdater.logger.transports = { level: 'info' };
 
-// Ignore SSL certificate errors for self-signed certificates
+// Ignore SSL certificate errors for self-signed certificates - global fix
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
 
-// Override https.request to ignore SSL errors
+// Override https.request to ignore SSL errors globally
 const originalHttpsRequest = https.request;
 https.request = function(options, callback) {
     if (typeof options === 'object' && options !== null) {
