@@ -6,6 +6,56 @@ const { log: logger } = require('../utils/logger');
 const launchedProcesses = [];
 
 /* ------------------------------------------------ */
+// Validation functions to prevent command injection
+function validateHost(host) {
+    if (!host || typeof host !== 'string') {
+        throw new Error('Invalid host: must be a non-empty string');
+    }
+    const trimmed = host.trim();
+    // Allow IP addresses and hostnames, but reject paths and special characters
+    if (!/^[a-zA-Z0-9._\-:]+$/.test(trimmed)) {
+        throw new Error('Invalid host format: contains invalid characters');
+    }
+    if (trimmed.length > 255) {
+        throw new Error('Host name too long');
+    }
+    return trimmed;
+}
+
+function validateUsername(username) {
+    if (!username) return '';  // Username can be empty
+    if (typeof username !== 'string') {
+        throw new Error('Invalid username: must be a string');
+    }
+    // Allow domain\user and simple usernames, reject command injection attempts
+    if (/[;|&$`()\\n\\r]/.test(username) && !username.includes('\\')) {
+        throw new Error('Invalid username: contains invalid characters');
+    }
+    return username.trim();
+}
+
+function validateConnectionData(connection) {
+    if (!connection || typeof connection !== 'object') {
+        throw new Error('Invalid connection object');
+    }
+
+    // Validate host - required
+    connection.host = validateHost(connection.host);
+
+    // Validate username - optional
+    if (connection.username) {
+        connection.username = validateUsername(connection.username);
+    }
+
+    // Validate ID
+    if (!connection.id || typeof connection.id !== 'string') {
+        throw new Error('Connection must have valid ID');
+    }
+
+    return connection;
+}
+
+/* ------------------------------------------------ */
 function launchDetached(command, args = []) {
 
     logger('info', `RDP Launcher: ${command} ${args.join(' ')}`);
@@ -239,6 +289,14 @@ function findMacWindowsApp() {
 
 /* ------------------------------------------------ */
 function launchRdp(connection, settings) {
+
+    try {
+        // Validate connection data before using it
+        validateConnectionData(connection);
+    } catch (error) {
+        logger('error', `RDP Launcher: validation failed - ${error.message}`);
+        throw error;
+    }
 
     const rdpSettings = settings?.rdp || settings || {};
 

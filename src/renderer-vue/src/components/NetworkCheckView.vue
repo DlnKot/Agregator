@@ -31,7 +31,8 @@
         <h3>Гео и провайдер</h3>
         <div v-if="geoOk" class="kv">
           <div class="row"><span class="k">IP</span><span class="v mono">{{ geo.query }}</span></div>
-          <div class="row"><span class="k">Страна</span><span class="v">{{ geo.country }} ({{ geo.countryCode }})</span></div>
+          <div class="row"><span class="k">Страна</span><span class="v">{{ geo.country }} ({{ geo.countryCode }})</span>
+          </div>
           <div class="row"><span class="k">Регион</span><span class="v">{{ geo.regionName }}</span></div>
           <div class="row"><span class="k">Город</span><span class="v">{{ geo.city }}</span></div>
           <div class="row"><span class="k">Провайдер</span><span class="v">{{ geo.isp }}</span></div>
@@ -158,11 +159,11 @@ function hintClass(status) {
 }
 
 function hintText(status) {
-  if (status === 'ok') return 'Все хорошо: сервис доступен, задержек нет.'
-  if (status === 'high_latency') return 'Есть проблемы: задержка выше нормы, возможны лаги.'
-  if (status === 'loss') return 'Есть проблемы: обнаружены потери пакетов, возможны обрывы.'
-  if (status === 'down') return 'Есть проблемы: сервер не отвечает, проверьте интернет/VPN и доступность сервиса.'
-  return 'Есть проблемы: не удалось корректно выполнить проверку.'
+  if (status === 'ok') return '✓ Отлично! Сервис работает правильно и быстро.'
+  if (status === 'high_latency') return '⚠ Медленное соединение. Сервис доступен, но может быть замедленным. Проверьте своё интернет-соединение.'
+  if (status === 'loss') return '⚠ Нестабильное соединение. Некоторые пакеты теряются. Может быть проблема с сетью или маршрутизацией.'
+  if (status === 'down') return '✗ Сервис недоступен. Проверьте подключение к интернету и убедитесь, что VPN включен (если требуется).'
+  return '? Не удалось проверить. Попробуйте позже или обратитесь в IT Support.'
 }
 
 async function refreshGeo() {
@@ -206,7 +207,7 @@ async function runTarget(t) {
 
     // Ensure geo is present, but do not block checks if it fails.
     if (!geo.value && !geoLoading.value) {
-      refreshGeo().catch(() => {})
+      refreshGeo().catch(() => { })
     }
 
     const res = await window.api.networkPing(t.host, packets)
@@ -250,7 +251,7 @@ async function runAll() {
 
 onMounted(() => {
   // Geo is lightweight; ping checks are only manual via buttons.
-  refreshGeo().catch(() => {})
+  refreshGeo().catch(() => { })
 })
 </script>
 
@@ -407,10 +408,13 @@ html[data-theme="dark"] .hint-ok {
   .net-grid {
     grid-template-columns: 1fr 1fr;
   }
+
   .card.host {
     grid-column: span 1;
   }
-  .card.geo, .card.summary {
+
+  .card.geo,
+  .card.summary {
     grid-column: span 1;
   }
 }
@@ -506,7 +510,9 @@ html[data-theme="dark"] .hint-ok {
   color: var(--text-primary);
 }
 
-.badge.s-loss, .badge.s-down, .badge.s-error {
+.badge.s-loss,
+.badge.s-down,
+.badge.s-error {
   border-color: rgba(239, 68, 68, 0.35);
   background: rgba(239, 68, 68, 0.10);
   color: var(--text-primary);

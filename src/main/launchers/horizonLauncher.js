@@ -10,6 +10,53 @@ const { log: logger } = require('../utils/logger');
 const launchedProcesses = [];
 
 /* ------------------------------------------------ */
+// Validation functions to prevent command injection
+function validateHost(host) {
+    if (!host || typeof host !== 'string') {
+        throw new Error('Invalid host: must be a non-empty string');
+    }
+    const trimmed = host.trim();
+    // Allow URLs and hostnames, but reject special characters that could be command injection
+    if (!/^[a-zA-Z0-9._\-:\/]+$/.test(trimmed)) {
+        throw new Error('Invalid host format: contains invalid characters');
+    }
+    if (trimmed.length > 255) {
+        throw new Error('Host name too long');
+    }
+    return trimmed;
+}
+
+function validateUsername(username) {
+    if (!username) return '';  // Username can be empty
+    if (typeof username !== 'string') {
+        throw new Error('Invalid username: must be a string');
+    }
+    // Allow domain\user format, but reject command injection attempts
+    if (/[;|&$`()\\n\\r]/.test(username) && !username.includes('\\')) {
+        throw new Error('Invalid username: contains invalid characters');
+    }
+    return username.trim();
+}
+
+function validateConnectionData(connection) {
+    if (!connection || typeof connection !== 'object') {
+        throw new Error('Invalid connection object');
+    }
+
+    // Validate host - can be FQDN or URL
+    if (connection.host) {
+        connection.host = validateHost(connection.host);
+    }
+
+    // Validate username - optional
+    if (connection.username) {
+        connection.username = validateUsername(connection.username);
+    }
+
+    return connection;
+}
+
+/* ------------------------------------------------ */
 function stripDomainFromUserName(userName) {
     if (!userName || typeof userName !== 'string') return '';
     const trimmed = userName.trim();
@@ -362,6 +409,14 @@ function launchWindows(connection, settings) {
 
 /* ------------------------------------------------ */
 function launchHorizon(connection, settings) {
+
+    try {
+        // Validate connection data before using it
+        validateConnectionData(connection);
+    } catch (error) {
+        logger('error', `Horizon Launcher: validation failed - ${error.message}`);
+        throw error;
+    }
 
     const s = settings?.horizon || settings || {};
 

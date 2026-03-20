@@ -46,7 +46,8 @@
             </button>
           </nav>
           <div class="sidebar-footer">
-            <button class="theme-toggle" type="button" @click="toggleTheme" :title="theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'">
+            <button class="theme-toggle" type="button" @click="toggleTheme"
+              :title="theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'">
               <span class="theme-toggle-icon" aria-hidden="true">
                 <svg v-if="theme === 'dark'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <circle cx="12" cy="12" r="4"></circle>
@@ -83,7 +84,9 @@
                   @click="currentClientFilter = 'horizon'">Horizon</button>
                 <button class="client-tab" :class="{ active: currentClientFilter === 'citrix' }"
                   @click="currentClientFilter = 'citrix'">Citrix</button>
-                <button class="client-tab vpn-tab" @click="handleVpnClick">
+              </div>
+              <div class="view-header-actions">
+                <button class="btn btn-secondary btn-vpn" title="Запустить VPN" @click="handleVpnClick">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="12 3 20 7.5 20 16.5 12 21 4 16.5 4 7.5 12 3"></polyline>
                     <line x1="12" y1="12" x2="20" y2="7.5"></line>
@@ -92,14 +95,14 @@
                   </svg>
                   VPN
                 </button>
+                <button class="btn btn-primary" id="add-connection-btn" @click="openConnectionModal()">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                  Добавить подключение
+                </button>
               </div>
-              <button class="btn btn-primary" id="add-connection-btn" @click="openConnectionModal()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="12" y1="5" x2="12" y2="19" />
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
-                Добавить подключение
-              </button>
             </div>
 
             <div id="connections-list" class="connections-list">
@@ -237,11 +240,15 @@ function closeConnectionModal() {
 
 async function handleSaveConnection(connection) {
   try {
-    await saveConnection(connection)
-    closeConnectionModal()
-    showToast('Подключение сохранено', 'success')
+    const result = await saveConnection(connection)
+    if (result.success) {
+      closeConnectionModal()
+      showToast('Подключение сохранено', 'success')
+    } else {
+      showToast(result.error || 'Ошибка сохранения подключения', 'error')
+    }
   } catch (error) {
-    showToast('Ошибка сохранения', 'error')
+    showToast('Ошибка сохранения: ' + (error.message || 'Неизвестная ошибка'), 'error')
   }
 }
 
@@ -249,10 +256,14 @@ async function handleDeleteConnection(id) {
   if (!confirm('Вы уверены, что хотите удалить это подключение?')) return
 
   try {
-    await deleteConnection(id)
-    showToast('Подключение удалено', 'success')
+    const result = await deleteConnection(id)
+    if (result.success) {
+      showToast('Подключение удалено', 'success')
+    } else {
+      showToast(result.error || 'Ошибка удаления подключения', 'error')
+    }
   } catch (error) {
-    showToast('Ошибка удаления', 'error')
+    showToast('Ошибка удаления: ' + (error.message || 'Неизвестная ошибка'), 'error')
   }
 }
 
@@ -290,10 +301,14 @@ async function handleVpnClick() {
 // Settings
 async function handleSaveSettings(newSettings) {
   try {
-    await saveSettings(newSettings)
-    showToast('Настройки сохранены', 'success')
+    const result = await saveSettings(newSettings)
+    if (result.success) {
+      showToast('Настройки сохранены', 'success')
+    } else {
+      showToast(result.error || 'Ошибка сохранения настроек', 'error')
+    }
   } catch (error) {
-    showToast('Ошибка сохранения настроек', 'error')
+    showToast('Ошибка сохранения настроек: ' + (error.message || 'Неизвестная ошибка'), 'error')
   }
 }
 
@@ -550,12 +565,21 @@ try {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 16px;
   margin-bottom: 24px;
+  flex-wrap: wrap;
 }
 
 .view-header h2 {
   font-size: 24px;
   font-weight: 600;
+}
+
+.view-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
 }
 
 /* Buttons */
@@ -583,8 +607,8 @@ try {
 }
 
 .btn-primary:hover {
-  background: var(--bg-tertiary);
-  opacity: 0.9;
+  background: #dc2626;
+  opacity: 1;
 }
 
 .btn-secondary {
@@ -639,25 +663,20 @@ try {
   color: var(--text-inverse);
 }
 
-.vpn-tab {
-  margin-left: auto;
-  background: var(--accent-secondary, #e74c3c);
-  color: var(--text-inverse);
-  padding: 8px 12px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 600;
+.btn-vpn {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
-.vpn-tab:hover {
-  background: var(--accent-secondary-hover, #c0392b);
-  color: var(--text-inverse);
+.btn-vpn:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.5);
 }
 
-.vpn-tab svg {
-  width: 16px;
-  height: 16px;
+.btn-vpn svg {
+  width: 18px;
+  height: 18px;
 }
 
 .connections-list {

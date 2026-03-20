@@ -1,5 +1,5 @@
 /**
- * VMware Horizon Launcher - handles launching VMware Horizon Client connections
+ * Citrix Workspace Launcher - handles launching Citrix connections
  */
 
 const { spawn, spawnSync } = require('child_process');
@@ -10,6 +10,41 @@ const crypto = require('crypto');
 const { log: logger } = require('../utils/logger');
 
 const launchedProcesses = [];
+
+// Validation functions to prevent command injection
+function validateStoreUrl(storeUrl) {
+    if (!storeUrl || typeof storeUrl !== 'string') return '';
+    const trimmed = storeUrl.trim();
+    // Basic URL validation - allow http/https URLs only
+    if (!/^https?:\/\/.+/.test(trimmed)) return '';
+    if (trimmed.length > 512) throw new Error('Store URL too long');
+    return trimmed;
+}
+
+function validateResourceName(resourceName) {
+    if (!resourceName || typeof resourceName !== 'string') return '';
+    const trimmed = resourceName.trim();
+    // Reject paths and dangerous characters
+    if (/[\\\/&$;|`()\\n\\r]/.test(trimmed)) {
+        throw new Error('Invalid resource name: contains invalid characters');
+    }
+    if (trimmed.length > 128) throw new Error('Resource name too long');
+    return trimmed;
+}
+
+function validateConnectionData(connection) {
+    if (!connection || typeof connection !== 'object') {
+        throw new Error('Invalid connection object');
+    }
+
+    // For Citrix, host can be store URL or resource name
+    // Validate optional storeUrl if present
+    if (connection.storeUrl) {
+        connection.storeUrl = validateStoreUrl(connection.storeUrl);
+    }
+
+    return connection;
+}
 
 // Common installation paths
 const HORIZON_PATHS = [
@@ -776,6 +811,14 @@ function tryBringCitrixToFrontWindows() {
 
 // Citrix Workspace launcher
 function launchCitrix(connection, settings) {
+    try {
+        // Validate connection data before using it
+        validateConnectionData(connection);
+    } catch (error) {
+        logger('error', `Citrix Launcher: validation failed - ${error.message}`);
+        throw error;
+    }
+
     // Extract citrix settings from full settings object
     const citrixSettings = settings?.citrix || settings || {};
 

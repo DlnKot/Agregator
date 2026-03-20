@@ -20,26 +20,32 @@ autoUpdater.logger = {
 
 autoUpdater.logger.transports = { level: 'info' };
 
-// Ignore SSL certificate errors for self-signed certificates - global fix
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
+// Security: Load custom CA certificate if provided for self-signed certificates
+// Use environment variable: NODE_EXTRA_CA_CERTS=/path/to/ca.pem
+// Or place ca.pem in app root and it will be loaded automatically
+const loadCustomCertificate = () => {
+    const possiblePaths = [
+        path.join(app.getAppPath(), 'ca.pem'),
+        path.join(app.getAppPath(), 'config', 'ca.pem'),
+        process.env.NODE_EXTRA_CA_CERTS
+    ];
 
-// Override https.request to ignore SSL errors globally
-const originalHttpsRequest = https.request;
-https.request = function(options, callback) {
-    if (typeof options === 'object' && options !== null) {
-        options.rejectUnauthorized = false;
+    for (const certPath of possiblePaths) {
+        if (certPath && fs.existsSync(certPath)) {
+            try {
+                process.env.NODE_EXTRA_CA_CERTS = certPath;
+                logger('info', `AutoUpdater: Custom CA certificate loaded from ${certPath}`);
+                return true;
+            } catch (e) {
+                logger('warn', `AutoUpdater: Failed to load custom CA certificate: ${e.message}`);
+            }
+        }
     }
-    return originalHttpsRequest.call(this, options, callback);
+    return false;
 };
 
-const originalHttpsGet = https.get;
-https.get = function(options, callback) {
-    if (typeof options === 'object' && options !== null) {
-        options.rejectUnauthorized = false;
-    }
-    return originalHttpsGet.call(this, options, callback);
-};
+// Load custom certificate on startup
+loadCustomCertificate();
 
 // Enable debugging only in development mode
 if (process.env.NODE_ENV === 'development') {
@@ -123,7 +129,7 @@ function initAutoUpdater(config = {}) {
 
         // Try HTTPS first, then fallback to HTTP
         let feedUrl = updateUrl;
-        
+
         // Set initial feed URL (will retry with HTTP on error)
         autoUpdater.setFeedURL({
             provider: 'generic',
@@ -207,7 +213,7 @@ function initAutoUpdater(config = {}) {
 
     autoUpdater.on('error', (error) => {
         const rawMessage = error?.message || String(error);
-        
+
         // If HTTPS fails with certificate error, try HTTP fallback
         if (updateUrl.startsWith('https') && rawMessage.includes('CERT_')) {
             logger('warn', 'AutoUpdater: HTTPS failed with cert error, trying HTTP fallback...');

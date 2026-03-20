@@ -12,6 +12,7 @@ class SimpleStore {
     // Debounce для предотвращения race condition при быстрых последовательных записях
     this._saveTimeout = null;
     this._savePending = false;
+    this._isSaving = false;  // Флаг текущей операции сохранения
 
   }
 
@@ -73,17 +74,36 @@ class SimpleStore {
 
       console.error('Error saving store:', error)
 
+    } finally {
+
+      this._isSaving = false;
+
+      // Если были изменения во время сохранения, запустить еще одно
+      if (this._savePending) {
+        this._savePending = false;
+        this._scheduleSave();
+      }
+
     }
   }
 
   _scheduleSave() {
-    // Debounce запись - ждем 100ms после последнего изменения
+    // Отменяем предыдущий таймаут
     if (this._saveTimeout) {
       clearTimeout(this._saveTimeout);
+      this._saveTimeout = null;
     }
+
+    // Если сейчас идет сохранение, просто отметить что нужно еще одно
+    if (this._isSaving) {
+      this._savePending = true;
+      return;
+    }
+
+    // Debounce запись - ждем 100ms после последнего изменения
     this._saveTimeout = setTimeout(() => {
       this._saveTimeout = null;
-      this._savePending = false;
+      this._isSaving = true;
       this._save();
     }, 100);
   }

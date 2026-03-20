@@ -37,33 +37,33 @@ const BUILTIN_DEFAULTS = {
       host: '',
       resolution: '1920x1080',
       colorDepth: '32',
-      
+
       // Мониторы
       multimon: false,
       span: false,
       startFullScreen: false,
-      
+
       // Перенаправление устройств
       clipboard: true,
       driveMapping: false,
-      
+
       // Учётные данные
       promptCredentials: true,
       useAdminSession: false,
-      
+
       // Аудио
       audio: {
         playback: true,
         capture: false
       },
-      
+
       // Перенаправление
       redirect: {
         printers: true,
         smartcards: true,
         webauthn: true
       },
-      
+
       // Производительность
       performance: {
         wallpaper: true,
@@ -72,7 +72,7 @@ const BUILTIN_DEFAULTS = {
         fullWindowDrag: true,
         menuAnimations: true
       },
-      
+
       // Кастомные флаги
       customFlags: ''
     },
@@ -274,7 +274,7 @@ function createWindow() {
       preload: path.join(__dirname, '../preload/preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false
+      sandbox: true
     },
     show: false,
     frame: true,
@@ -529,7 +529,7 @@ app.whenReady().then(() => {
   // Ignore SSL certificate errors for self-signed certificates
   app.commandLine.appendSwitch('ignore-certificate-errors');
   app.commandLine.appendSwitch('ignore-certificate-errors-spki-list', '*');
-  
+
   logger('info', 'App ready, starting...');
   logger('info', `Platform: ${process.platform}`);
   logger('info', `Electron: ${process.versions.electron}`);

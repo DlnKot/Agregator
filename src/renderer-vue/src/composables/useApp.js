@@ -52,31 +52,48 @@ async function loadData() {
 
 async function saveConnection(connection) {
 
-  const result = await window.api.saveConnection(connection)
+  try {
+    const result = await window.api.saveConnection(connection)
 
-  connections.value = await window.api.getConnections()
+    connections.value = await window.api.getConnections()
 
-  return result
+    return { success: true, result }
+  } catch (error) {
+    console.error('Failed to save connection:', error)
+    return { success: false, error: error.message || 'Failed to save connection' }
+  }
 }
 
 async function deleteConnection(id) {
 
-  await window.api.deleteConnection(id)
+  try {
+    await window.api.deleteConnection(id)
 
-  connections.value = await window.api.getConnections()
+    connections.value = await window.api.getConnections()
+    return { success: true }
+  } catch (error) {
+    console.error('Failed to delete connection:', error)
+    return { success: false, error: error.message || 'Failed to delete connection' }
+  }
 }
 
 /* -------------------------- SETTINGS OPS ------------------------ */
 
 async function saveSettings(newSettings) {
 
-  const plainSettings = JSON.parse(JSON.stringify(newSettings))
+  try {
+    const plainSettings = JSON.parse(JSON.stringify(newSettings))
 
-  await window.api.saveSettings(plainSettings)
+    await window.api.saveSettings(plainSettings)
 
-  settings.value = plainSettings
+    settings.value = plainSettings
 
-  await createDefaultConnectionsIfNeeded(plainSettings)
+    await createDefaultConnectionsIfNeeded(plainSettings)
+    return { success: true }
+  } catch (error) {
+    console.error('Failed to save settings:', error)
+    return { success: false, error: error.message || 'Failed to save settings' }
+  }
 }
 
 /* ------------------- DEFAULT CONNECTION CONFIG ------------------ */

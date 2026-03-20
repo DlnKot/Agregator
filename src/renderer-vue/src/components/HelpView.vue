@@ -1,13 +1,8 @@
 <template>
   <div class="help-container">
     <div class="help-tabs">
-      <button 
-        v-for="tab in tabs" 
-        :key="tab.id" 
-        class="help-tab" 
-        :class="{ active: activeTab === tab.id }"
-        @click="activeTab = tab.id"
-      >
+      <button v-for="tab in tabs" :key="tab.id" class="help-tab" :class="{ active: activeTab === tab.id }"
+        @click="activeTab = tab.id">
         {{ tab.label }}
       </button>
     </div>
@@ -16,7 +11,7 @@
       <!-- HelpDesk -->
       <div v-if="activeTab === 'helpdesk'" class="help-section">
         <h2>HelpDesk — служба поддержки</h2>
-        
+
         <div class="help-block">
           <h3>Как позвонить в поддержку?</h3>
           <ul class="contact-list">
@@ -37,7 +32,9 @@
 
         <div class="help-block important">
           <h3>ВАЖНО!!!</h3>
-          <p>Если в Outlook нет кнопки «Обращение в Helpdesk», то нажми на «Создать сообщение» и направь письмо на адрес <strong>helpdesk@alfabank.ru</strong>.</p>
+          <p>Если в Outlook нет кнопки «Обращение в Helpdesk», то нажми на «Создать сообщение» и направь письмо на адрес
+            <strong>helpdesk@alfabank.ru</strong>.
+          </p>
           <p>В письме опиши подробно суть обращения и не забудь добавить скриншот во вложение.</p>
         </div>
       </div>
@@ -45,9 +42,10 @@
       <!-- Indeed -->
       <div v-if="activeTab === 'indeed'" class="help-section">
         <h2>Indeed — одноразовый код</h2>
-        
+
         <div class="help-block">
-          <p class="description">Indeed – одноразовый код, с помощью которого вы можете подключиться к сервисам банка.</p>
+          <p class="description">Indeed – одноразовый код, с помощью которого вы можете подключиться к сервисам банка.
+          </p>
         </div>
 
         <div class="help-block">
@@ -55,7 +53,9 @@
           <ol class="steps-list">
             <li>Установите Indeed Key Authenticator для <strong>IOS</strong></li>
             <li>Нажмите на шестерёнку, чтобы получить ID.</li>
-            <li>Скопируйте ID устройства. <a href="#" @click.prevent="openLink('https://alfapeople.alfabank.ru/faq/tree/topic/25-indeed-kod')">Подробнее здесь</a>.</li>
+            <li>Скопируйте ID устройства. <a href="#" class="link"
+                @click.prevent="openLink('https://alfapeople.alfabank.ru/faq/tree/topic/25-indeed-kod')">Подробнее
+                здесь</a>.</li>
             <li>Зайдите на портал Alfa People, где необходимо авторизоваться:</li>
             <li class="sub-step">- Введите рабочую почту в формате ****@alfabank.ru</li>
             <li class="sub-step">- Подтвердите номер телефона кодом из сообщения</li>
@@ -64,15 +64,18 @@
             <li>Зарегистрируйте Indeed в Alfa People, нажав "Создать аутентификатор."</li>
             <li>Введите Пароль от учетной записи.</li>
             <li>Внесите ID устройства, который Вы копировали в приложении Indeed Key.</li>
-            <li>Вернитесь в приложение Indeed Key, чтобы закончить регистрацию: нажмите на плюс в правом верхнем углу приложения</li>
+            <li>Вернитесь в приложение Indeed Key, чтобы закончить регистрацию: нажмите на плюс в правом верхнем углу
+              приложения</li>
             <li>Отсканируйте QR-код.</li>
-            <li>Если вы проходите регистрацию с телефона, перейдите по ссылке. Дополнительно вы получите письмо со ссылкой для активации.</li>
+            <li>Если вы проходите регистрацию с телефона, перейдите по ссылке. Дополнительно вы получите письмо со
+              ссылкой для активации.</li>
           </ol>
         </div>
 
         <div class="help-block">
           <p>Готово! Теперь приложение Indeed Key генерирует одноразовые коды каждые 30 секунд.</p>
-          <a href="#" @click.prevent="openLink('https://alfapeople.alfabank.ru/faq/tree/topic/25-indeed-kod')" class="link">Инструкция со скриншотами на Alfa People</a>
+          <a href="#" @click.prevent="openLink('https://alfapeople.alfabank.ru/faq/tree/topic/25-indeed-kod')"
+            class="link">Инструкция со скриншотами на Alfa People</a>
         </div>
       </div>
 
@@ -84,9 +87,10 @@
         <div class="help-block">
           <h3>Виртуальная машина «VDI» (VMware Horizon Client)</h3>
           <p>Это полный аналог физической рабочей станции.</p>
-          
-          <p><strong>Для доступа:</strong> нужно заполнить универсальную ИТ-заявку «Рабочее место сотрудника VDI VMware».</p>
-          
+
+          <p><strong>Для доступа:</strong> нужно заполнить универсальную ИТ-заявку «Рабочее место сотрудника VDI
+            VMware».</p>
+
           <div class="features-box">
             <h4>Основные возможности:</h4>
             <ul>
@@ -96,8 +100,9 @@
             </ul>
           </div>
 
-          <p>Инструкции по настройке VDI находятся на порталах <strong>Alfa People</strong> и <strong>Alfa Book</strong>.</p>
-          
+          <p>Инструкции по настройке VDI находятся на порталах <strong>Alfa People</strong> и <strong>Alfa
+              Book</strong>.</p>
+
           <div class="info-box">
             <p>Вне сети банка доступно по ссылке. Код доступа: <code>h6StZ6@1</code></p>
           </div>
@@ -106,10 +111,13 @@
         <!-- ПУРМС -->
         <div class="help-block">
           <h3>ПУРМС</h3>
-          <p>Это полноценное удалённое рабочее место сотрудника, которое даёт доступ к рабочему столу, корпоративной почте и практически ко всем системам, в которых сотрудники банка могут работать удалённо.</p>
-          
-          <p><strong>Для доступа:</strong> нужно заполнить <a href="#" @click.prevent="openLink('https://itservice/form-group-view/576c0b93-bbac-4595-bfa1-8ea7ef4eef38?formNum=IT0212')">универсальную ИТ-заявку</a>.</p>
-          
+          <p>Это полноценное удалённое рабочее место сотрудника, которое даёт доступ к рабочему столу, корпоративной
+            почте и практически ко всем системам, в которых сотрудники банка могут работать удалённо.</p>
+
+          <p><strong>Для доступа:</strong> нужно заполнить <a href="#"
+              @click.prevent="openLink('https://itservice/form-group-view/576c0b93-bbac-4595-bfa1-8ea7ef4eef38?formNum=IT0212')">универсальную
+              ИТ-заявку</a>.</p>
+
           <div class="features-box">
             <h4>Возможности:</h4>
             <ul>
@@ -129,8 +137,9 @@
             </ul>
           </div>
 
-          <p>Инструкции по настройке ПУРМС находятся на порталах <strong>Alfa People</strong> и <strong>Alfa Book</strong>.</p>
-          
+          <p>Инструкции по настройке ПУРМС находятся на порталах <strong>Alfa People</strong> и <strong>Alfa
+              Book</strong>.</p>
+
           <div class="info-box">
             <p>Вне сети банка доступно по ссылке. Пароль для доступа: <code>MyWxq8@7</code></p>
           </div>
@@ -139,16 +148,20 @@
         <!-- CITRIX -->
         <div class="help-block">
           <h3>CITRIX</h3>
-          <p>Удалённая работа по протоколу ICA на серверах и виртуальных машинах. На рабочем месте должен быть установлен Citrix receiver и предоставлен сетевой доступ.</p>
-          
-          <p><strong>Для доступа:</strong> нужно заполнить заявку «Терминальное рабочее место сотрудника через CITRIX».</p>
-          
-          <p>Инструкции по настройкам CITRIX находятся на порталах <strong>Alfa People</strong> и <strong>Alfa Book</strong>.</p>
-          
+          <p>Удалённая работа по протоколу ICA на серверах и виртуальных машинах. На рабочем месте должен быть
+            установлен Citrix receiver и предоставлен сетевой доступ.</p>
+
+          <p><strong>Для доступа:</strong> нужно заполнить заявку «Терминальное рабочее место сотрудника через CITRIX».
+          </p>
+
+          <p>Инструкции по настройкам CITRIX находятся на порталах <strong>Alfa People</strong> и <strong>Alfa
+              Book</strong>.</p>
+
           <div class="citrix-types">
             <div class="citrix-type">
               <h4>CITRIX-CC (ЦПК)</h4>
-              <p>Сервис для удалённого подключения к системам для работы с опубликованными приложениями операторов контакт-центров.</p>
+              <p>Сервис для удалённого подключения к системам для работы с опубликованными приложениями операторов
+                контакт-центров.</p>
               <p>Подключение через <strong>MYCC.alfabank.ru</strong></p>
             </div>
 
@@ -160,7 +173,8 @@
 
             <div class="citrix-type">
               <h4>CITRIX CC-EXTENDED / CITRIX VDI</h4>
-              <p>Сервис с индивидуальным рабочим местом. Виртуальные машины удаляются после выхода, данные сохраняются.</p>
+              <p>Сервис с индивидуальным рабочим местом. Виртуальные машины удаляются после выхода, данные сохраняются.
+              </p>
               <p>Доступен как в банке, так и дома.</p>
             </div>
 
@@ -180,27 +194,30 @@
         <!-- VPN -->
         <div class="help-block">
           <h3>VPN (CheckPoint)</h3>
-          <p>Удалённый доступ к системам банка через VPN позволяет открывать ресурсы на своём устройстве, подключив CheckPoint к адресу <strong>mypc.alfabank.ru</strong>.</p>
-          
+          <p>Удалённый доступ к системам банка через VPN позволяет открывать ресурсы на своём устройстве, подключив
+            CheckPoint к адресу <strong>mypc.alfabank.ru</strong>.</p>
+
           <p><strong>Для доступа:</strong> нужно заполнить ИТ-заявку «Удалённый доступ к системам банка через VPN».</p>
-          
-          <div class="info-box">
-            <p>Настройка чекпоинта стандартная к адресу mypc.alfabank.ru. Код доступа: <code>TA?x5V7f</code></p>
-          </div>
 
           <div class="warning-box">
-            <p>Такой доступ не позволяет менять пароль от учётной записи через ПК. Только через другие типы удалённого доступа или Alfa People на телефоне.</p>
+            <p>Настройка чекпоинта стандартная к адресу mypc.alfabank.ru. Обратитесь в IT Support для получения учётных
+              данных.</p>
+            <p style="margin-top: 8px;">Такой доступ не позволяет менять пароль от учётной записи через ПК. Только через
+              другие типы удалённого
+              доступа или Alfa People на телефоне.</p>
           </div>
         </div>
 
         <!-- Jira/Confluence -->
         <div class="help-block">
           <h3>Jira / Confluence</h3>
-          <p><strong>Jira</strong> — инструмент управления проектами, который помогает оптимизировать работу команды.</p>
+          <p><strong>Jira</strong> — инструмент управления проектами, который помогает оптимизировать работу команды.
+          </p>
           <p><strong>Confluence</strong> — система для создания страниц, документов и обмена контентом.</p>
-          
-          <p><strong>Для доступа:</strong> необходимо оформить Универсальную заявку на доступ и выбрать "Jira, Confluence, Bitbucket, GIT, Stash"</p>
-          
+
+          <p><strong>Для доступа:</strong> необходимо оформить Универсальную заявку на доступ и выбрать "Jira,
+            Confluence, Bitbucket, GIT, Stash"</p>
+
           <div class="links-box">
             <a href="#" @click.prevent="openLink('http://jira.moscow.alfaintra.net')">Jira</a>
             <a href="#" @click.prevent="openLink('http://confluence.moscow.alfaintra.net')">Confluence</a>
@@ -211,10 +228,11 @@
       <!-- Чатбот -->
       <div v-if="activeTab === 'chatbot'" class="help-section">
         <h2>Чат-бот IT Helps</h2>
-        
+
         <div class="help-block">
           <p class="description">
-            Чат-бот IT Helps — чат-бот технической поддержки, который быстро ищет информацию по запросу, помогает с возникшей проблемой и создаёт обращения, которые сразу направляются в HelpDesk. 
+            Чат-бот IT Helps — чат-бот технической поддержки, который быстро ищет информацию по запросу, помогает с
+            возникшей проблемой и создаёт обращения, которые сразу направляются в HelpDesk.
             <strong>Он предназначен для внутреннего использования сотрудниками.</strong>
           </p>
         </div>
@@ -479,11 +497,23 @@ function openLink(url) {
 }
 
 .info-box code {
-  background: rgba(0, 0, 0, 0.2);
-  padding: 2px 8px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 4px 10px;
   border-radius: 4px;
   font-family: monospace;
-  color: #22c55e;
+  color: var(--text-primary);
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+.warning-box code {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-family: monospace;
+  color: var(--text-primary);
+  font-weight: 500;
+  letter-spacing: 0.3px;
 }
 
 .warning-box {
@@ -535,29 +565,30 @@ function openLink(url) {
 .links-box {
   display: flex;
   gap: 12px;
-  margin-top: 12px;
+  margin-top: 16px;
+  flex-wrap: wrap;
 }
 
+.link,
 .links-box a {
-  color: var(--accent-primary);
+  color: var(--text-inverse);
   text-decoration: none;
-  padding: 8px 16px;
-  background: rgba(59, 130, 246, 0.1);
-  border-radius: var(--radius-sm);
+  padding: 8px 14px;
+  background: rgba(59, 130, 246, 0.85);
+  border-radius: var(--radius-lg);
   font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  transition: var(--transition);
+  border: 1px solid rgba(59, 130, 246, 0.95);
 }
 
+.link:hover,
 .links-box a:hover {
-  background: rgba(59, 130, 246, 0.2);
-}
-
-.link {
-  color: var(--accent-primary);
-  text-decoration: none;
-  font-size: 13px;
-}
-
-.link:hover {
-  text-decoration: underline;
+  background: rgba(59, 130, 246, 1);
+  border-color: rgba(59, 130, 246, 1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 </style>
