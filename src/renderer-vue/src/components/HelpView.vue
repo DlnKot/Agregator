@@ -55,7 +55,7 @@
             <li>Нажмите на шестерёнку, чтобы получить ID.</li>
             <li>Скопируйте ID устройства. <a href="#" class="link"
                 @click.prevent="openLink('https://alfapeople.alfabank.ru/faq/tree/topic/25-indeed-kod')">Подробнее
-                здесь</a>.</li>
+                здесь</a></li>
             <li>Зайдите на портал Alfa People, где необходимо авторизоваться:</li>
             <li class="sub-step">- Введите рабочую почту в формате ****@alfabank.ru</li>
             <li class="sub-step">- Подтвердите номер телефона кодом из сообщения</li>

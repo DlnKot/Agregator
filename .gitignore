@@ -50,3 +50,7 @@ out/
 
 # User data and local config
 user-config.json
+
+DEVELOPMENT.md
+DOCS.md
+SPEC.md
