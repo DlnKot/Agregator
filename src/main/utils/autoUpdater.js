@@ -93,11 +93,20 @@ function initAutoUpdater(config = {}) {
         'error'
     ];
 
-    for (const eventName of events) {
-        try {
-            autoUpdater.removeAllListeners(eventName);
-        } catch (e) {
-            // ignore - метод может не существовать в некоторых версиях
+    // Безопасное удаление слушателей - проверяем существование метода
+    if (typeof autoUpdater.removeAllListeners === 'function') {
+        for (const eventName of events) {
+            try {
+                // Проверяем, есть ли слушатели для этого события
+                const listeners = autoUpdater.listenerCount(eventName);
+                if (listeners > 0) {
+                    autoUpdater.removeAllListeners(eventName);
+                    logger('debug', `AutoUpdater: Removed ${listeners} listeners for ${eventName}`);
+                }
+            } catch (e) {
+                // Игнорируем ошибки при удалении
+                logger('debug', `AutoUpdater: Could not remove listeners for ${eventName}: ${e.message}`);
+            }
         }
     }
 

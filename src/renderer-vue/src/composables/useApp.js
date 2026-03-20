@@ -37,8 +37,12 @@ async function loadData() {
     }
 
   } catch (error) {
-
-    console.error('Error loading data:', error)
+    // Используем централизованное логирование
+    const errorMsg = error?.message || String(error)
+    console.error('Error loading data:', errorMsg)
+    if (window.api?.log) {
+      window.api.log('error', `loadData failed: ${errorMsg}`)
+    }
     isFirstRun.value = true
 
   } finally {
@@ -59,8 +63,12 @@ async function saveConnection(connection) {
 
     return { success: true, result }
   } catch (error) {
-    console.error('Failed to save connection:', error)
-    return { success: false, error: error.message || 'Failed to save connection' }
+    const errorMsg = error?.message || String(error)
+    console.error('Failed to save connection:', errorMsg)
+    if (window.api?.log) {
+      window.api.log('error', `saveConnection failed: ${errorMsg}`)
+    }
+    return { success: false, error: errorMsg }
   }
 }
 
@@ -72,8 +80,12 @@ async function deleteConnection(id) {
     connections.value = await window.api.getConnections()
     return { success: true }
   } catch (error) {
-    console.error('Failed to delete connection:', error)
-    return { success: false, error: error.message || 'Failed to delete connection' }
+    const errorMsg = error?.message || String(error)
+    console.error('Failed to delete connection:', errorMsg)
+    if (window.api?.log) {
+      window.api.log('error', `deleteConnection failed: ${errorMsg}`)
+    }
+    return { success: false, error: errorMsg }
   }
 }
 
@@ -91,8 +103,12 @@ async function saveSettings(newSettings) {
     await createDefaultConnectionsIfNeeded(plainSettings)
     return { success: true }
   } catch (error) {
-    console.error('Failed to save settings:', error)
-    return { success: false, error: error.message || 'Failed to save settings' }
+    const errorMsg = error?.message || String(error)
+    console.error('Failed to save settings:', errorMsg)
+    if (window.api?.log) {
+      window.api.log('error', `saveSettings failed: ${errorMsg}`)
+    }
+    return { success: false, error: errorMsg }
   }
 }
 
@@ -230,12 +246,14 @@ async function launchConnection(conn) {
     return result || { success: false, error: 'Unknown error' }
 
   } catch (error) {
-
-    console.error('Launch error:', error)
-
+    const errorMsg = error?.message || String(error)
+    console.error('Launch error:', errorMsg)
+    if (window.api?.log) {
+      window.api.log('error', `launchConnection failed: ${errorMsg}`)
+    }
     return {
       success: false,
-      error: error.message
+      error: errorMsg
     }
   }
 }
@@ -298,10 +316,17 @@ async function checkForUpdates() {
   updateError.value = null
   try {
     const result = await window.api.checkForUpdates()
+    if (window.api?.log) {
+      window.api.log('info', `checkForUpdates result: ${JSON.stringify(result)}`)
+    }
     return result
   } catch (error) {
-    updateError.value = error.message
-    return { success: false, error: error.message }
+    const errorMsg = error.message
+    updateError.value = errorMsg
+    if (window.api?.log) {
+      window.api.log('error', `checkForUpdates failed: ${errorMsg}`)
+    }
+    return { success: false, error: errorMsg }
   }
 }
 
@@ -310,10 +335,17 @@ async function downloadUpdate() {
   updateError.value = null
   try {
     const result = await window.api.downloadUpdate()
+    if (window.api?.log) {
+      window.api.log('info', `downloadUpdate result: ${JSON.stringify(result)}`)
+    }
     return result
   } catch (error) {
-    updateError.value = error.message
-    return { success: false, error: error.message }
+    const errorMsg = error.message
+    updateError.value = errorMsg
+    if (window.api?.log) {
+      window.api.log('error', `downloadUpdate failed: ${errorMsg}`)
+    }
+    return { success: false, error: errorMsg }
   }
 }
 

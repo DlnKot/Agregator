@@ -519,6 +519,15 @@ function setupIpcHandlers() {
       return { success: false, error: error.message };
     }
   });
+
+  // Logging handler
+  ipcMain.handle('log-message', (event, level, message) => {
+    if (typeof logger === 'function') {
+      logger(level, `[Renderer] ${message}`);
+    }
+    return true;
+  });
+
   // Auto-updater handlers
   autoUpdaterModule.setupIpcHandlers();
 }

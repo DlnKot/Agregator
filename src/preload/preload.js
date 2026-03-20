@@ -39,5 +39,8 @@ contextBridge.exposeInMainWorld('api', {
   networkPing: (host, count) => ipcRenderer.invoke('network-run-ping', host, count),
   networkGeo: () => ipcRenderer.invoke('network-geo'),
 
+  // Logging
+  log: (level, message) => ipcRenderer.invoke('log-message', level, message),
+
   // No credentials storage (username is stored in connection profile)
 });
