@@ -264,7 +264,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
 const tabs = [
   { id: 'helpdesk', label: 'HelpDesk' },
@@ -274,6 +274,13 @@ const tabs = [
 ]
 
 const activeTab = ref('helpdesk')
+
+// Трекинг метрик при смене вкладки
+watch(activeTab, (newTab) => {
+  if (window.api?.trackHelpView) {
+    window.api.trackHelpView(newTab)
+  }
+}, { immediate: true })
 
 function openLink(url) {
   if (window.api?.openExternal) {

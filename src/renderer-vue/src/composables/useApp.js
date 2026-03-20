@@ -57,10 +57,20 @@ async function loadData() {
 async function saveConnection(connection) {
 
   try {
+    const isNew = !connection.id
     const result = await window.api.saveConnection(connection)
 
     connections.value = await window.api.getConnections()
 
+    // Трекинг метрик
+    if (result.success && window.api?.trackEvent) {
+      if (isNew) {
+        window.api.trackEvent('connection_create', { type: connection.type })
+      } else {
+        window.api.trackEvent('connection_edit', { type: connection.type })
+      }
+    }
+    
     return { success: true, result }
   } catch (error) {
     const errorMsg = error?.message || String(error)
@@ -75,9 +85,19 @@ async function saveConnection(connection) {
 async function deleteConnection(id) {
 
   try {
+    // Получаем данные подключения перед удалением для трекинга
+    const conn = connections.value.find(c => c.id === id)
+    const connectionType = conn?.type || 'unknown'
+    
     await window.api.deleteConnection(id)
 
     connections.value = await window.api.getConnections()
+    
+    // Трекинг метрик
+    if (window.api?.trackEvent) {
+      window.api.trackEvent('connection_delete', { type: connectionType })
+    }
+    
     return { success: true }
   } catch (error) {
     const errorMsg = error?.message || String(error)
@@ -101,6 +121,12 @@ async function saveSettings(newSettings) {
     settings.value = plainSettings
 
     await createDefaultConnectionsIfNeeded(plainSettings)
+    
+    // Трекинг метрик
+    if (window.api?.trackEvent) {
+      window.api.trackEvent('settings_save', {})
+    }
+    
     return { success: true }
   } catch (error) {
     const errorMsg = error?.message || String(error)
@@ -226,14 +252,26 @@ async function launchConnection(conn) {
 
       case 'rdp':
         result = await window.api.launchRdp(connectionWithCreds, mergedSettings)
+        // Трекинг запуска подключения
+        if (result?.success && window.api?.trackConnectionLaunch) {
+          window.api.trackConnectionLaunch('rdp', true)
+        }
         break
 
       case 'horizon':
         result = await window.api.launchHorizon(connectionWithCreds, mergedSettings)
+        // Трекинг запуска подключения
+        if (result?.success && window.api?.trackConnectionLaunch) {
+          window.api.trackConnectionLaunch('horizon', true)
+        }
         break
 
       case 'citrix':
         result = await window.api.launchCitrix(connectionWithCreds, mergedSettings)
+        // Трекинг запуска подключения
+        if (result?.success && window.api?.trackConnectionLaunch) {
+          window.api.trackConnectionLaunch('citrix', true)
+        }
         break
 
       default:
@@ -250,6 +288,10 @@ async function launchConnection(conn) {
     console.error('Launch error:', errorMsg)
     if (window.api?.log) {
       window.api.log('error', `launchConnection failed: ${errorMsg}`)
+    }
+    // Трекинг ошибки
+    if (window.api?.trackError) {
+      window.api.trackError({ message: errorMsg, stack: error?.stack })
     }
     return {
       success: false,

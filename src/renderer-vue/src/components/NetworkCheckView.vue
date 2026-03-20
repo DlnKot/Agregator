@@ -189,6 +189,11 @@ async function refreshGeo() {
 }
 
 async function runTarget(t) {
+  // Трекинг метрик
+  if (window.api?.trackNetworkCheck) {
+    window.api.trackNetworkCheck()
+  }
+  
   globalError.value = ''
   // Avoid race conditions when multiple checks run in parallel.
   results.value = {

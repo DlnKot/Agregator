@@ -18,6 +18,10 @@ const citrixLauncher = require('./launchers/citrixLauncher');
 const vpnLauncher = require('./launchers/vpnLauncher');
 const autoUpdaterModule = require('./utils/autoUpdater');
 const networkCheck = require('./utils/networkCheck');
+const metricsCollector = require('./utils/metricsCollector');
+const metricsStorage = require('./utils/metricsStorage');
+const metricsSender = require('./utils/metricsSender');
+const { uuidv4 } = require('./utils/uuid');
 const { version: appVersion, name: appNameFromFile } = require('../version');
 
 // Ensure the macOS Dock shows our app name even in dev runs (otherwise it can show "Electron").
@@ -254,6 +258,49 @@ function initializeStores() {
   }
 }
 
+// ==================== Metrics & Client ID ====================
+
+function getOrCreateClientId() {
+  let clientId = configStore.get('clientId');
+  
+  if (!clientId) {
+    clientId = uuidv4();
+    configStore.set('clientId', clientId);
+    logger('info', `Metrics: Generated new clientId: ${clientId}`);
+  }
+  
+  return clientId;
+}
+
+function initializeMetrics(userDataPath) {
+  // Инициализация хранилища метрик
+  metricsStorage.initStorage(userDataPath);
+  
+  // Получаем или создаём clientId
+  const clientId = getOrCreateClientId();
+  
+  // Инициализация сбора метрик - начинаем новую сессию
+  metricsCollector.initSession(clientId);
+  
+  // Настройка отправщика (пока отключен - будет включен после готовности сервера)
+  metricsSender.configure({
+    enabled: false, // Включить когда сервер будет готов
+    endpoint: 'https://10.230.121.212/metrics',
+    sendIntervalHours: 24
+  });
+  
+  logger('info', `Metrics: Initialized with clientId: ${clientId}`);
+}
+
+function flushMetrics() {
+  // Завершаем сессию и отправляем/сохраняем метрики
+  const session = metricsCollector.endSession();
+  if (session) {
+    metricsSender.flush(session);
+    logger('info', 'Metrics: Session flushed on app quit');
+  }
+}
+
 // ==================== Window Management ====================
 
 function createWindow() {
@@ -350,12 +397,22 @@ function killAllLaunchedProcesses() {
 // ==================== Exception Handlers ====================
 
 process.on('uncaughtException', (error) => {
+  // Трекинг ошибки в метриках
+  if (metricsCollector && typeof metricsCollector.trackError === 'function') {
+    try { metricsCollector.trackError(error); } catch (e) { /* ignore */ }
+  }
+  
   logger('error', `Uncaught Exception: ${error.message}`);
   logger('error', error.stack);
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason) => {
+  // Трекинг ошибки в метриках
+  if (metricsCollector && typeof metricsCollector.trackError === 'function') {
+    try { metricsCollector.trackError(new Error(String(reason))); } catch (e) { /* ignore */ }
+  }
+  
   logger('error', `Unhandled Rejection: ${reason}`);
 });
 
@@ -528,6 +585,49 @@ function setupIpcHandlers() {
     return true;
   });
 
+  // Metrics handlers
+  ipcMain.handle('track-event', (event, type, data) => {
+    if (metricsCollector.hasActiveSession()) {
+      metricsCollector.trackEvent(type, data || {});
+    }
+    return true;
+  });
+
+  ipcMain.handle('track-connection-launch', (event, connectionType, success) => {
+    if (metricsCollector.hasActiveSession()) {
+      metricsCollector.trackConnectionLaunch(connectionType, success);
+    }
+    return true;
+  });
+
+  ipcMain.handle('track-tab-view', (event, tab) => {
+    if (metricsCollector.hasActiveSession()) {
+      metricsCollector.trackTabView(tab);
+    }
+    return true;
+  });
+
+  ipcMain.handle('track-network-check', () => {
+    if (metricsCollector.hasActiveSession()) {
+      metricsCollector.trackNetworkCheck();
+    }
+    return true;
+  });
+
+  ipcMain.handle('track-help-view', (event, section) => {
+    if (metricsCollector.hasActiveSession()) {
+      metricsCollector.trackHelpView(section);
+    }
+    return true;
+  });
+
+  ipcMain.handle('track-error', (event, error) => {
+    if (metricsCollector.hasActiveSession()) {
+      metricsCollector.trackError(error);
+    }
+    return true;
+  });
+
   // Auto-updater handlers
   autoUpdaterModule.setupIpcHandlers();
 }
@@ -561,6 +661,7 @@ app.whenReady().then(() => {
 
     trySetDockIcon();
     initializeStores();
+    initializeMetrics(userDataPath);
     setupIpcHandlers();
     createWindow();
 
@@ -599,6 +700,9 @@ app.on('window-all-closed', () => {
 app.on('before-quit', (event) => {
   logger('info', 'App is quitting...');
   killAllLaunchedProcesses();
+
+  // Отправка метрик перед закрытием
+  flushMetrics();
 
   // Принудительно сохраняем все данные перед закрытием
   if (configStore && typeof configStore.flush === 'function') {

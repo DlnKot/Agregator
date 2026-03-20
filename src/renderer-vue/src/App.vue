@@ -10,7 +10,7 @@
         <aside class="sidebar">
           <nav class="sidebar-nav">
             <button class="nav-item" :class="{ active: currentView === 'connections' }"
-              @click="currentView = 'connections'">
+              @click="handleViewChange('connections')">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="2" y="3" width="20" height="14" rx="2" />
                 <line x1="8" y1="21" x2="16" y2="21" />
@@ -18,7 +18,8 @@
               </svg>
               Подключения
             </button>
-            <button class="nav-item" :class="{ active: currentView === 'settings' }" @click="currentView = 'settings'">
+            <button class="nav-item" :class="{ active: currentView === 'settings' }" 
+              @click="handleViewChange('settings')">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="3" />
                 <path
@@ -26,7 +27,8 @@
               </svg>
               Настройки
             </button>
-            <button class="nav-item" :class="{ active: currentView === 'network' }" @click="currentView = 'network'">
+            <button class="nav-item" :class="{ active: currentView === 'network' }" 
+              @click="handleViewChange('network')">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M4 19v-7"></path>
                 <path d="M8 19v-11"></path>
@@ -36,7 +38,8 @@
               </svg>
               Проверка сети
             </button>
-            <button class="nav-item" :class="{ active: currentView === 'help' }" @click="currentView = 'help'">
+            <button class="nav-item" :class="{ active: currentView === 'help' }" 
+              @click="handleViewChange('help')">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="10"></circle>
                 <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
@@ -290,11 +293,24 @@ async function handleVpnClick() {
     const result = await window.api.launchVpn()
     if (result && result.success) {
       showToast('VPN клиент запущен', 'success')
+      // Трекинг метрик
+      if (window.api?.trackConnectionLaunch) {
+        window.api.trackConnectionLaunch('vpn', true)
+      }
     } else {
       showToast(result?.error || 'Не удалось запустить VPN клиент', 'error')
     }
   } catch (error) {
     showToast('Ошибка при подключении к VPN', 'error')
+  }
+}
+
+// Handle view change with metrics
+function handleViewChange(view) {
+  currentView.value = view
+  // Трекинг метрик
+  if (window.api?.trackTabView) {
+    window.api.trackTabView(view)
   }
 }
 
@@ -355,7 +371,12 @@ function applyTheme(nextTheme) {
 }
 
 function toggleTheme() {
-  applyTheme(theme.value === 'dark' ? 'light' : 'dark')
+  const newTheme = theme.value === 'dark' ? 'light' : 'dark'
+  applyTheme(newTheme)
+  // Трекинг метрик
+  if (window.api?.trackEvent) {
+    window.api.trackEvent('theme_toggle', { theme: newTheme })
+  }
 }
 
 // Apply theme ASAP (before first paint when possible)

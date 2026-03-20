@@ -42,5 +42,13 @@ contextBridge.exposeInMainWorld('api', {
   // Logging
   log: (level, message) => ipcRenderer.invoke('log-message', level, message),
 
+  // Metrics
+  trackEvent: (type, data) => ipcRenderer.invoke('track-event', type, data),
+  trackConnectionLaunch: (type, success) => ipcRenderer.invoke('track-connection-launch', type, success),
+  trackTabView: (tab) => ipcRenderer.invoke('track-tab-view', tab),
+  trackNetworkCheck: () => ipcRenderer.invoke('track-network-check'),
+  trackHelpView: (section) => ipcRenderer.invoke('track-help-view', section),
+  trackError: (error) => ipcRenderer.invoke('track-error', error),
+
   // No credentials storage (username is stored in connection profile)
 });
