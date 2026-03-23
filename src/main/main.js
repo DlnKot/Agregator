@@ -16,6 +16,7 @@ const rdpLauncher = require('./launchers/rdpLauncher');
 const horizonLauncher = require('./launchers/horizonLauncher');
 const citrixLauncher = require('./launchers/citrixLauncher');
 const vpnLauncher = require('./launchers/vpnLauncher');
+const rudesktopLauncher = require('./launchers/rudesktopLauncher');
 const autoUpdaterModule = require('./utils/autoUpdater');
 const networkCheck = require('./utils/networkCheck');
 const metricsCollector = require('./utils/metricsCollector');
@@ -202,7 +203,7 @@ function normalizeConnections(connections = []) {
 
     // deployment-defaults.json entries historically didn't include id, but the UI uses it as a key and identifier.
     if (!result.id) {
-      result.id = `${Date.now()}_${index}_${Math.random().toString(36).slice(2, 9)}`;
+      result.id = uuidv4();
       changed = true;
     }
 
@@ -224,6 +225,179 @@ function normalizeConnections(connections = []) {
   });
 
   return { normalized, changed };
+}
+
+// ==================== IPC Input Validation ====================
+
+const _DANGEROUS_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
+
+function isPlainObject(value) {
+  if (!value || typeof value !== 'object') return false;
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+}
+
+function deepCloneJsonSafe(value, { maxDepth = 30, maxNodes = 20000 } = {}) {
+  const seen = new WeakSet();
+  let nodes = 0;
+
+  function clone(v, depth) {
+    nodes += 1;
+    if (nodes > maxNodes) throw new Error('Object too large');
+    if (depth > maxDepth) throw new Error('Object too deep');
+
+    if (v === null || v === undefined) return v;
+
+    const t = typeof v;
+    if (t === 'string' || t === 'number' || t === 'boolean') return v;
+    if (t === 'bigint') throw new Error('BigInt is not supported');
+    if (t === 'function' || t === 'symbol') throw new Error('Unsupported value type');
+
+    if (Array.isArray(v)) {
+      if (seen.has(v)) throw new Error('Circular reference');
+      seen.add(v);
+      return v.map((x) => clone(x, depth + 1));
+    }
+
+    if (isPlainObject(v)) {
+      if (seen.has(v)) throw new Error('Circular reference');
+      seen.add(v);
+
+      const out = {};
+      for (const key of Object.keys(v)) {
+        if (_DANGEROUS_KEYS.has(key)) continue;
+        out[key] = clone(v[key], depth + 1);
+      }
+      return out;
+    }
+
+    // Disallow class instances (Date, Buffer, etc). Renderer should only send JSON.
+    throw new Error('Unsupported object type');
+  }
+
+  return clone(value, 0);
+}
+
+function assertJsonSize(value, label, maxBytes = 250 * 1024) {
+  const json = JSON.stringify(value);
+  if (typeof json !== 'string') throw new Error(`${label}: cannot serialize`);
+  if (Buffer.byteLength(json, 'utf8') > maxBytes) {
+    throw new Error(`${label}: payload too large`);
+  }
+}
+
+function coerceByTemplate(template, value) {
+  if (isPlainObject(template)) {
+    const src = isPlainObject(value) ? value : {};
+    const out = {};
+    for (const key of Object.keys(template)) {
+      if (_DANGEROUS_KEYS.has(key)) continue;
+      out[key] = coerceByTemplate(template[key], src[key]);
+    }
+    return out;
+  }
+
+  if (typeof template === 'boolean') {
+    return typeof value === 'boolean' ? value : template;
+  }
+
+  if (typeof template === 'number') {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : template;
+  }
+
+  if (typeof template === 'string') {
+    return typeof value === 'string' ? value : template;
+  }
+
+  return value ?? template;
+}
+
+function sanitizeSettingsInput(input) {
+  const safe = deepCloneJsonSafe(input || {});
+  if (!isPlainObject(safe)) throw new Error('Invalid settings object');
+
+  // Preserve unknown root keys (e.g. `user`) but sanitize known sections against defaults.
+  const out = { ...safe };
+
+  const defaults = BUILTIN_DEFAULTS.settings;
+  out.rdp = coerceByTemplate(defaults.rdp, safe.rdp);
+  out.horizon = coerceByTemplate(defaults.horizon, safe.horizon);
+  out.citrix = coerceByTemplate(defaults.citrix, safe.citrix);
+  out.general = coerceByTemplate(defaults.general, safe.general);
+  out.networkCheck = coerceByTemplate(defaults.networkCheck, safe.networkCheck);
+
+  assertJsonSize(out, 'settings');
+  return out;
+}
+
+function sanitizeConnectionInput(input) {
+  const safe = deepCloneJsonSafe(input || {});
+  if (!isPlainObject(safe)) throw new Error('Invalid connection object');
+
+  const allowedTypes = new Set(['rdp', 'horizon', 'citrix']);
+  const type = typeof safe.type === 'string' ? safe.type.trim().toLowerCase() : '';
+  if (!allowedTypes.has(type)) throw new Error('Invalid connection type');
+
+  const name = typeof safe.name === 'string' ? safe.name.trim() : '';
+  const host = typeof safe.host === 'string' ? safe.host.trim() : '';
+  if (!name) throw new Error('Connection name is required');
+  if (!host) throw new Error('Connection host is required');
+  if (name.length > 200) throw new Error('Connection name too long');
+  if (host.length > 2048) throw new Error('Connection host too long');
+
+  const out = {
+    id: typeof safe.id === 'string' ? safe.id : '',
+    type,
+    name,
+    host,
+    desktopPool: typeof safe.desktopPool === 'string' ? safe.desktopPool.trim() : '',
+    storeUrl: typeof safe.storeUrl === 'string' ? safe.storeUrl.trim() : '',
+    username: typeof safe.username === 'string' ? safe.username.trim() : '',
+    description: typeof safe.description === 'string' ? safe.description.trim() : '',
+    isUserModified: true
+  };
+
+  if (typeof safe.isDefault === 'boolean') out.isDefault = safe.isDefault;
+  if (isPlainObject(safe.clientSettings)) out.clientSettings = safe.clientSettings;
+
+  // Basic URL sanity for Citrix storeUrl (optional).
+  if (out.type === 'citrix' && out.storeUrl) {
+    try {
+      // Keep previous behavior (renderer normalizes by adding https:// if missing).
+      if (!out.storeUrl.startsWith('http://') && !out.storeUrl.startsWith('https://')) {
+        out.storeUrl = 'https://' + out.storeUrl;
+      }
+      out.storeUrl = out.storeUrl.replace(/\/+$/, '');
+      const u = new URL(out.storeUrl);
+      if (u.protocol !== 'http:' && u.protocol !== 'https:') {
+        throw new Error('Citrix Store URL must be http/https');
+      }
+    } catch {
+      throw new Error('Invalid Citrix Store URL');
+    }
+  }
+
+  assertJsonSize(out, 'connection');
+  return out;
+}
+
+function sanitizeProfileInput(input) {
+  const safe = deepCloneJsonSafe(input || {});
+  if (!isPlainObject(safe)) throw new Error('Invalid profile object');
+
+  const out = {
+    id: typeof safe.id === 'string' ? safe.id : '',
+    name: typeof safe.name === 'string' ? safe.name.trim() : '',
+    description: typeof safe.description === 'string' ? safe.description.trim() : ''
+  };
+
+  if (isPlainObject(safe.settings)) out.settings = safe.settings;
+
+  if (out.name && out.name.length > 200) throw new Error('Profile name too long');
+
+  assertJsonSize(out, 'profile');
+  return out;
 }
 
 function initializeStores() {
@@ -429,20 +603,23 @@ function setupIpcHandlers() {
 
   // Connection handlers
   ipcMain.handle('save-connection', (event, connection) => {
+    const sanitized = sanitizeConnectionInput(connection);
+
     const connections = configStore.get('connections', []);
-    const idx = connections.findIndex(c => c.id === connection.id);
+    const idx = connections.findIndex(c => c && typeof c === 'object' && c.id === sanitized.id);
     if (idx >= 0) {
-      // При редактировании существующего подключения - помечаем как пользовательское
-      connection.isUserModified = true;
-      connections[idx] = connection;
+      // Update existing connection (preserve id).
+      connections[idx] = { ...connections[idx], ...sanitized, id: connections[idx].id };
     } else {
-      // Новое подключение всегда пользовательское
-      connection.id = Date.now().toString();
-      connection.isUserModified = true;
-      connections.push(connection);
+      // New connection: always generate a strong unique id to avoid collisions.
+      const newConn = { ...sanitized, id: uuidv4() };
+      connections.push(newConn);
+      configStore.set('connections', connections);
+      return newConn;
     }
+
     configStore.set('connections', connections);
-    return connection;
+    return connections[idx];
   });
 
   ipcMain.handle('delete-connection', (event, connectionId) => {
@@ -453,18 +630,27 @@ function setupIpcHandlers() {
 
   // Settings handlers
   ipcMain.handle('save-settings', (event, settings) => {
-    configStore.set('settings', settings);
+    const sanitized = sanitizeSettingsInput(settings);
+    configStore.set('settings', sanitized);
     return true;
   });
 
   // Profile handlers
   ipcMain.handle('save-profile', (event, profile) => {
+    const sanitized = sanitizeProfileInput(profile);
+
     const profiles = configStore.get('profiles', []);
-    const idx = profiles.findIndex(p => p.id === profile.id);
-    if (idx >= 0) profiles[idx] = profile;
-    else { profile.id = Date.now().toString(); profiles.push(profile); }
+    const idx = profiles.findIndex(p => p && typeof p === 'object' && p.id === sanitized.id);
+    if (idx >= 0) {
+      profiles[idx] = { ...profiles[idx], ...sanitized, id: profiles[idx].id };
+      configStore.set('profiles', profiles);
+      return profiles[idx];
+    }
+
+    const newProfile = { ...sanitized, id: uuidv4() };
+    profiles.push(newProfile);
     configStore.set('profiles', profiles);
-    return profile;
+    return newProfile;
   });
 
   ipcMain.handle('delete-profile', (event, profileId) => {
@@ -512,6 +698,23 @@ function setupIpcHandlers() {
     } catch (error) {
       logger('error', `VPN launch error: ${error.message}`);
       return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('launch-rudesktop', async () => {
+    try {
+      rudesktopLauncher.launchRuDesktop();
+      return { success: true };
+    } catch (error) {
+      const code = error?.code;
+      if (code === 'RUDESKTOP_NOT_INSTALLED') {
+        return { success: false, notInstalled: true, downloadUrl: error?.downloadUrl || rudesktopLauncher.DOWNLOAD_URL };
+      }
+      if (code === 'RUDESKTOP_UNSUPPORTED_PLATFORM') {
+        return { success: false, error: error?.message || 'Unsupported platform' };
+      }
+      logger('error', `RuDesktop launch error: ${error?.message || String(error)}`);
+      return { success: false, error: error?.message || String(error) };
     }
   });
 
@@ -635,9 +838,18 @@ function setupIpcHandlers() {
 // ==================== App Lifecycle ====================
 
 app.whenReady().then(() => {
-  // Ignore SSL certificate errors for self-signed certificates
-  app.commandLine.appendSwitch('ignore-certificate-errors');
-  app.commandLine.appendSwitch('ignore-certificate-errors-spki-list', '*');
+  // SECURITY NOTE:
+  // Do NOT globally disable TLS/certificate verification. If internal endpoints use a private CA,
+  // ship that CA and rely on NODE_EXTRA_CA_CERTS (see src/main/utils/autoUpdater.js).
+  //
+  // If you *must* temporarily bypass TLS verification for debugging, set:
+  //   ARC_ALLOW_INSECURE_TLS=1
+  // This keeps the default secure.
+  if (process.env.ARC_ALLOW_INSECURE_TLS === '1') {
+    app.commandLine.appendSwitch('ignore-certificate-errors');
+    // Intentionally do NOT set ignore-certificate-errors-spki-list='*' (too broad).
+    logger('warn', 'SECURITY: ARC_ALLOW_INSECURE_TLS=1 enabled. TLS certificate verification is disabled.');
+  }
 
   logger('info', 'App ready, starting...');
   logger('info', `Platform: ${process.platform}`);

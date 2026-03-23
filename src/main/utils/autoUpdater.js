@@ -7,8 +7,6 @@ const path = require('path');
 const fs = require('fs');
 const { spawnSync } = require('child_process');
 const { log: logger } = require('./logger');
-const https = require('https');
-const http = require('http');
 
 // Configure auto-updater logging
 autoUpdater.logger = {
@@ -61,9 +59,6 @@ let publishConfig = null;
 // Custom server URL for updates
 const CUSTOM_UPDATE_URL = 'https://10.230.121.212/electron/latest/';
 const CUSTOM_UPDATE_URL_HTTP = 'http://10.230.121.212/electron/latest/';
-
-// Храним ссылки на функции-обработчики для возможности удаления
-const eventHandlers = new Map();
 
 function getExpectedUpdateConfigPath() {
     // electron-updater:
@@ -131,6 +126,7 @@ function initAutoUpdater(config = {}) {
     // Configure custom server publish settings
     const updateUrl = config.updateUrl || CUSTOM_UPDATE_URL;
     const updateUrlHttp = config.updateUrlHttp || CUSTOM_UPDATE_URL_HTTP;
+    const allowHttpFallback = config.allowHttpFallback === true;
 
     if (updateUrl) {
         autoUpdater.autoDownload = false;
@@ -223,9 +219,10 @@ function initAutoUpdater(config = {}) {
     autoUpdater.on('error', (error) => {
         const rawMessage = error?.message || String(error);
 
-        // If HTTPS fails with certificate error, try HTTP fallback
-        if (updateUrl.startsWith('https') && rawMessage.includes('CERT_')) {
-            logger('warn', 'AutoUpdater: HTTPS failed with cert error, trying HTTP fallback...');
+        // Security: never downgrade update transport unless explicitly allowed.
+        // Self-signed/enterprise PKI should be handled via a custom CA (NODE_EXTRA_CA_CERTS / ca.pem).
+        if (allowHttpFallback && updateUrl.startsWith('https') && rawMessage.includes('CERT_')) {
+            logger('warn', 'AutoUpdater: HTTPS failed with cert error, trying HTTP fallback (allowHttpFallback=true)...');
             const feedUrl = updateUrlHttp;
             try {
                 autoUpdater.setFeedURL({
@@ -244,6 +241,11 @@ function initAutoUpdater(config = {}) {
                 logger('error', msg);
                 notifyRenderer('update-error', { message: msg });
             }
+            return;
+        } else if (updateUrl.startsWith('https') && rawMessage.includes('CERT_')) {
+            const msg = `AutoUpdater: TLS certificate error. Install the corporate CA (ca.pem / NODE_EXTRA_CA_CERTS) for ${updateUrl}. Details: ${rawMessage}`;
+            logger('error', msg);
+            notifyRenderer('update-error', { message: msg });
             return;
         }
 

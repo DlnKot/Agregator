@@ -18,7 +18,7 @@
               </svg>
               Подключения
             </button>
-            <button class="nav-item" :class="{ active: currentView === 'settings' }" 
+            <button class="nav-item" :class="{ active: currentView === 'settings' }"
               @click="handleViewChange('settings')">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="3" />
@@ -27,7 +27,7 @@
               </svg>
               Настройки
             </button>
-            <button class="nav-item" :class="{ active: currentView === 'network' }" 
+            <button class="nav-item" :class="{ active: currentView === 'network' }"
               @click="handleViewChange('network')">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M4 19v-7"></path>
@@ -38,12 +38,12 @@
               </svg>
               Проверка сети
             </button>
-            <button class="nav-item" :class="{ active: currentView === 'help' }" 
-              @click="handleViewChange('help')">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"/>
-                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-                <path d="M12 17h.01"/>
+            <button class="nav-item" :class="{ active: currentView === 'help' }" @click="handleViewChange('help')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                <path d="M12 17h.01" />
               </svg>
               Помощь
             </button>
@@ -89,6 +89,25 @@
                   @click="currentClientFilter = 'citrix'">Citrix</button>
               </div>
               <div class="view-header-actions">
+                <button class="btn btn-secondary btn-rudesktop" title="Запустить RuDesktop"
+                  @click="handleRuDesktopClick">
+                  <svg width="160" height="160" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Левый полукруг (замкнутый) -->
+                    <path d="
+    M56 20
+    A40 40 0 0 0 41 100
+    L56 20
+  " stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+
+                    <!-- Правый полукруг (замкнутый, чуть выше) -->
+                    <path d="
+    M66 16
+    A40 40 0 0 1 51 96
+    L66 16
+  " stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                  RuDesktop
+                </button>
                 <button class="btn btn-secondary btn-vpn" title="Запустить VPN" @click="handleVpnClick">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="12 3 20 7.5 20 16.5 12 21 4 16.5 4 7.5 12 3"></polyline>
@@ -302,6 +321,47 @@ async function handleVpnClick() {
     }
   } catch (error) {
     showToast('Ошибка при подключении к VPN', 'error')
+  }
+}
+
+async function handleRuDesktopClick() {
+  try {
+    if (!window.api?.launchRuDesktop) {
+      showToast('RuDesktop доступен только при запуске в приложении (Electron)', 'error')
+      return
+    }
+
+    const result = await window.api.launchRuDesktop()
+    if (result && result.success) {
+      showToast('RuDesktop запущен', 'success')
+      if (window.api?.trackConnectionLaunch) {
+        window.api.trackConnectionLaunch('rudesktop', true)
+      }
+      return
+    }
+
+    if (result?.notInstalled) {
+      const url = result?.downloadUrl || 'https://rudesktop.ru/downloads/'
+      alert('RuDesktop не установлен. Сейчас откроется сайт для установки.')
+      setTimeout(() => {
+        window.api?.openExternal?.(url)
+      }, 5000)
+      showToast('RuDesktop не установлен', 'error')
+      if (window.api?.trackConnectionLaunch) {
+        window.api.trackConnectionLaunch('rudesktop', false)
+      }
+      return
+    }
+
+    showToast(result?.error || 'Не удалось запустить RuDesktop', 'error')
+    if (window.api?.trackConnectionLaunch) {
+      window.api.trackConnectionLaunch('rudesktop', false)
+    }
+  } catch (error) {
+    showToast('Ошибка при запуске RuDesktop', 'error')
+    if (window.api?.trackConnectionLaunch) {
+      window.api.trackConnectionLaunch('rudesktop', false)
+    }
   }
 }
 
@@ -700,10 +760,37 @@ try {
   height: 18px;
 }
 
+.btn-rudesktop {
+  background: #194197;
+  color: #ffffff;
+  border: 1px solid #194197;
+}
+
+.btn-rudesktop:hover {
+  background: #0f286e;
+  border-color: #0f286e;
+}
+
+:global(html[data-theme="dark"]) .btn-rudesktop {
+  background: #194197;
+  color: #ffffff;
+  border-color: #194197;
+}
+
+:global(html[data-theme="dark"]) .btn-rudesktop:hover {
+  background: #0f286e;
+  border-color: #0f286e;
+}
+
 .connections-list {
   flex: 1;
   min-height: 0;
   overflow: auto;
   padding-right: 8px;
+}
+
+.btn-rudesktop svg {
+  width: 18px;
+  height: 18px;
 }
 </style>
