@@ -17,6 +17,9 @@ contextBridge.exposeInMainWorld('api', {
   saveProfile: (profile) => ipcRenderer.invoke('save-profile', profile),
   deleteProfile: (id) => ipcRenderer.invoke('delete-profile', id),
 
+  // App
+  getVersion: () => ipcRenderer.invoke('get-version'),
+
   // Launchers
   launchRdp: (connection, settings) => ipcRenderer.invoke('launch-rdp', connection, settings),
   launchHorizon: (connection, settings) => ipcRenderer.invoke('launch-horizon', connection, settings),
@@ -32,7 +35,9 @@ contextBridge.exposeInMainWorld('api', {
   getPlatform: () => ipcRenderer.invoke('get-platform'),
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
   onAutoUpdateEvent: (callback) => {
-    ipcRenderer.on('auto-update-event', (event, data) => callback(data));
+    const handler = (event, data) => callback(data);
+    ipcRenderer.on('auto-update-event', handler);
+    return () => ipcRenderer.removeListener('auto-update-event', handler);
   },
 
   // Network check

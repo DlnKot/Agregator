@@ -332,7 +332,7 @@
               <span class="update-value version-new">{{ updateStatus.version }}</span>
             </div>
 
-            <div v-if="!isMac && updateProgress.percent > 0" class="update-progress">
+            <div v-if="updateProgress.percent > 0" class="update-progress">
               <div class="progress-bar">
                 <div class="progress-fill" :style="{ width: updateProgress.percent + '%' }"></div>
               </div>
@@ -340,11 +340,8 @@
                 formatBytes(updateProgress.bytesPerSecond) }}/с)</span>
             </div>
 
-            <button v-if="!isMac" class="btn btn-primary" @click="handleDownloadUpdate" :disabled="isDownloading">
+            <button class="btn btn-primary" @click="handleDownloadUpdate" :disabled="isDownloading">
               {{ isDownloading ? 'Загрузка...' : 'Скачать обновление' }}
-            </button>
-            <button v-else class="btn btn-primary" @click="handleOpenMacInstaller">
-              Скачать установщик (.pkg)
             </button>
           </div>
 
@@ -418,26 +415,25 @@ onMounted(async () => {
 
   // Get current version from main process via API
   try {
-    const version = await window.api?.getVersion?.()
-    if (version) {
-      appVersion.value = version
-    }
+    const res = await window.api?.getVersion?.()
+    const version = res && typeof res === 'object' && res.success === true ? res.data : res
+    if (version) appVersion.value = version
   } catch (e) {
     // Ignore - will use default value
   }
 
   // Try to get update status
   try {
-    const status = await window.api?.getUpdateStatus?.()
-    if (status) {
-      updateStatus.value = status
-    }
+    const res = await window.api?.getUpdateStatus?.()
+    const status = res && typeof res === 'object' && res.success === true ? res.data : res
+    if (status) updateStatus.value = status
   } catch (e) {
     // Ignore - may not be available in dev mode
   }
 
   try {
-    const p = await window.api?.getPlatform?.()
+    const res = await window.api?.getPlatform?.()
+    const p = res && typeof res === 'object' && res.success === true ? res.data : res
     isMac.value = p === 'darwin'
   } catch (e) {
     isMac.value = /Mac|iPhone|iPad/i.test(navigator.userAgent)

@@ -355,7 +355,7 @@ async function checkForUpdates() {
     try {
         logger('info', 'AutoUpdater: Manual check for updates triggered');
         await autoUpdater.checkForUpdates();
-        return { success: true };
+        return { success: true, data: true };
     } catch (error) {
         logger('error', `AutoUpdater: Check failed - ${error.message}`);
         return { success: false, error: error.message };
@@ -367,15 +367,9 @@ async function checkForUpdates() {
  */
 async function downloadUpdate() {
     try {
-        if (process.platform === 'darwin') {
-            return {
-                success: false,
-                error: 'На macOS обновление устанавливается через установщик .pkg. Откройте страницу релиза и скачайте .pkg файл.'
-            };
-        }
         logger('info', 'AutoUpdater: Starting update download');
         await autoUpdater.downloadUpdate();
-        return { success: true };
+        return { success: true, data: true };
     } catch (error) {
         logger('error', `AutoUpdater: Download failed - ${error.message}`);
         return { success: false, error: error.message };
@@ -403,12 +397,12 @@ function installUpdate() {
 function getUpdateStatus() {
     const updateUrl = publishConfig?.updateUrl || CUSTOM_UPDATE_URL;
 
-    return {
+    return { success: true, data: {
         updateAvailable,
         updateDownloaded,
         version: updateInfo?.version || null,
         updateUrl
-    };
+    }};
 }
 
 /**
@@ -425,6 +419,7 @@ function setupIpcHandlers() {
 
     ipcMain.handle('install-update', () => {
         installUpdate();
+        return { success: true, data: true };
     });
 
     ipcMain.handle('get-update-status', () => {

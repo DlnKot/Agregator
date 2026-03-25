@@ -8,6 +8,19 @@ const currentClientFilter = ref('all')
 const isLoading = ref(false)
 const isFirstRun = ref(false)
 
+function unwrapIpc(res) {
+  if (!res || typeof res !== 'object') return res
+  if (res.success === false) {
+    const err = new Error(res.error || 'IPC request failed')
+    err.ipc = res
+    throw err
+  }
+  if (res.success === true && Object.prototype.hasOwnProperty.call(res, 'data')) {
+    return res.data
+  }
+  return res
+}
+
 /* --------------------------- LOAD DATA --------------------------- */
 
 async function loadData() {
@@ -27,13 +40,16 @@ async function loadData() {
       window.api.getSettings()
     ])
 
-    connections.value = conns
-    settings.value = s
+    const connsData = unwrapIpc(conns)
+    const settingsData = unwrapIpc(s)
 
-    if (!s?.user?.username) {
+    connections.value = connsData
+    settings.value = settingsData
+
+    if (!settingsData?.user?.username) {
       isFirstRun.value = true
     } else {
-      await createDefaultConnectionsIfNeeded(s)
+      await createDefaultConnectionsIfNeeded(settingsData)
     }
 
   } catch (error) {
@@ -60,7 +76,9 @@ async function saveConnection(connection) {
     const isNew = !connection.id
     const result = await window.api.saveConnection(connection)
 
-    connections.value = await window.api.getConnections()
+    unwrapIpc(result)
+
+    connections.value = unwrapIpc(await window.api.getConnections())
 
     // Трекинг метрик
     if (result.success && window.api?.trackEvent) {
@@ -89,9 +107,9 @@ async function deleteConnection(id) {
     const conn = connections.value.find(c => c.id === id)
     const connectionType = conn?.type || 'unknown'
     
-    await window.api.deleteConnection(id)
+    unwrapIpc(await window.api.deleteConnection(id))
 
-    connections.value = await window.api.getConnections()
+    connections.value = unwrapIpc(await window.api.getConnections())
     
     // Трекинг метрик
     if (window.api?.trackEvent) {
@@ -116,7 +134,7 @@ async function saveSettings(newSettings) {
   try {
     const plainSettings = JSON.parse(JSON.stringify(newSettings))
 
-    await window.api.saveSettings(plainSettings)
+    unwrapIpc(await window.api.saveSettings(plainSettings))
 
     settings.value = plainSettings
 
@@ -154,7 +172,7 @@ async function createDefaultConnectionsIfNeeded(currentSettings) {
 
   if (!user?.username) return
 
-  const existingConnections = await window.api.getConnections()
+  const existingConnections = unwrapIpc(await window.api.getConnections())
 
   const hasDefaults = existingConnections.some(c => c.isDefault === true)
 
@@ -183,10 +201,10 @@ async function createDefaultConnectionsIfNeeded(currentSettings) {
       clientSettings: config.defaultSettings
     }
 
-    await window.api.saveConnection(connection)
+    unwrapIpc(await window.api.saveConnection(connection))
   }
 
-  connections.value = await window.api.getConnections()
+  connections.value = unwrapIpc(await window.api.getConnections())
 }
 
 /* ---------------- USER CREDENTIALS ---------------- */
@@ -361,6 +379,7 @@ async function checkForUpdates() {
     if (window.api?.log) {
       window.api.log('info', `checkForUpdates result: ${JSON.stringify(result)}`)
     }
+    if (result?.success === false) updateError.value = result.error || 'Update check failed'
     return result
   } catch (error) {
     const errorMsg = error.message
@@ -380,6 +399,7 @@ async function downloadUpdate() {
     if (window.api?.log) {
       window.api.log('info', `downloadUpdate result: ${JSON.stringify(result)}`)
     }
+    if (result?.success === false) updateError.value = result.error || 'Download failed'
     return result
   } catch (error) {
     const errorMsg = error.message

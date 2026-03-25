@@ -62,11 +62,6 @@ jobs:
       env:
         CSC_IDENTITY_AUTO_DISCOVERY: false
 
-    - name: Build macOS PKG (x64 + arm64)
-      run: npm run build:mac:pkg
-      env:
-        CSC_IDENTITY_AUTO_DISCOVERY: false
-
     - name: Upload macOS artifacts
       uses: actions/upload-artifact@v4
       with:
@@ -76,7 +71,6 @@ jobs:
           dist/Alfa*.dmg.blockmap
           dist/Alfa*-mac.zip
           dist/Alfa*-mac.zip.blockmap
-          dist/*.pkg
           dist/latest-mac.yml
         retention-days: 1
 
@@ -102,7 +96,7 @@ jobs:
     - name: Prepare release files
       run: |
         mkdir -p release-files
-        find artifacts -type f \( -name "*.exe" -o -name "*.dmg" -o -name "*.zip" -o -name "*.pkg" -o -name "*.yml" -o -name "*.blockmap" \) -exec cp {} release-files/ \;
+        find artifacts -type f \( -name "*.exe" -o -name "*.dmg" -o -name "*.zip" -o -name "*.yml" -o -name "*.blockmap" \) -exec cp {} release-files/ \;
 
     - name: Get version
       id: version

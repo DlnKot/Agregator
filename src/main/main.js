@@ -23,7 +23,7 @@ const metricsCollector = require('./utils/metricsCollector');
 const metricsStorage = require('./utils/metricsStorage');
 const metricsSender = require('./utils/metricsSender');
 const { uuidv4 } = require('./utils/uuid');
-const { version: appVersion, name: appNameFromFile } = require('../version');
+const { version: appVersion, name: appNameFromFile } = require('../version.cjs');
 
 // Ensure the macOS Dock shows our app name even in dev runs (otherwise it can show "Electron").
 try {
@@ -578,7 +578,16 @@ process.on('uncaughtException', (error) => {
   
   logger('error', `Uncaught Exception: ${error.message}`);
   logger('error', error.stack);
-  process.exit(1);
+
+  // Best-effort graceful shutdown so we don't lose store changes.
+  try { if (configStore && typeof configStore.flush === 'function') configStore.flush(); } catch { /* ignore */ }
+  try { flushMetrics(); } catch { /* ignore */ }
+
+  // Quit Electron; if it hangs, force-exit.
+  try { app.quit(); } catch { /* ignore */ }
+  setTimeout(() => {
+    try { process.exit(1); } catch { /* ignore */ }
+  }, 1500);
 });
 
 process.on('unhandledRejection', (reason) => {
@@ -593,80 +602,143 @@ process.on('unhandledRejection', (reason) => {
 // ==================== IPC Handlers ====================
 
 function setupIpcHandlers() {
+  const ok = (data) => ({ success: true, data });
+  const fail = (error) => ({ success: false, error: error?.message || String(error) });
+
   // Data handlers
-  ipcMain.handle('get-connections', () => configStore ? configStore.get('connections', []) : []);
-  ipcMain.handle('get-settings', () => configStore ? configStore.get('settings') : BUILTIN_DEFAULTS.settings);
-  ipcMain.handle('get-profiles', () => configStore ? configStore.get('profiles', []) : []);
+  ipcMain.handle('get-connections', () => {
+    try {
+      const data = configStore ? configStore.get('connections', []) : [];
+      return ok(data);
+    } catch (e) {
+      logger('error', `get-connections failed: ${e?.message || String(e)}`);
+      return fail(e);
+    }
+  });
+
+  ipcMain.handle('get-settings', () => {
+    try {
+      const data = configStore ? configStore.get('settings') : BUILTIN_DEFAULTS.settings;
+      return ok(data);
+    } catch (e) {
+      logger('error', `get-settings failed: ${e?.message || String(e)}`);
+      return fail(e);
+    }
+  });
+
+  ipcMain.handle('get-profiles', () => {
+    try {
+      const data = configStore ? configStore.get('profiles', []) : [];
+      return ok(data);
+    } catch (e) {
+      logger('error', `get-profiles failed: ${e?.message || String(e)}`);
+      return fail(e);
+    }
+  });
 
   // App version handler
-  ipcMain.handle('get-version', () => appVersion);
+  ipcMain.handle('get-version', () => {
+    try {
+      return ok(appVersion);
+    } catch (e) {
+      return fail(e);
+    }
+  });
 
   // Connection handlers
   ipcMain.handle('save-connection', (event, connection) => {
-    const sanitized = sanitizeConnectionInput(connection);
+    try {
+      const sanitized = sanitizeConnectionInput(connection);
 
-    const connections = configStore.get('connections', []);
-    const idx = connections.findIndex(c => c && typeof c === 'object' && c.id === sanitized.id);
-    if (idx >= 0) {
-      // Update existing connection (preserve id).
-      connections[idx] = { ...connections[idx], ...sanitized, id: connections[idx].id };
-    } else {
-      // New connection: always generate a strong unique id to avoid collisions.
-      const newConn = { ...sanitized, id: uuidv4() };
-      connections.push(newConn);
+      const connections = configStore.get('connections', []);
+      const idx = connections.findIndex(c => c && typeof c === 'object' && c.id === sanitized.id);
+      let saved;
+
+      if (idx >= 0) {
+        // Update existing connection (preserve id).
+        connections[idx] = { ...connections[idx], ...sanitized, id: connections[idx].id };
+        saved = connections[idx];
+      } else {
+        // New connection: always generate a strong unique id to avoid collisions.
+        saved = { ...sanitized, id: uuidv4() };
+        connections.push(saved);
+      }
+
       configStore.set('connections', connections);
-      return newConn;
+      return ok(saved);
+    } catch (e) {
+      logger('error', `save-connection failed: ${e?.message || String(e)}`);
+      return fail(e);
     }
-
-    configStore.set('connections', connections);
-    return connections[idx];
   });
 
   ipcMain.handle('delete-connection', (event, connectionId) => {
-    const connections = configStore.get('connections', []);
-    configStore.set('connections', connections.filter(c => c.id !== connectionId));
-    return true;
+    try {
+      const connections = configStore.get('connections', []);
+      configStore.set('connections', connections.filter(c => c.id !== connectionId));
+      return ok(true);
+    } catch (e) {
+      logger('error', `delete-connection failed: ${e?.message || String(e)}`);
+      return fail(e);
+    }
   });
 
   // Settings handlers
   ipcMain.handle('save-settings', (event, settings) => {
-    const sanitized = sanitizeSettingsInput(settings);
-    configStore.set('settings', sanitized);
-    return true;
+    try {
+      const sanitized = sanitizeSettingsInput(settings);
+      configStore.set('settings', sanitized);
+      return ok(true);
+    } catch (e) {
+      logger('error', `save-settings failed: ${e?.message || String(e)}`);
+      return fail(e);
+    }
   });
 
   // Profile handlers
   ipcMain.handle('save-profile', (event, profile) => {
-    const sanitized = sanitizeProfileInput(profile);
+    try {
+      const sanitized = sanitizeProfileInput(profile);
 
-    const profiles = configStore.get('profiles', []);
-    const idx = profiles.findIndex(p => p && typeof p === 'object' && p.id === sanitized.id);
-    if (idx >= 0) {
-      profiles[idx] = { ...profiles[idx], ...sanitized, id: profiles[idx].id };
+      const profiles = configStore.get('profiles', []);
+      const idx = profiles.findIndex(p => p && typeof p === 'object' && p.id === sanitized.id);
+      let saved;
+
+      if (idx >= 0) {
+        profiles[idx] = { ...profiles[idx], ...sanitized, id: profiles[idx].id };
+        saved = profiles[idx];
+      } else {
+        saved = { ...sanitized, id: uuidv4() };
+        profiles.push(saved);
+      }
+
       configStore.set('profiles', profiles);
-      return profiles[idx];
+      return ok(saved);
+    } catch (e) {
+      logger('error', `save-profile failed: ${e?.message || String(e)}`);
+      return fail(e);
     }
-
-    const newProfile = { ...sanitized, id: uuidv4() };
-    profiles.push(newProfile);
-    configStore.set('profiles', profiles);
-    return newProfile;
   });
 
   ipcMain.handle('delete-profile', (event, profileId) => {
-    const profiles = configStore.get('profiles', []);
-    configStore.set('profiles', profiles.filter(p => p.id !== profileId));
-    return true;
+    try {
+      const profiles = configStore.get('profiles', []);
+      configStore.set('profiles', profiles.filter(p => p.id !== profileId));
+      return ok(true);
+    } catch (e) {
+      logger('error', `delete-profile failed: ${e?.message || String(e)}`);
+      return fail(e);
+    }
   });
 
   // Launch handlers
   ipcMain.handle('launch-rdp', async (event, connection, settings) => {
     try {
       rdpLauncher.launchRdp(connection, settings || {});
-      return { success: true };
+      return ok(true);
     } catch (error) {
       logger('error', `RDP launch error: ${error.message}`);
-      return { success: false, error: error.message };
+      return fail(error);
     }
   });
 
@@ -674,57 +746,61 @@ function setupIpcHandlers() {
     try {
       // Pass the full settings object - launcher will extract horizon settings
       horizonLauncher.launchHorizon(connection, settings || {});
-      return { success: true };
+      return ok(true);
     } catch (error) {
       logger('error', `Horizon launch error: ${error.message}`);
-      return { success: false, error: error.message };
+      return fail(error);
     }
   });
 
   ipcMain.handle('launch-citrix', async (event, connection, settings) => {
     try {
       citrixLauncher.launchCitrix(connection, settings?.citrix || {});
-      return { success: true };
+      return ok(true);
     } catch (error) {
       logger('error', `Citrix launch error: ${error.message}`);
-      return { success: false, error: error.message };
+      return fail(error);
     }
   });
 
   ipcMain.handle('launch-vpn', async () => {
     try {
       vpnLauncher.launchVpn();
-      return { success: true };
+      return ok(true);
     } catch (error) {
       logger('error', `VPN launch error: ${error.message}`);
-      return { success: false, error: error.message };
+      return fail(error);
     }
   });
 
   ipcMain.handle('launch-rudesktop', async () => {
     try {
       rudesktopLauncher.launchRuDesktop();
-      return { success: true };
+      return ok(true);
     } catch (error) {
       const code = error?.code;
       if (code === 'RUDESKTOP_NOT_INSTALLED') {
         return { success: false, notInstalled: true, downloadUrl: error?.downloadUrl || rudesktopLauncher.DOWNLOAD_URL };
       }
       if (code === 'RUDESKTOP_UNSUPPORTED_PLATFORM') {
-        return { success: false, error: error?.message || 'Unsupported platform' };
+        return fail(error?.message || 'Unsupported platform');
       }
       logger('error', `RuDesktop launch error: ${error?.message || String(error)}`);
-      return { success: false, error: error?.message || String(error) };
+      return fail(error);
     }
   });
 
   ipcMain.handle('get-platform', () => {
-    return process.platform;
+    try {
+      return ok(process.platform);
+    } catch (e) {
+      return fail(e);
+    }
   });
 
   ipcMain.handle('open-external', async (event, url) => {
     const u = String(url || '').trim();
-    if (!u) return { success: false, error: 'Empty URL' };
+    if (!u) return fail('Empty URL');
 
     // Валидация URL - разрешаем только безопасные протоколы
     try {
@@ -732,17 +808,17 @@ function setupIpcHandlers() {
       const allowedProtocols = ['https:', 'http:', 'mailto:'];
       if (!allowedProtocols.includes(parsedUrl.protocol)) {
         logger('warn', `openExternal: Blocked unsafe protocol: ${parsedUrl.protocol}`);
-        return { success: false, error: 'Недопустимый протокол. Разрешены только http, https и mailto' };
-      }
-    } catch (e) {
-      return { success: false, error: 'Неверный формат URL' };
-    }
+         return fail('Недопустимый протокол. Разрешены только http, https и mailto');
+       }
+     } catch (e) {
+       return fail('Неверный формат URL');
+     }
 
     try {
       await shell.openExternal(u);
-      return { success: true };
+      return ok(true);
     } catch (e) {
-      return { success: false, error: e?.message || String(e) };
+      return fail(e);
     }
   });
 
@@ -750,10 +826,10 @@ function setupIpcHandlers() {
   ipcMain.handle('network-run-full-check', async (event, payload) => {
     try {
       const res = await networkCheck.runFullNetworkCheck(payload || {});
-      return { success: true, data: res };
+      return ok(res);
     } catch (error) {
       logger('error', `Network check error: ${error.message}`);
-      return { success: false, error: error.message };
+      return fail(error);
     }
   });
 
@@ -763,72 +839,100 @@ function setupIpcHandlers() {
       const settings = configStore ? (configStore.get('settings') || {}) : BUILTIN_DEFAULTS.settings;
       const thresholdMs = settings?.networkCheck?.latencyThresholdMs ?? 100;
       const evaluation = networkCheck.evaluatePing(ping, thresholdMs);
-      return { success: true, data: { ping, evaluation } };
+      return ok({ ping, evaluation });
     } catch (error) {
       logger('error', `Network ping error: ${error.message}`);
-      return { success: false, error: error.message };
+      return fail(error);
     }
   });
 
   ipcMain.handle('network-geo', async () => {
     try {
       const res = await networkCheck.fetchGeo();
-      return { success: true, data: res };
+      return ok(res);
     } catch (error) {
       logger('error', `Network geo error: ${error.message}`);
-      return { success: false, error: error.message };
+      return fail(error);
     }
   });
 
   // Logging handler
   ipcMain.handle('log-message', (event, level, message) => {
-    if (typeof logger === 'function') {
-      logger(level, `[Renderer] ${message}`);
+    try {
+      if (typeof logger === 'function') {
+        logger(level, `[Renderer] ${message}`);
+      }
+      return ok(true);
+    } catch (e) {
+      return fail(e);
     }
-    return true;
   });
 
   // Metrics handlers
   ipcMain.handle('track-event', (event, type, data) => {
-    if (metricsCollector.hasActiveSession()) {
-      metricsCollector.trackEvent(type, data || {});
+    try {
+      if (metricsCollector.hasActiveSession()) {
+        metricsCollector.trackEvent(type, data || {});
+      }
+      return ok(true);
+    } catch (e) {
+      return fail(e);
     }
-    return true;
   });
 
   ipcMain.handle('track-connection-launch', (event, connectionType, success) => {
-    if (metricsCollector.hasActiveSession()) {
-      metricsCollector.trackConnectionLaunch(connectionType, success);
+    try {
+      if (metricsCollector.hasActiveSession()) {
+        metricsCollector.trackConnectionLaunch(connectionType, success);
+      }
+      return ok(true);
+    } catch (e) {
+      return fail(e);
     }
-    return true;
   });
 
   ipcMain.handle('track-tab-view', (event, tab) => {
-    if (metricsCollector.hasActiveSession()) {
-      metricsCollector.trackTabView(tab);
+    try {
+      if (metricsCollector.hasActiveSession()) {
+        metricsCollector.trackTabView(tab);
+      }
+      return ok(true);
+    } catch (e) {
+      return fail(e);
     }
-    return true;
   });
 
   ipcMain.handle('track-network-check', () => {
-    if (metricsCollector.hasActiveSession()) {
-      metricsCollector.trackNetworkCheck();
+    try {
+      if (metricsCollector.hasActiveSession()) {
+        metricsCollector.trackNetworkCheck();
+      }
+      return ok(true);
+    } catch (e) {
+      return fail(e);
     }
-    return true;
   });
 
   ipcMain.handle('track-help-view', (event, section) => {
-    if (metricsCollector.hasActiveSession()) {
-      metricsCollector.trackHelpView(section);
+    try {
+      if (metricsCollector.hasActiveSession()) {
+        metricsCollector.trackHelpView(section);
+      }
+      return ok(true);
+    } catch (e) {
+      return fail(e);
     }
-    return true;
   });
 
   ipcMain.handle('track-error', (event, error) => {
-    if (metricsCollector.hasActiveSession()) {
-      metricsCollector.trackError(error);
+    try {
+      if (metricsCollector.hasActiveSession()) {
+        metricsCollector.trackError(error);
+      }
+      return ok(true);
+    } catch (e) {
+      return fail(e);
     }
-    return true;
   });
 
   // Auto-updater handlers

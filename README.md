@@ -30,7 +30,8 @@ npm run dev
 ## Сборка приложения
 
 ```bash
-npm run build
+npm run build:win   # Windows
+npm run build:mac   # macOS
 ```
 
 Собранное приложение будет в папке `dist/`.

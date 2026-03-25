@@ -1,26 +1,36 @@
 {
   "name": "alfa-remote-client",
-  "version": "0.5.6",
+  "version": "0.5.7",
   "description": "Alfa Remote Client - агрегатор для запуска клиентов удалённых рабочих столов (RDP, Horizon, Citrix)",
   "main": "src/main/main.js",
   "scripts": {
-    "start": "npm run build:vue && env -u ELECTRON_RUN_AS_NODE electron .",
-    "dev": "vite --port 5173 & VITE_DEV_SERVER_URL=http://localhost:5173 ELECTRON_DEV=1 env -u ELECTRON_RUN_AS_NODE electron .",
+    "predev": "node scripts/sync-version.js",
+    "prestart": "node scripts/sync-version.js",
+    "prebuild:vue": "node scripts/sync-version.js",
+    "start": "npm run build:vue && cross-env ELECTRON_RUN_AS_NODE= electron .",
+    "dev": "concurrently -k -n VITE,ELECTRON -c green,blue \"vite --port 5173\" \"wait-on tcp:5173 && cross-env ELECTRON_RUN_AS_NODE= VITE_DEV_SERVER_URL=http://localhost:5173 ELECTRON_DEV=1 electron .\"",
     "build:vue": "vite build",
     "build:win": "npm run build:vue && electron-builder --win --publish never",
     "build:mac": "npm run build:vue && electron-builder --mac --publish never && node scripts/sync-mac-artifact-names.js",
-    "build:mac:pkg": "npm run build:vue && electron-builder --mac pkg --x64 --publish never && electron-builder --mac pkg --arm64 --publish never",
     "pack": "electron-builder --dir",
     "publish:win": "npm run build:vue && electron-builder --win --publish always",
-    "publish:mac": "npm run build:vue && electron-builder --mac --publish always"
+    "publish:mac": "npm run build:vue && electron-builder --mac --publish always",
+    "lint": "eslint .",
+    "test": "node --test"
   },
   "author": "Alfa Remote Client",
   "license": "MIT",
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.5",
+    "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
     "electron": "^33.3.1",
     "electron-builder": "^25.1.8",
+    "eslint": "^9.33.0",
+    "eslint-plugin-vue": "^10.4.0",
     "vite": "^8.0.0",
+    "vue-eslint-parser": "^10.2.0",
+    "wait-on": "^8.0.5",
     "vue": "^3.5.30"
   },
   "dependencies": {

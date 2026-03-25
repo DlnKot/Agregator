@@ -1,10 +1,8 @@
 /**
- * Centralized version management
- * Single source of truth for application version
- * Update this file when bumping versions, all places will automatically reflect changes
+ * Centralized version management (ESM for Vite renderer)
+ * NOTE: This file is generated from package.json by scripts/sync-version.js
  */
 
-module.exports = {
-  version: '0.5.6',
-  name: 'Alfa Remote Client'
-};
+export const version = "0.5.7"
+export const name = "Alfa Remote Client"
+export default { version, name }

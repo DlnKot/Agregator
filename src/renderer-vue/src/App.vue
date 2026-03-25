@@ -410,10 +410,9 @@ onMounted(async () => {
 
   // Load app version from main process
   try {
-    const version = await window.api?.getVersion?.()
-    if (version) {
-      appVersion.value = version
-    }
+    const res = await window.api?.getVersion?.()
+    const version = res && typeof res === 'object' && res.success === true ? res.data : res
+    if (version) appVersion.value = version
   } catch (e) {
     // Ignore - version will use default value
   }
