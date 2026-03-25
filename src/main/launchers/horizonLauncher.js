@@ -143,11 +143,11 @@ function buildArgs(connection, settings = {}, macFormat = false) {
         ? (k, v) => v ? args.push(`-${k}`, v) : args.push(`-${k}`)
         : (k, v) => v ? args.push(`--${k}=${v}`) : args.push(`--${k}`);
 
-    if (settings.serverUrl)
-        flag('serverURL', normalizeUrl(settings.serverUrl));
+    if (connection.host)
+        flag('serverURL', normalizeUrl(connection.host));
 
-    if (connection.desktopPool || settings.desktopName)
-        flag('desktopName', connection.desktopPool || settings.desktopName);
+    if (connection.desktopPool)
+        flag('desktopName', connection.desktopPool);
 
     if (settings.appName)
         flag('appName', settings.appName);

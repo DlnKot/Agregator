@@ -40,26 +40,26 @@ const BUILTIN_DEFAULTS = {
     rdp: {
       // Базовые настройки
       host: '',
-      resolution: '1920x1080',
+      resolution: '800x600',
       colorDepth: '32',
 
       // Мониторы
-      multimon: false,
+      multimon: true,
       span: false,
-      startFullScreen: false,
+      startFullScreen: true,
 
       // Перенаправление устройств
       clipboard: true,
       driveMapping: false,
 
       // Учётные данные
-      promptCredentials: true,
+      promptCredentials: false,
       useAdminSession: false,
 
       // Аудио
       audio: {
         playback: true,
-        capture: false
+        capture: true
       },
 
       // Перенаправление
@@ -72,18 +72,16 @@ const BUILTIN_DEFAULTS = {
       // Производительность
       performance: {
         wallpaper: true,
-        fontSmoothing: true,
-        desktopComposition: true,
-        fullWindowDrag: true,
-        menuAnimations: true
+        fontSmoothing: false,
+        desktopComposition: false,
+        fullWindowDrag: false,
+        menuAnimations: false
       },
 
       // Кастомные флаги
-      customFlags: ''
+      customFlags: 'compression:i:1\nnetworkautodetect:i:1\nbandwidthautodetect:i:1\nconnection type:i:7\nvideoplaybackmode:i:1\nautoreconnection enabled:i:1'
     },
     horizon: {
-      serverUrl: '',
-      desktopName: '',
       appName: '',
       userName: '',
       domainName: '',
@@ -101,7 +99,6 @@ const BUILTIN_DEFAULTS = {
       customFlags: ''
     },
     citrix: {
-      storeUrl: '',
       accountName: '',
       resourceName: '',
       customPath: '',
@@ -450,8 +447,13 @@ function sanitizeConnectionInput(input) {
 
   if (isPlainObject(safe.clientSettings)) out.clientSettings = safe.clientSettings;
 
-  // Basic URL sanity for Citrix storeUrl (optional).
-  if (out.type === 'citrix' && out.storeUrl) {
+  // Citrix requires a StoreFront discovery URL.
+  if (out.type === 'citrix' && !out.storeUrl) {
+    throw new Error('Citrix Store URL is required');
+  }
+
+  // Basic URL sanity for Citrix storeUrl.
+  if (out.type === 'citrix') {
     try {
       // Keep previous behavior (renderer normalizes by adding https:// if missing).
       if (!out.storeUrl.startsWith('http://') && !out.storeUrl.startsWith('https://')) {

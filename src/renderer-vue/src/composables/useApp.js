@@ -267,6 +267,24 @@ function applyCredentialsToConnection(connection) {
   return { ...connection }
 }
 
+function isPlainObject(v) {
+  return v && typeof v === 'object' && !Array.isArray(v)
+}
+
+function deepMerge(a, b) {
+  if (!isPlainObject(a)) return JSON.parse(JSON.stringify(b ?? {}))
+  if (!isPlainObject(b)) return JSON.parse(JSON.stringify(a ?? {}))
+
+  const out = { ...a }
+  for (const k of Object.keys(b)) {
+    const av = a[k]
+    const bv = b[k]
+    if (isPlainObject(av) && isPlainObject(bv)) out[k] = deepMerge(av, bv)
+    else out[k] = bv
+  }
+  return out
+}
+
 /* --------------------- LAUNCH CONNECTION --------------------- */
 
 async function launchConnection(conn) {
@@ -291,8 +309,7 @@ async function launchConnection(conn) {
     const mergedSettings = {
       ...globalSettings,
       [plainConnection.type]: {
-        ...(globalSettings[plainConnection.type] || {}),
-        ...clientSettings
+        ...deepMerge((globalSettings[plainConnection.type] || {}), clientSettings)
       }
     }
 

@@ -3,6 +3,6 @@
  * NOTE: This file is generated from package.json by scripts/sync-version.js
  */
 
-export const version = "0.5.7"
+export const version = "0.5.8"
 export const name = "Alfa Remote Client"
 export default { version, name }

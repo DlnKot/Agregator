@@ -7,6 +7,9 @@
         <button class="modal-close" @click="$emit('close')">&times;</button>
       </div>
       <div class="modal-body">
+        <div v-if="isFactory" class="factory-note" role="note" aria-live="polite">
+          Это стандартное подключение. Можно изменить только название.
+        </div>
         <form id="connection-form" @submit.prevent="save">
           <input type="hidden" id="connection-id" v-model="form.id">
 
@@ -50,7 +53,6 @@
             <label for="connection-description">Описание</label>
             <textarea id="connection-description" v-model="form.description" rows="2"
               placeholder="Описание подключения" :disabled="isFactory"></textarea>
-            <small v-if="isFactory">Это стандартное подключение. Можно изменить только название.</small>
           </div>
         </form>
       </div>
@@ -186,6 +188,11 @@ function save() {
     return
   }
 
+  if (form.type === 'citrix' && !String(form.storeUrl || '').trim()) {
+    alert('Заполните обязательные поля')
+    return
+  }
+
   // For Horizon connections, normalize server URL (add https:// if missing)
   let normalizedHost = form.host.trim()
   if (form.type === 'horizon') {
@@ -310,6 +317,17 @@ onBeforeUnmount(() => {
 .modal-body {
   padding: 24px;
   overflow-y: auto;
+}
+
+.factory-note {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--accent-warning);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 13px;
 }
 
 .modal-footer {

@@ -36,6 +36,7 @@
         <div class="form-group">
           <label for="rdp-resolution">Разрешение</label>
           <select id="rdp-resolution" v-model="localSettings.rdp.resolution">
+            <option value="800x600">800x600</option>
             <option value="1920x1080">1920x1080 (FullHD)</option>
             <option value="1366x768">1366x768</option>
             <option value="1024x768">1024x768</option>
@@ -109,6 +110,90 @@
         </div>
 
         <div class="form-group">
+          <label>Аудио</label>
+          <label class="toggle">
+            <input type="checkbox" v-model="localSettings.rdp.audio.playback">
+            <span class="toggle-slider"></span>
+          </label>
+          <small>Воспроизведение звука на локальном компьютере</small>
+        </div>
+
+        <div class="form-group">
+          <label>Микрофон</label>
+          <label class="toggle">
+            <input type="checkbox" v-model="localSettings.rdp.audio.capture">
+            <span class="toggle-slider"></span>
+          </label>
+          <small>Передача микрофона в удаленную сессию</small>
+        </div>
+
+        <div class="form-group">
+          <label>Перенаправление</label>
+          <label class="toggle">
+            <input type="checkbox" v-model="localSettings.rdp.redirect.printers">
+            <span class="toggle-slider"></span>
+          </label>
+          <small>Принтеры</small>
+        </div>
+
+        <div class="form-group">
+          <label>Смарт-карты</label>
+          <label class="toggle">
+            <input type="checkbox" v-model="localSettings.rdp.redirect.smartcards">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label>WebAuthn</label>
+          <label class="toggle">
+            <input type="checkbox" v-model="localSettings.rdp.redirect.webauthn">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label>Производительность</label>
+          <label class="toggle">
+            <input type="checkbox" v-model="localSettings.rdp.performance.wallpaper">
+            <span class="toggle-slider"></span>
+          </label>
+          <small>Обои</small>
+        </div>
+
+        <div class="form-group">
+          <label>Сглаживание шрифтов</label>
+          <label class="toggle">
+            <input type="checkbox" v-model="localSettings.rdp.performance.fontSmoothing">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label>Композиция рабочего стола</label>
+          <label class="toggle">
+            <input type="checkbox" v-model="localSettings.rdp.performance.desktopComposition">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label>Перетаскивание окна</label>
+          <label class="toggle">
+            <input type="checkbox" v-model="localSettings.rdp.performance.fullWindowDrag">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label>Анимации меню</label>
+          <label class="toggle">
+            <input type="checkbox" v-model="localSettings.rdp.performance.menuAnimations">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="form-group">
           <label for="rdp-custom">Дополнительные параметры (.rdp строки)</label>
           <textarea id="rdp-custom" v-model="localSettings.rdp.customFlags" rows="3"
             placeholder="Например: audiomode:i:1"></textarea>
@@ -118,18 +203,6 @@
       <!-- Horizon Settings -->
       <div v-if="activeTab === 'horizon'" class="settings-section">
         <h3>Настройки VMware Horizon</h3>
-
-        <div class="form-group">
-          <label for="horizon-server">URL сервера (--serverURL)</label>
-          <input type="text" id="horizon-server" v-model="localSettings.horizon.serverUrl"
-            placeholder="https://horizon.company.com">
-        </div>
-
-        <div class="form-group">
-          <label for="horizon-desktop">Desktop Name (--desktopName)</label>
-          <input type="text" id="horizon-desktop" v-model="localSettings.horizon.desktopName"
-            placeholder="Имя десктопа или пула">
-        </div>
 
         <div class="form-group">
           <label for="horizon-app">Application (--appName)</label>
@@ -239,12 +312,6 @@
       <!-- Citrix Settings -->
       <div v-if="activeTab === 'citrix'" class="settings-section">
         <h3>Настройки Citrix Workspace</h3>
-
-        <div class="form-group">
-          <label for="citrix-store">Store URL</label>
-          <input type="text" id="citrix-store" v-model="localSettings.citrix.storeUrl"
-            placeholder="https://store.company.com/Citrix/Store">
-        </div>
 
         <div class="form-group">
           <label for="citrix-account">Account name (macOS createaccount name=)</label>
@@ -521,17 +588,31 @@ const defaultSettings = {
     resolution: '1920x1080',
     colorDepth: '32',
     multimon: false,
+    span: false,
     clipboard: true,
     driveMapping: false,
     useAdminSession: false,
     promptCredentials: true,
     startFullScreen: false,
-    span: false,
+    audio: {
+      playback: true,
+      capture: false
+    },
+    redirect: {
+      printers: true,
+      smartcards: true,
+      webauthn: true
+    },
+    performance: {
+      wallpaper: true,
+      fontSmoothing: true,
+      desktopComposition: true,
+      fullWindowDrag: true,
+      menuAnimations: true
+    },
     customFlags: ''
   },
   horizon: {
-    serverUrl: '',
-    desktopName: '',
     appName: '',
     desktopProtocol: '',
     desktopLayout: '',
@@ -547,7 +628,6 @@ const defaultSettings = {
     customFlags: ''
   },
   citrix: {
-    storeUrl: '',
     accountName: '',
     resourceName: '',
     customPath: '',

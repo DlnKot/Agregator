@@ -6,18 +6,18 @@
     },
     "rdp": {
       "host": "",
-      "resolution": "1920x1080",
+      "resolution": "800x600",
       "colorDepth": "32",
-      "multimon": false,
+      "multimon": true,
       "span": false,
-      "startFullScreen": false,
+      "startFullScreen": true,
       "clipboard": true,
       "driveMapping": false,
-      "promptCredentials": true,
+      "promptCredentials": false,
       "useAdminSession": false,
       "audio": {
         "playback": true,
-        "capture": false
+        "capture": true
       },
       "redirect": {
         "printers": true,
@@ -26,16 +26,14 @@
       },
       "performance": {
         "wallpaper": true,
-        "fontSmoothing": true,
-        "desktopComposition": true,
-        "fullWindowDrag": true,
-        "menuAnimations": true
+        "fontSmoothing": false,
+        "desktopComposition": false,
+        "fullWindowDrag": false,
+        "menuAnimations": false
       },
-      "customFlags": ""
+      "customFlags": "compression:i:1\nnetworkautodetect:i:1\nbandwidthautodetect:i:1\nconnection type:i:7\nvideoplaybackmode:i:1\nautoreconnection enabled:i:1"
     },
     "horizon": {
-      "serverUrl": "",
-      "desktopName": "",
       "appName": "",
       "desktopProtocol": "",
       "desktopLayout": "",
@@ -51,7 +49,7 @@
       "customFlags": ""
     },
     "citrix": {
-      "storeUrl": "",
+      "accountName": "",
       "resourceName": "",
       "customPath": "",
       "customFlags": ""
@@ -66,51 +64,21 @@
       "factoryId": "default-horizon-vdi-primary",
       "type": "horizon",
       "name": "VDI",
-      "host": "telework.alfabank.ru",
+      "host": "https://telework.alfabank.ru",
       "description": "Рабочее место через Horizon",
       "isDefault": true,
       "isUserModified": false,
-      "desktopPool": "workspace-fullwm",
-      "defaultSettings": {
-        "serverUrl": "https://telework.alfabank.ru",
-        "desktopName": "workspace-fullvm",
-        "appName": "",
-        "desktopProtocol": "",
-        "desktopLayout": "",
-        "monitors": "",
-        "unattended": false,
-        "nonInteractive": false,
-        "launchMinimized": false,
-        "loginAsCurrentUser": false,
-        "hideClientAfterLaunchSession": false,
-        "useExisting": false,
-        "singleAutoConnect": false
-      }
+      "desktopPool": "workspace-fullwm"
     },
     {
       "factoryId": "default-horizon-vdi-backup",
       "type": "horizon",
       "name": "VDI - Резерв",
-      "host": "telework.moscow.alfaintra.net",
+      "host": "https://telework.moscow.alfaintra.net",
       "description": "Рабочее место через Horizon (Москва)",
       "isDefault": true,
       "isUserModified": false,
-      "desktopPool": "workspace-fullvm",
-      "defaultSettings": {
-        "serverUrl": "https://telework.moscow.alfaintra.net",
-        "desktopName": "workspace-fullwm",
-        "appName": "",
-        "desktopProtocol": "",
-        "desktopLayout": "",
-        "monitors": "",
-        "unattended": false,
-        "nonInteractive": false,
-        "launchMinimized": false,
-        "loginAsCurrentUser": false,
-        "hideClientAfterLaunchSession": false,
-        "useExisting": false,
-        "singleAutoConnect": false
-      }
+      "desktopPool": "workspace-fullvm"
     },
     {
       "factoryId": "default-rdp-purms",
@@ -119,50 +87,17 @@
       "host": "mypc.moscow.alfaintra.net",
       "description": "Удалённый рабочий стол",
       "isDefault": true,
-      "isUserModified": false,
-      "defaultSettings": {
-        "resolution": "800x600",
-        "colorDepth": "32",
-        "multimon": true,
-        "startFullScreen": true,
-        "span": false,
-        "clipboard": true,
-        "driveMapping": false,
-        "promptCredentials": false,
-        "useAdminSession": false,
-        "audio": {
-          "playback": true,
-          "capture": true
-        },
-        "redirect": {
-          "printers": true,
-          "smartcards": true,
-          "webauthn": true
-        },
-        "performance": {
-          "wallpaper": true,
-          "fontSmoothing": false,
-          "desktopComposition": false,
-          "fullWindowDrag": false,
-          "menuAnimations": false
-        },
-        "customFlags": "compression:i:1\nnetworkautodetect:i:1\nbandwidthautodetect:i:1\nconnection type:i:7\nvideoplaybackmode:i:1\nautoreconnection enabled:i:1"
-      }
+      "isUserModified": false
     },
     {
       "factoryId": "default-citrix-vdi-apps",
       "type": "citrix",
       "name": "Citrix",
       "host": "sf-vdi.moscow.alfaintra.net",
+      "storeUrl": "https://sf-vdi.moscow.alfaintra.net/Citrix/VDI-Apps/discovery",
       "description": "Виртуальные приложения Citrix",
       "isDefault": true,
-      "isUserModified": false,
-      "defaultSettings": {
-        "storeUrl": "https://sf-vdi.moscow.alfaintra.net/Citrix/VDI-Apps/discovery",
-        "resourceName": "",
-        "customPath": "",
-        "customFlags": ""
-      }
+      "isUserModified": false
     }
   ]
 }

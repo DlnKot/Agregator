@@ -823,11 +823,15 @@ function launchCitrix(connection, settings) {
     const citrixSettings = settings?.citrix || settings || {};
 
     logger('info', `Citrix Launcher: Starting connection to ${connection.host}`);
-    logger('info', `Citrix Launcher: Store URL (settings): ${citrixSettings.storeUrl}`);
+    logger('info', `Citrix Launcher: Store URL (settings): ${citrixSettings.storeUrl || ''}`);
     logger('info', `Citrix Launcher: Resource: ${citrixSettings.resourceName}`);
 
-    const effectiveStoreUrlRaw = (connection?.storeUrl || '').trim() || (citrixSettings.storeUrl || '').trim();
+    const effectiveStoreUrlRaw = (connection?.storeUrl || '').trim();
     const effectiveStoreUrl = normalizeStorefrontAddress(effectiveStoreUrlRaw);
+
+    if (!effectiveStoreUrlRaw) {
+        throw new Error('Citrix Store URL is required in the connection');
+    }
 
     if (effectiveStoreUrl) {
         logger('info', `Citrix Launcher: Store URL (effective): ${effectiveStoreUrl}`);
