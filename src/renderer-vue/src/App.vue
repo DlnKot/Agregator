@@ -139,7 +139,7 @@
               <h2>Настройки</h2>
             </div>
 
-            <SettingsView :settings="settings" @save="handleSaveSettings" />
+            <SettingsView :settings="settings" @save="handleSaveSettings" @reset-default-connections="handleResetDefaultConnections" />
           </section>
 
           <!-- Network Check View -->
@@ -197,7 +197,7 @@ const theme = ref('light')
 const headerLogoSrc = computed(() => (theme.value === 'dark' ? headerLogoWhite : headerLogoBlack))
 const headerMarkSrc = computed(() => (theme.value === 'dark' ? headerMarkWhite : headerMarkBlack))
 
-const {
+  const {
   connections,
   settings,
   currentView,
@@ -205,9 +205,10 @@ const {
   filteredConnections,
   isFirstRun,
   loadData,
-  saveConnection,
-  deleteConnection,
-  saveSettings,
+    saveConnection,
+    deleteConnection,
+    resetDefaultConnections,
+    saveSettings,
   launchConnection,
   getUserCredentials
 } = useApp()
@@ -385,6 +386,22 @@ async function handleSaveSettings(newSettings) {
     }
   } catch (error) {
     showToast('Ошибка сохранения настроек: ' + (error.message || 'Неизвестная ошибка'), 'error')
+  }
+}
+
+async function handleResetDefaultConnections() {
+  const ok = confirm('Сбросить стандартные подключения к заводским настройкам?\n\nПользовательские подключения не будут затронуты.')
+  if (!ok) return
+
+  try {
+    const result = await resetDefaultConnections()
+    if (result.success) {
+      showToast('Стандартные подключения сброшены', 'success')
+    } else {
+      showToast(result.error || 'Не удалось сбросить стандартные подключения', 'error')
+    }
+  } catch (error) {
+    showToast('Ошибка сброса: ' + (error?.message || String(error)), 'error')
   }
 }
 

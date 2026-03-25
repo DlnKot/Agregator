@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('api', {
   getConnections: () => ipcRenderer.invoke('get-connections'),
   saveConnection: (connection) => ipcRenderer.invoke('save-connection', connection),
   deleteConnection: (id) => ipcRenderer.invoke('delete-connection', id),
+  resetDefaultConnections: () => ipcRenderer.invoke('reset-default-connections'),
 
   // Settings
   getSettings: () => ipcRenderer.invoke('get-settings'),

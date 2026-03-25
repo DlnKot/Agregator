@@ -291,6 +291,14 @@
             <span class="toggle-slider"></span>
           </label>
         </div>
+
+        <div class="form-group">
+          <label>Стандартные подключения</label>
+          <button class="btn btn-secondary" type="button" @click="emit('reset-default-connections')">
+            Сбросить к заводским
+          </button>
+          <small>Сбросит только переименования стандартных подключений. Пользовательские подключения не затрагиваются.</small>
+        </div>
       </div>
 
       <!-- Network Settings -->
@@ -391,7 +399,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['save'])
+const emit = defineEmits(['save', 'reset-default-connections'])
 
 // Auto-updater
 const {

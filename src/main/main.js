@@ -193,6 +193,96 @@ function readDeploymentDefaults() {
 
 // ==================== Store Initialization ====================
 
+function normalizeFactoryId(raw, fallback) {
+  const s = typeof raw === 'string' ? raw.trim() : '';
+  if (s) return s;
+  return fallback;
+}
+
+function getStoreUrlLike(conn) {
+  if (!conn || typeof conn !== 'object') return '';
+  const s1 = typeof conn.storeUrl === 'string' ? conn.storeUrl.trim() : '';
+  if (s1) return s1;
+  const s2 = typeof conn?.clientSettings?.storeUrl === 'string' ? conn.clientSettings.storeUrl.trim() : '';
+  if (s2) return s2;
+  const s3 = typeof conn?.defaultSettings?.storeUrl === 'string' ? conn.defaultSettings.storeUrl.trim() : '';
+  if (s3) return s3;
+  return '';
+}
+
+function connectionSignatureKey(conn) {
+  const type = typeof conn?.type === 'string' ? conn.type.trim().toLowerCase() : '';
+  const host = typeof conn?.host === 'string' ? conn.host.trim() : '';
+  const desktopPool = typeof conn?.desktopPool === 'string' ? conn.desktopPool.trim() : '';
+  const storeUrl = getStoreUrlLike(conn).replace(/\/+$/, '');
+  return [type, host, desktopPool, storeUrl].join('|');
+}
+
+function normalizeFactoryConnections(connections = []) {
+  const out = [];
+  const arr = Array.isArray(connections) ? connections : [];
+  for (let i = 0; i < arr.length; i += 1) {
+    const c = arr[i];
+    if (!c || typeof c !== 'object') continue;
+
+    const type = typeof c.type === 'string' ? c.type.trim().toLowerCase() : '';
+    if (!type) continue;
+
+    const fallbackFactoryId = `factory-${type}-${i}`;
+    const factoryId = normalizeFactoryId(c.factoryId, fallbackFactoryId);
+
+    const template = {
+      id: `factory:${factoryId}`,
+      factoryId,
+      isDefault: true,
+      isUserModified: false,
+      type,
+      name: typeof c.name === 'string' ? c.name.trim() : '',
+      host: typeof c.host === 'string' ? c.host.trim() : '',
+      description: typeof c.description === 'string' ? c.description.trim() : '',
+      desktopPool: typeof c.desktopPool === 'string' ? c.desktopPool.trim() : ''
+    };
+
+    // Use per-connection overrides under `clientSettings` (legacy key: defaultSettings).
+    if (isPlainObject(c.clientSettings)) template.clientSettings = c.clientSettings;
+    else if (isPlainObject(c.defaultSettings)) template.clientSettings = c.defaultSettings;
+
+    // Citrix uses storeUrl at connection level (falls back to settings otherwise).
+    const storeUrl = getStoreUrlLike(c);
+    if (storeUrl) template.storeUrl = storeUrl;
+
+    out.push(template);
+  }
+  return out;
+}
+
+function getFactoryTemplates() {
+  const deploymentDefaults = readDeploymentDefaults();
+  const source = deploymentDefaults || BUILTIN_DEFAULTS;
+  return normalizeFactoryConnections(source.connections || []);
+}
+
+function composeConnectionsForRenderer() {
+  const templates = getFactoryTemplates();
+  const overrides = configStore ? (configStore.get('defaultConnectionOverrides', {}) || {}) : {};
+
+  const userConnectionsRaw = configStore ? (configStore.get('connectionsUser', []) || []) : [];
+  const { normalized: userConnections, changed } = normalizeConnections(userConnectionsRaw);
+  if (changed && configStore) {
+    configStore.set('connectionsUser', userConnections);
+  }
+
+  const mergedDefaults = templates.map((t) => {
+    const o = overrides && typeof overrides === 'object' ? overrides[t.factoryId] : null;
+    const name = typeof o?.name === 'string' ? o.name.trim() : '';
+    if (!name) return t;
+    return { ...t, name };
+  });
+
+  // Ensure deterministic order: defaults first, then user connections.
+  return [...mergedDefaults, ...userConnections];
+}
+
 function normalizeConnections(connections = []) {
   let changed = false;
 
@@ -358,7 +448,6 @@ function sanitizeConnectionInput(input) {
     isUserModified: true
   };
 
-  if (typeof safe.isDefault === 'boolean') out.isDefault = safe.isDefault;
   if (isPlainObject(safe.clientSettings)) out.clientSettings = safe.clientSettings;
 
   // Basic URL sanity for Citrix storeUrl (optional).
@@ -406,29 +495,70 @@ function initializeStores() {
 
   configStore = new SimpleStore(path.join(userDataPath, 'config.json'), {
     settings: BUILTIN_DEFAULTS.settings,
+    // New model
+    connectionsUser: [],
+    defaultConnectionOverrides: {},
+    // Legacy keys kept for safe migrations
     connections: [],
     profiles: []
   });
 
   const deploymentDefaults = readDeploymentDefaults();
-  const existingConnections = configStore.get('connections', []);
   const existingProfiles = configStore.get('profiles', []);
+  const legacyConnections = configStore.get('connections', []);
+  const connectionsUserExisting = configStore.get('connectionsUser', []);
+  const overridesExisting = configStore.get('defaultConnectionOverrides', {});
 
-  if (existingConnections.length === 0 && existingProfiles.length === 0) {
+  // First-run defaults: apply settings only (connections are composed from deployment templates at read time).
+  if (
+    (Array.isArray(connectionsUserExisting) ? connectionsUserExisting.length : 0) === 0 &&
+    (Array.isArray(existingProfiles) ? existingProfiles.length : 0) === 0 &&
+    (Array.isArray(legacyConnections) ? legacyConnections.length : 0) === 0
+  ) {
     const source = deploymentDefaults || BUILTIN_DEFAULTS;
     configStore.set('settings', { ...BUILTIN_DEFAULTS.settings, ...(source.settings || {}) });
-    const { normalized } = normalizeConnections(source.connections || []);
-    configStore.set('connections', normalized);
     configStore.set('profiles', source.profiles || []);
-    logger('info', 'Default deployment profile has been applied');
+    logger('info', 'Default deployment profile has been applied (settings/profiles)');
   }
 
-  // Migration: ensure all stored connections have an id and normalized structure.
-  const currentConnections = configStore.get('connections', []);
-  const { normalized, changed } = normalizeConnections(currentConnections);
-  if (changed) {
-    configStore.set('connections', normalized);
-    logger('info', `Connections normalized (missing id/clientSettings fixed): ${currentConnections.length} entries`);
+  // Migration (legacy -> new model): if we have legacy connections but no new-model data.
+  const hasNewModel =
+    (Array.isArray(connectionsUserExisting) ? connectionsUserExisting.length : 0) > 0 ||
+    (overridesExisting && typeof overridesExisting === 'object' && Object.keys(overridesExisting).length > 0);
+
+  if (!hasNewModel && Array.isArray(legacyConnections) && legacyConnections.length > 0) {
+    const templates = normalizeFactoryConnections((deploymentDefaults || BUILTIN_DEFAULTS).connections || []);
+    const templatesBySig = new Map(templates.map(t => [connectionSignatureKey(t), t]));
+
+    const legacyDefaults = legacyConnections.filter(c => c && typeof c === 'object' && c.isDefault === true);
+    const legacyUsers = legacyConnections.filter(c => !(c && typeof c === 'object' && c.isDefault === true));
+
+    const overrides = {};
+    for (const d of legacyDefaults) {
+      const sig = connectionSignatureKey(d);
+      const t = templatesBySig.get(sig);
+      const name = typeof d?.name === 'string' ? d.name.trim() : '';
+      if (t && name && name !== t.name) {
+        overrides[t.factoryId] = { name };
+      }
+    }
+
+    const { normalized: usersNormalized } = normalizeConnections(legacyUsers);
+    configStore.set('connectionsUser', usersNormalized);
+    configStore.set('defaultConnectionOverrides', overrides);
+
+    // Stop using the legacy key.
+    configStore.set('connections', []);
+
+    logger('info', `Migrated legacy connections: defaults=${legacyDefaults.length}, users=${legacyUsers.length}`);
+  }
+
+  // Normalize user connections shape.
+  const currentUsers = configStore.get('connectionsUser', []);
+  const { normalized: usersNormalized, changed: usersChanged } = normalizeConnections(currentUsers);
+  if (usersChanged) {
+    configStore.set('connectionsUser', usersNormalized);
+    logger('info', `User connections normalized: ${currentUsers.length} entries`);
   }
 }
 
@@ -608,7 +738,7 @@ function setupIpcHandlers() {
   // Data handlers
   ipcMain.handle('get-connections', () => {
     try {
-      const data = configStore ? configStore.get('connections', []) : [];
+      const data = composeConnectionsForRenderer();
       return ok(data);
     } catch (e) {
       logger('error', `get-connections failed: ${e?.message || String(e)}`);
@@ -648,9 +778,31 @@ function setupIpcHandlers() {
   // Connection handlers
   ipcMain.handle('save-connection', (event, connection) => {
     try {
-      const sanitized = sanitizeConnectionInput(connection);
+      const safe = deepCloneJsonSafe(connection || {});
+      if (isPlainObject(safe) && typeof safe.factoryId === 'string' && safe.factoryId.trim()) {
+        const factoryId = safe.factoryId.trim();
+        const name = typeof safe.name === 'string' ? safe.name.trim() : '';
+        if (!name) throw new Error('Connection name is required');
+        if (name.length > 200) throw new Error('Connection name too long');
 
-      const connections = configStore.get('connections', []);
+        const templates = getFactoryTemplates();
+        const exists = templates.some(t => t.factoryId === factoryId);
+        if (!exists) throw new Error('Unknown default connection');
+
+        const overrides = (configStore.get('defaultConnectionOverrides', {}) || {});
+        const next = { ...overrides, [factoryId]: { name } };
+        configStore.set('defaultConnectionOverrides', next);
+
+        // Return the updated composed connection.
+        const updated = composeConnectionsForRenderer().find(c => c && typeof c === 'object' && c.factoryId === factoryId);
+        return ok(updated || { factoryId, name, isDefault: true });
+      }
+
+      const sanitized = sanitizeConnectionInput(connection);
+      sanitized.isDefault = false;
+      delete sanitized.factoryId;
+
+      const connections = configStore.get('connectionsUser', []);
       const idx = connections.findIndex(c => c && typeof c === 'object' && c.id === sanitized.id);
       let saved;
 
@@ -664,7 +816,7 @@ function setupIpcHandlers() {
         connections.push(saved);
       }
 
-      configStore.set('connections', connections);
+      configStore.set('connectionsUser', connections);
       return ok(saved);
     } catch (e) {
       logger('error', `save-connection failed: ${e?.message || String(e)}`);
@@ -674,11 +826,26 @@ function setupIpcHandlers() {
 
   ipcMain.handle('delete-connection', (event, connectionId) => {
     try {
-      const connections = configStore.get('connections', []);
-      configStore.set('connections', connections.filter(c => c.id !== connectionId));
+      const id = typeof connectionId === 'string' ? connectionId : String(connectionId || '');
+      if (id.startsWith('factory:')) {
+        return fail('Cannot delete default connection');
+      }
+
+      const connections = configStore.get('connectionsUser', []);
+      configStore.set('connectionsUser', connections.filter(c => c.id !== id));
       return ok(true);
     } catch (e) {
       logger('error', `delete-connection failed: ${e?.message || String(e)}`);
+      return fail(e);
+    }
+  });
+
+  ipcMain.handle('reset-default-connections', () => {
+    try {
+      configStore.set('defaultConnectionOverrides', {});
+      return ok(composeConnectionsForRenderer());
+    } catch (e) {
+      logger('error', `reset-default-connections failed: ${e?.message || String(e)}`);
       return fail(e);
     }
   });

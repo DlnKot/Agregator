@@ -73,7 +73,8 @@ async function loadData() {
 async function saveConnection(connection) {
 
   try {
-    const isNew = !connection.id
+    const isFactory = !!connection?.factoryId
+    const isNew = !isFactory && !connection.id
     const result = await window.api.saveConnection(connection)
 
     unwrapIpc(result)
@@ -82,7 +83,9 @@ async function saveConnection(connection) {
 
     // Трекинг метрик
     if (result.success && window.api?.trackEvent) {
-      if (isNew) {
+      if (isFactory) {
+        window.api.trackEvent('default_connection_rename', { factoryId: connection.factoryId })
+      } else if (isNew) {
         window.api.trackEvent('connection_create', { type: connection.type })
       } else {
         window.api.trackEvent('connection_edit', { type: connection.type })
@@ -122,6 +125,35 @@ async function deleteConnection(id) {
     console.error('Failed to delete connection:', errorMsg)
     if (window.api?.log) {
       window.api.log('error', `deleteConnection failed: ${errorMsg}`)
+    }
+    return { success: false, error: errorMsg }
+  }
+}
+
+async function resetDefaultConnections() {
+  try {
+    if (!window.api?.resetDefaultConnections) {
+      return { success: false, error: 'Недоступно в браузере' }
+    }
+
+    const res = await window.api.resetDefaultConnections()
+    const data = unwrapIpc(res)
+    if (Array.isArray(data)) {
+      connections.value = data
+    } else {
+      connections.value = unwrapIpc(await window.api.getConnections())
+    }
+
+    if (window.api?.trackEvent) {
+      window.api.trackEvent('default_connections_reset', {})
+    }
+
+    return { success: true }
+  } catch (error) {
+    const errorMsg = error?.message || String(error)
+    console.error('Failed to reset default connections:', errorMsg)
+    if (window.api?.log) {
+      window.api.log('error', `resetDefaultConnections failed: ${errorMsg}`)
     }
     return { success: false, error: errorMsg }
   }
@@ -438,6 +470,7 @@ export function useApp() {
     loadData,
     saveConnection,
     deleteConnection,
+    resetDefaultConnections,
     saveSettings,
     launchConnection,
     getUserCredentials,

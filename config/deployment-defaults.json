@@ -63,6 +63,7 @@
   },
   "connections": [
     {
+      "factoryId": "default-horizon-vdi-primary",
       "type": "horizon",
       "name": "VDI",
       "host": "telework.alfabank.ru",
@@ -87,6 +88,7 @@
       }
     },
     {
+      "factoryId": "default-horizon-vdi-backup",
       "type": "horizon",
       "name": "VDI - Резерв",
       "host": "telework.moscow.alfaintra.net",
@@ -111,6 +113,7 @@
       }
     },
     {
+      "factoryId": "default-rdp-purms",
       "type": "rdp",
       "name": "ПУРМС",
       "host": "mypc.moscow.alfaintra.net",
@@ -147,6 +150,7 @@
       }
     },
     {
+      "factoryId": "default-citrix-vdi-apps",
       "type": "citrix",
       "name": "Citrix",
       "host": "sf-vdi.moscow.alfaintra.net",

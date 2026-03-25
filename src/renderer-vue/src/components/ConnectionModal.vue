@@ -1,7 +1,7 @@
 <template>
-  <div class="modal active" @click.self="$emit('close')">
-    <div class="modal-overlay"></div>
-    <div class="modal-content">
+  <div class="modal active" tabindex="-1" @keydown.esc="$emit('close')">
+    <div class="modal-overlay" @mousedown="onOverlayMouseDown" @click="onOverlayClick"></div>
+    <div class="modal-content" @mousedown.stop @click.stop>
       <div class="modal-header">
         <h3 id="modal-title">{{ isEditing ? 'Редактировать подключение' : 'Новое подключение' }}</h3>
         <button class="modal-close" @click="$emit('close')">&times;</button>
@@ -12,7 +12,7 @@
 
           <div class="form-group">
             <label for="connection-type">Тип подключения</label>
-            <select id="connection-type" v-model="form.type" required>
+            <select id="connection-type" v-model="form.type" required :disabled="isFactory">
               <option value="rdp">RDP (Remote Desktop)</option>
               <option value="horizon">VMware Horizon</option>
               <option value="citrix">Citrix Workspace</option>
@@ -21,35 +21,36 @@
 
           <div class="form-group">
             <label for="connection-name">Название</label>
-            <input type="text" id="connection-name" v-model="form.name" required placeholder="Например: Рабочий стол">
+            <input ref="nameInput" type="text" id="connection-name" v-model="form.name" required placeholder="Например: Рабочий стол">
           </div>
 
           <div class="form-group">
             <label for="connection-host">Хост / IP адрес</label>
-            <input type="text" id="connection-host" v-model="form.host" required
+            <input type="text" id="connection-host" v-model="form.host" required :disabled="isFactory"
               placeholder="192.168.1.100 или hostname">
           </div>
 
           <div class="form-group horizon-fields" :style="{ display: form.type === 'horizon' ? 'block' : 'none' }">
             <label for="connection-pool">Desktop Pool (имя пула)</label>
-            <input type="text" id="connection-pool" v-model="form.desktopPool" placeholder="workspace-fullwm">
+            <input type="text" id="connection-pool" v-model="form.desktopPool" placeholder="workspace-fullwm" :disabled="isFactory">
           </div>
 
           <div class="form-group citrix-fields" :style="{ display: form.type === 'citrix' ? 'block' : 'none' }">
             <label for="connection-store">Citrix Store URL</label>
-            <input type="text" id="connection-store" v-model="form.storeUrl"
+            <input type="text" id="connection-store" v-model="form.storeUrl" :disabled="isFactory"
               placeholder="https://store.company.com/Citrix/Store">
           </div>
 
           <div class="form-group">
             <label for="connection-username">Учётная запись (domain\username)</label>
-            <input type="text" id="connection-username" v-model="form.username" placeholder="DOMAIN\username">
+            <input type="text" id="connection-username" v-model="form.username" placeholder="DOMAIN\username" :disabled="isFactory">
           </div>
 
           <div class="form-group">
             <label for="connection-description">Описание</label>
             <textarea id="connection-description" v-model="form.description" rows="2"
-              placeholder="Описание подключения"></textarea>
+              placeholder="Описание подключения" :disabled="isFactory"></textarea>
+            <small v-if="isFactory">Это стандартное подключение. Можно изменить только название.</small>
           </div>
         </form>
       </div>
@@ -62,7 +63,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch } from 'vue'
+import { ref, reactive, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 
 const props = defineProps({
   connection: {
@@ -79,6 +80,7 @@ const emit = defineEmits(['close', 'save'])
 
 const form = reactive({
   id: '',
+  factoryId: '',
   type: 'rdp',
   name: '',
   host: '',
@@ -88,13 +90,43 @@ const form = reactive({
   description: ''
 })
 
-const isEditing = computed(() => !!props.connection?.id)
+const isFactory = computed(() => !!props.connection?.factoryId || props.connection?.isDefault === true)
+const isEditing = computed(() => !!props.connection?.id || !!props.connection?.factoryId)
+
+const nameInput = ref(null)
+
+const overlayMouseDown = ref(false)
+const overlayDown = ref({ x: 0, y: 0 })
+
+function onOverlayMouseDown(e) {
+  overlayMouseDown.value = true
+  overlayDown.value = { x: e.clientX || 0, y: e.clientY || 0 }
+}
+
+function onOverlayClick(e) {
+  if (!overlayMouseDown.value) return
+  overlayMouseDown.value = false
+
+  const sel = window.getSelection?.()?.toString?.() || ''
+  if (sel) return
+
+  const dx = Math.abs((e.clientX || 0) - (overlayDown.value.x || 0))
+  const dy = Math.abs((e.clientY || 0) - (overlayDown.value.y || 0))
+  if (dx > 3 || dy > 3) return
+
+  emit('close')
+}
+
+function onWindowMouseUp() {
+  overlayMouseDown.value = false
+}
 
 // Initialize form with connection data
 watch(() => props.connection, (newVal) => {
   if (newVal) {
     Object.assign(form, {
       id: newVal.id || '',
+      factoryId: newVal.factoryId || '',
       type: newVal.type || 'rdp',
       name: newVal.name || '',
       host: newVal.host || '',
@@ -107,6 +139,7 @@ watch(() => props.connection, (newVal) => {
     // Reset form for new connection - use default username from settings
     Object.assign(form, {
       id: '',
+      factoryId: '',
       type: 'rdp',
       name: '',
       host: '',
@@ -116,6 +149,10 @@ watch(() => props.connection, (newVal) => {
       description: ''
     })
   }
+
+  nextTick(() => {
+    try { nameInput.value?.focus?.() } catch { /* ignore */ }
+  })
 }, { immediate: true })
 
 // Normalize URL - add https:// if missing protocol
@@ -135,6 +172,15 @@ function normalizeCitrixStoreUrl(url) {
 }
 
 function save() {
+  if (isFactory.value) {
+    if (!form.name) {
+      alert('Заполните обязательные поля')
+      return
+    }
+    emit('save', { factoryId: form.factoryId, name: form.name.trim() })
+    return
+  }
+
   if (!form.name || !form.host) {
     alert('Заполните обязательные поля')
     return
@@ -159,6 +205,17 @@ function save() {
 
   emit('save', connectionData)
 }
+
+onMounted(() => {
+  window.addEventListener('mouseup', onWindowMouseUp)
+  nextTick(() => {
+    try { nameInput.value?.focus?.() } catch { /* ignore */ }
+  })
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('mouseup', onWindowMouseUp)
+})
 </script>
 
 <style scoped>
@@ -187,8 +244,6 @@ function save() {
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(4px);
   z-index: 1;
-  /* Purely visual. Closing handled by @click.self on .modal */
-  pointer-events: none;
 }
 
 .modal-content {
