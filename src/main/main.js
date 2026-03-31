@@ -16,7 +16,6 @@ const rdpLauncher = require('./launchers/rdpLauncher');
 const horizonLauncher = require('./launchers/horizonLauncher');
 const citrixLauncher = require('./launchers/citrixLauncher');
 const vpnLauncher = require('./launchers/vpnLauncher');
-const rudesktopLauncher = require('./launchers/rudesktopLauncher');
 const autoUpdaterModule = require('./utils/autoUpdater');
 const networkCheck = require('./utils/networkCheck');
 const metricsCollector = require('./utils/metricsCollector');
@@ -959,26 +958,6 @@ function setupIpcHandlers() {
       return ok(true);
     } catch (error) {
       logger('error', `VPN launch error: ${error.message}`);
-      return fail(error);
-    }
-  });
-
-  ipcMain.handle('launch-rudesktop', async () => {
-    try {
-      rudesktopLauncher.launchRuDesktop();
-      return ok(true);
-    } catch (error) {
-      const code = error?.code;
-      if (code === 'RUDESKTOP_NOT_INSTALLED') {
-        return { success: false, notInstalled: true, downloadUrl: error?.downloadUrl || rudesktopLauncher.DOWNLOAD_URL };
-      }
-      if (code === 'RUDESKTOP_LAUNCH_FAILED') {
-        return fail(error?.message || 'Failed to launch RuDesktop');
-      }
-      if (code === 'RUDESKTOP_UNSUPPORTED_PLATFORM') {
-        return fail(error?.message || 'Unsupported platform');
-      }
-      logger('error', `RuDesktop launch error: ${error?.message || String(error)}`);
       return fail(error);
     }
   });

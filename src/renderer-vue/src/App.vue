@@ -89,25 +89,6 @@
                   @click="currentClientFilter = 'citrix'">Citrix</button>
               </div>
               <div class="view-header-actions">
-                <button class="btn btn-secondary btn-rudesktop" title="Запустить RuDesktop"
-                  @click="handleRuDesktopClick">
-                  <svg width="160" height="160" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Левый полукруг (замкнутый) -->
-                    <path d="
-    M56 20
-    A40 40 0 0 0 41 100
-    L56 20
-  " stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
-
-                    <!-- Правый полукруг (замкнутый, чуть выше) -->
-                    <path d="
-    M66 16
-    A40 40 0 0 1 51 96
-    L66 16
-  " stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
-                  </svg>
-                  RuDesktop
-                </button>
                 <button class="btn btn-secondary btn-vpn" title="Запустить VPN" @click="handleVpnClick">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="12 3 20 7.5 20 16.5 12 21 4 16.5 4 7.5 12 3"></polyline>
@@ -170,17 +151,6 @@
     <!-- First Run Modal -->
     <FirstRunModal v-if="isFirstRun" @save="handleFirstRunSave" />
 
-    <!-- RuDesktop install prompt -->
-    <ConfirmModal
-      v-if="showRuDesktopInstallPrompt"
-      title="RuDesktop не установлен"
-      message="Хотите перейти на сайт для установки?"
-      confirm-text="Открыть сайт"
-      cancel-text="Не сейчас"
-      @confirm="openRuDesktopInstallSite"
-      @cancel="closeRuDesktopInstallPrompt"
-    />
-
     <!-- Toast -->
     <div v-if="toast.show" :class="['toast', toast.type]">
       <span class="toast-message">{{ toast.message }}</span>
@@ -197,7 +167,6 @@ import NetworkCheckView from './components/NetworkCheckView.vue'
 import HelpView from './components/HelpView.vue'
 import ConnectionModal from './components/ConnectionModal.vue'
 import FirstRunModal from './components/FirstRunModal.vue'
-import ConfirmModal from './components/ConfirmModal.vue'
 import versionData from '../../version.js'
 import headerLogoBlack from './assets/icons/logo-black.svg'
 import headerLogoWhite from './assets/icons/logo-white.svg'
@@ -208,9 +177,6 @@ const appVersion = ref(versionData.version)  // Will be loaded from API when run
 const theme = ref('light')
 const headerLogoSrc = computed(() => (theme.value === 'dark' ? headerLogoWhite : headerLogoBlack))
 const headerMarkSrc = computed(() => (theme.value === 'dark' ? headerMarkWhite : headerMarkBlack))
-
-const showRuDesktopInstallPrompt = ref(false)
-const ruDesktopInstallUrl = ref('https://rudesktop.ru/downloads/')
 
   const {
   connections,
@@ -340,54 +306,6 @@ async function handleVpnClick() {
   }
 }
 
-async function handleRuDesktopClick() {
-  try {
-    if (!window.api?.launchRuDesktop) {
-      showToast('RuDesktop доступен только при запуске в приложении (Electron)', 'error')
-      return
-    }
-
-    const result = await window.api.launchRuDesktop()
-    if (result && result.success) {
-      showToast('RuDesktop запущен', 'success')
-      if (window.api?.trackConnectionLaunch) {
-        window.api.trackConnectionLaunch('rudesktop', true)
-      }
-      return
-    }
-
-    if (result?.notInstalled) {
-      const url = result?.downloadUrl || 'https://rudesktop.ru/downloads/'
-      ruDesktopInstallUrl.value = url
-      showRuDesktopInstallPrompt.value = true
-      showToast('RuDesktop не установлен', 'error')
-      if (window.api?.trackConnectionLaunch) {
-        window.api.trackConnectionLaunch('rudesktop', false)
-      }
-      return
-    }
-
-    showToast(result?.error || 'Не удалось запустить RuDesktop', 'error')
-    if (window.api?.trackConnectionLaunch) {
-      window.api.trackConnectionLaunch('rudesktop', false)
-    }
-  } catch (error) {
-    showToast('Ошибка при запуске RuDesktop', 'error')
-    if (window.api?.trackConnectionLaunch) {
-      window.api.trackConnectionLaunch('rudesktop', false)
-    }
-  }
-}
-
-function openRuDesktopInstallSite() {
-  const url = String(ruDesktopInstallUrl.value || '').trim() || 'https://rudesktop.ru/downloads/'
-  showRuDesktopInstallPrompt.value = false
-  window.api?.openExternal?.(url)
-}
-
-function closeRuDesktopInstallPrompt() {
-  showRuDesktopInstallPrompt.value = false
-}
 
 // Handle view change with metrics
 function handleViewChange(view) {
@@ -799,37 +717,10 @@ try {
   height: 18px;
 }
 
-.btn-rudesktop {
-  background: #194197;
-  color: #ffffff;
-  border: 1px solid #194197;
-}
-
-.btn-rudesktop:hover {
-  background: #0f286e;
-  border-color: #0f286e;
-}
-
-:global(html[data-theme="dark"]) .btn-rudesktop {
-  background: #194197;
-  color: #ffffff;
-  border-color: #194197;
-}
-
-:global(html[data-theme="dark"]) .btn-rudesktop:hover {
-  background: #0f286e;
-  border-color: #0f286e;
-}
-
 .connections-list {
   flex: 1;
   min-height: 0;
   overflow: auto;
   padding-right: 8px;
-}
-
-.btn-rudesktop svg {
-  width: 18px;
-  height: 18px;
 }
 </style>
