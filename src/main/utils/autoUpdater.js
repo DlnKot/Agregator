@@ -60,6 +60,10 @@ let publishConfig = null;
 const CUSTOM_UPDATE_URL = 'https://10.230.121.212/electron/latest/';
 const CUSTOM_UPDATE_URL_HTTP = 'http://10.230.121.212/electron/latest/';
 
+// GitHub updates (public repo by default). Can be overridden via init config.
+const DEFAULT_GITHUB_OWNER = 'DlnKot';
+const DEFAULT_GITHUB_REPO = 'Agregator';
+
 function getExpectedUpdateConfigPath() {
     // electron-updater:
     // - prod: process.resourcesPath/app-update.yml
@@ -123,44 +127,57 @@ function initAutoUpdater(config = {}) {
         }
     }
 
-    // Configure custom server publish settings
+    const useGithub = config.useGithub === true;
     const updateUrl = config.updateUrl || CUSTOM_UPDATE_URL;
     const updateUrlHttp = config.updateUrlHttp || CUSTOM_UPDATE_URL_HTTP;
     const allowHttpFallback = config.allowHttpFallback === true;
+    const githubOwner = String(config.githubOwner || DEFAULT_GITHUB_OWNER).trim();
+    const githubRepo = String(config.githubRepo || DEFAULT_GITHUB_REPO).trim();
 
-    if (updateUrl) {
-        autoUpdater.autoDownload = false;
-        autoUpdater.autoInstallOnAppQuit = true;
+    autoUpdater.autoDownload = false;
+    autoUpdater.autoInstallOnAppQuit = true;
 
-        // Try HTTPS first, then fallback to HTTP
-        let feedUrl = updateUrl;
+    if (useGithub) {
+        if (!githubOwner || !githubRepo) {
+            logger('warn', 'AutoUpdater: GitHub owner/repo not configured. Updates disabled.');
+            return;
+        }
 
+        autoUpdater.setFeedURL({
+            provider: 'github',
+            owner: githubOwner,
+            repo: githubRepo
+        });
+
+        logger('info', `AutoUpdater: Initialized with GitHub releases: ${githubOwner}/${githubRepo}`);
+        logger('info', `AutoUpdater: Current version - ${config.currentVersion}`);
+    } else if (updateUrl) {
         // Set initial feed URL (will retry with HTTP on error)
         autoUpdater.setFeedURL({
             provider: 'generic',
-            url: feedUrl,
+            url: updateUrl,
             channel: 'latest'
         });
 
         logger('info', `AutoUpdater: Initialized with custom server: ${updateUrl}`);
         logger('info', `AutoUpdater: Current version - ${config.currentVersion}`);
-
-        // Best-effort diagnostics: macOS auto-update requires a signed app.
-        if (process.platform === 'darwin' && app.isPackaged) {
-            try {
-                const res = spawnSync('codesign', ['-dv', '--verbose=2', process.execPath], { encoding: 'utf8' });
-                if (res.status !== 0) {
-                    logger('warn', 'AutoUpdater: macOS app does not look code-signed. Auto-update may fail to install.');
-                } else {
-                    logger('info', 'AutoUpdater: macOS code-sign check passed.');
-                }
-            } catch (e) {
-                logger('warn', `AutoUpdater: Cannot run codesign check: ${e.message || e}`);
-            }
-        }
     } else {
         logger('warn', 'AutoUpdater: Update server URL not configured. Updates disabled.');
         return;
+    }
+
+    // Best-effort diagnostics: macOS auto-update requires a signed app.
+    if (process.platform === 'darwin' && app.isPackaged) {
+        try {
+            const res = spawnSync('codesign', ['-dv', '--verbose=2', process.execPath], { encoding: 'utf8' });
+            if (res.status !== 0) {
+                logger('warn', 'AutoUpdater: macOS app does not look code-signed. Auto-update may fail to install.');
+            } else {
+                logger('info', 'AutoUpdater: macOS code-sign check passed.');
+            }
+        } catch (e) {
+            logger('warn', `AutoUpdater: Cannot run codesign check: ${e.message || e}`);
+        }
     }
 
     // Set up event handlers
@@ -221,7 +238,7 @@ function initAutoUpdater(config = {}) {
 
         // Security: never downgrade update transport unless explicitly allowed.
         // Self-signed/enterprise PKI should be handled via a custom CA (NODE_EXTRA_CA_CERTS / ca.pem).
-        if (allowHttpFallback && updateUrl.startsWith('https') && rawMessage.includes('CERT_')) {
+        if (!useGithub && allowHttpFallback && updateUrl.startsWith('https') && rawMessage.includes('CERT_')) {
             logger('warn', 'AutoUpdater: HTTPS failed with cert error, trying HTTP fallback (allowHttpFallback=true)...');
             const feedUrl = updateUrlHttp;
             try {
@@ -242,7 +259,7 @@ function initAutoUpdater(config = {}) {
                 notifyRenderer('update-error', { message: msg });
             }
             return;
-        } else if (updateUrl.startsWith('https') && rawMessage.includes('CERT_')) {
+        } else if (!useGithub && updateUrl.startsWith('https') && rawMessage.includes('CERT_')) {
             const msg = `AutoUpdater: TLS certificate error. Install the corporate CA (ca.pem / NODE_EXTRA_CA_CERTS) for ${updateUrl}. Details: ${rawMessage}`;
             logger('error', msg);
             notifyRenderer('update-error', { message: msg });
@@ -396,12 +413,14 @@ function installUpdate() {
  */
 function getUpdateStatus() {
     const updateUrl = publishConfig?.updateUrl || CUSTOM_UPDATE_URL;
+    const updateSource = publishConfig?.useGithub === true ? 'github' : 'generic';
 
     return { success: true, data: {
         updateAvailable,
         updateDownloaded,
         version: updateInfo?.version || null,
-        updateUrl
+        updateUrl,
+        updateSource
     }};
 }
 

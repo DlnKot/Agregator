@@ -108,6 +108,11 @@ const BUILTIN_DEFAULTS = {
       minimizeToTray: false,
       startMinimized: false
     },
+    updates: {
+      // For test/dev builds: allow switching update source to GitHub releases.
+      // Default is the corporate update server.
+      useGithub: false
+    },
     networkCheck: {
       latencyThresholdMs: 100
     }
@@ -412,6 +417,7 @@ function sanitizeSettingsInput(input) {
   out.horizon = coerceByTemplate(defaults.horizon, safe.horizon);
   out.citrix = coerceByTemplate(defaults.citrix, safe.citrix);
   out.general = coerceByTemplate(defaults.general, safe.general);
+  out.updates = coerceByTemplate(defaults.updates, safe.updates);
   out.networkCheck = coerceByTemplate(defaults.networkCheck, safe.networkCheck);
 
   assertJsonSize(out, 'settings');
@@ -857,6 +863,21 @@ function setupIpcHandlers() {
     try {
       const sanitized = sanitizeSettingsInput(settings);
       configStore.set('settings', sanitized);
+
+      // Re-init auto-updater with the new update source (packaged only).
+      if (!process.env.ELECTRON_DEV && app.isPackaged) {
+        try {
+          autoUpdaterModule.initAutoUpdater({
+            currentVersion: app.getVersion(),
+            updateUrl: 'https://10.230.121.212/electron/latest/',
+            updateUrlHttp: 'http://10.230.121.212/electron/latest/',
+            useGithub: sanitized?.updates?.useGithub === true
+          });
+        } catch (e) {
+          logger('warn', `Auto-updater re-init on save-settings failed: ${e?.message || String(e)}`);
+        }
+      }
+
       return ok(true);
     } catch (e) {
       logger('error', `save-settings failed: ${e?.message || String(e)}`);
@@ -1152,11 +1173,16 @@ app.whenReady().then(() => {
 
     // Initialize auto-updater (only in production)
     if (!process.env.ELECTRON_DEV && app.isPackaged) {
-      // Используем кастомный сервер обновлений (HTTPS с fallback на HTTP)
+      const settings = configStore ? (configStore.get('settings') || {}) : BUILTIN_DEFAULTS.settings;
+      const useGithub = settings?.updates?.useGithub === true;
+
       const updateConfig = {
         currentVersion: app.getVersion(),
+        // By default use corporate update server (HTTPS with optional HTTP fallback).
         updateUrl: 'https://10.230.121.212/electron/latest/',
-        updateUrlHttp: 'http://10.230.121.212/electron/latest/'
+        updateUrlHttp: 'http://10.230.121.212/electron/latest/',
+        // Dev/test switch: use GitHub releases instead of corporate server.
+        useGithub
       };
       autoUpdaterModule.initAutoUpdater(updateConfig);
 
