@@ -170,6 +170,17 @@
     <!-- First Run Modal -->
     <FirstRunModal v-if="isFirstRun" @save="handleFirstRunSave" />
 
+    <!-- RuDesktop install prompt -->
+    <ConfirmModal
+      v-if="showRuDesktopInstallPrompt"
+      title="RuDesktop не установлен"
+      message="Открыть сайт для установки?"
+      confirm-text="Открыть сайт"
+      cancel-text="Не сейчас"
+      @confirm="openRuDesktopInstallSite"
+      @cancel="closeRuDesktopInstallPrompt"
+    />
+
     <!-- Toast -->
     <div v-if="toast.show" :class="['toast', toast.type]">
       <span class="toast-message">{{ toast.message }}</span>
@@ -186,6 +197,7 @@ import NetworkCheckView from './components/NetworkCheckView.vue'
 import HelpView from './components/HelpView.vue'
 import ConnectionModal from './components/ConnectionModal.vue'
 import FirstRunModal from './components/FirstRunModal.vue'
+import ConfirmModal from './components/ConfirmModal.vue'
 import versionData from '../../version.js'
 import headerLogoBlack from './assets/icons/logo-black.svg'
 import headerLogoWhite from './assets/icons/logo-white.svg'
@@ -196,6 +208,9 @@ const appVersion = ref(versionData.version)  // Will be loaded from API when run
 const theme = ref('light')
 const headerLogoSrc = computed(() => (theme.value === 'dark' ? headerLogoWhite : headerLogoBlack))
 const headerMarkSrc = computed(() => (theme.value === 'dark' ? headerMarkWhite : headerMarkBlack))
+
+const showRuDesktopInstallPrompt = ref(false)
+const ruDesktopInstallUrl = ref('https://rudesktop.ru/downloads/')
 
   const {
   connections,
@@ -343,10 +358,8 @@ async function handleRuDesktopClick() {
 
     if (result?.notInstalled) {
       const url = result?.downloadUrl || 'https://rudesktop.ru/downloads/'
-      alert('RuDesktop не установлен. Сейчас откроется сайт для установки.')
-      setTimeout(() => {
-        window.api?.openExternal?.(url)
-      }, 5000)
+      ruDesktopInstallUrl.value = url
+      showRuDesktopInstallPrompt.value = true
       showToast('RuDesktop не установлен', 'error')
       if (window.api?.trackConnectionLaunch) {
         window.api.trackConnectionLaunch('rudesktop', false)
@@ -364,6 +377,16 @@ async function handleRuDesktopClick() {
       window.api.trackConnectionLaunch('rudesktop', false)
     }
   }
+}
+
+function openRuDesktopInstallSite() {
+  const url = String(ruDesktopInstallUrl.value || '').trim() || 'https://rudesktop.ru/downloads/'
+  showRuDesktopInstallPrompt.value = false
+  window.api?.openExternal?.(url)
+}
+
+function closeRuDesktopInstallPrompt() {
+  showRuDesktopInstallPrompt.value = false
 }
 
 // Handle view change with metrics
