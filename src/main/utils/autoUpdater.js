@@ -63,6 +63,14 @@ const CUSTOM_UPDATE_URL_HTTP = 'http://10.230.121.212/electron/latest/';
 // GitHub updates (public repo by default). Can be overridden via init config.
 const DEFAULT_GITHUB_OWNER = 'DlnKot';
 const DEFAULT_GITHUB_REPO = 'Agregator';
+const DEFAULT_GITHUB_DEV_TAG = 'dev-latest';
+
+function getGithubDevLatestBaseUrl(owner, repo) {
+    const o = String(owner || '').trim();
+    const r = String(repo || '').trim();
+    const tag = DEFAULT_GITHUB_DEV_TAG;
+    return `https://github.com/${o}/${r}/releases/download/${tag}/`;
+}
 
 function getExpectedUpdateConfigPath() {
     // electron-updater:
@@ -143,13 +151,17 @@ function initAutoUpdater(config = {}) {
             return;
         }
 
+        // Strict dev channel: point generic provider to a fixed GitHub release/tag.
+        // This avoids picking up stable releases from main.
+        const baseUrl = getGithubDevLatestBaseUrl(githubOwner, githubRepo);
+        autoUpdater.allowPrerelease = true;
         autoUpdater.setFeedURL({
-            provider: 'github',
-            owner: githubOwner,
-            repo: githubRepo
+            provider: 'generic',
+            url: baseUrl,
+            channel: 'latest'
         });
 
-        logger('info', `AutoUpdater: Initialized with GitHub releases: ${githubOwner}/${githubRepo}`);
+        logger('info', `AutoUpdater: Initialized with GitHub dev channel: ${baseUrl}`);
         logger('info', `AutoUpdater: Current version - ${config.currentVersion}`);
     } else if (updateUrl) {
         // Set initial feed URL (will retry with HTTP on error)
@@ -413,7 +425,7 @@ function installUpdate() {
  */
 function getUpdateStatus() {
     const updateUrl = publishConfig?.updateUrl || CUSTOM_UPDATE_URL;
-    const updateSource = publishConfig?.useGithub === true ? 'github' : 'generic';
+    const updateSource = publishConfig?.useGithub === true ? 'github-dev-latest' : 'generic';
 
     return { success: true, data: {
         updateAvailable,
