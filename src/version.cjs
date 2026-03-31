@@ -4,6 +4,6 @@
  */
 
 module.exports = {
-  version: "0.5.9",
+  version: "0.5.10",
   name: "Alfa Remote Client"
 };

@@ -441,6 +441,15 @@
           </div>
         </div>
 
+        <div class="form-group update-dev-toggle">
+          <label for="updates-use-github">Обновления через GitHub</label>
+          <label class="toggle">
+            <input type="checkbox" id="updates-use-github" v-model="localSettings.updates.useGithub">
+            <span class="toggle-slider"></span>
+          </label>
+          <small>Если включено, проверка обновлений идет через GitHub Releases. Если выключено — через внутренний сервер.</small>
+        </div>
+
         <div class="update-info-text">
           <p>После загрузки обновления приложение будет перезапущено для
             установки.</p>
@@ -637,6 +646,9 @@ const defaultSettings = {
     minimizeToTray: false,
     startMinimized: false
   },
+  updates: {
+    useGithub: false
+  },
   networkCheck: {
     latencyThresholdMs: 100
   }
@@ -671,6 +683,10 @@ function initSettings() {
     // General settings
     if (newSettings.general) {
       merged.general = { ...defaultSettings.general, ...newSettings.general }
+    }
+    // Updates settings
+    if (newSettings.updates) {
+      merged.updates = { ...defaultSettings.updates, ...newSettings.updates }
     }
     // Network settings
     if (newSettings.networkCheck) {

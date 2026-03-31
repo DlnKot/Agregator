@@ -16,7 +16,6 @@ const rdpLauncher = require('./launchers/rdpLauncher');
 const horizonLauncher = require('./launchers/horizonLauncher');
 const citrixLauncher = require('./launchers/citrixLauncher');
 const vpnLauncher = require('./launchers/vpnLauncher');
-const rudesktopLauncher = require('./launchers/rudesktopLauncher');
 const autoUpdaterModule = require('./utils/autoUpdater');
 const networkCheck = require('./utils/networkCheck');
 const metricsCollector = require('./utils/metricsCollector');
@@ -107,6 +106,11 @@ const BUILTIN_DEFAULTS = {
     general: {
       minimizeToTray: false,
       startMinimized: false
+    },
+    updates: {
+      // For test/dev builds: allow switching update source to GitHub releases.
+      // Default is the corporate update server.
+      useGithub: false
     },
     networkCheck: {
       latencyThresholdMs: 100
@@ -412,6 +416,7 @@ function sanitizeSettingsInput(input) {
   out.horizon = coerceByTemplate(defaults.horizon, safe.horizon);
   out.citrix = coerceByTemplate(defaults.citrix, safe.citrix);
   out.general = coerceByTemplate(defaults.general, safe.general);
+  out.updates = coerceByTemplate(defaults.updates, safe.updates);
   out.networkCheck = coerceByTemplate(defaults.networkCheck, safe.networkCheck);
 
   assertJsonSize(out, 'settings');
@@ -857,6 +862,21 @@ function setupIpcHandlers() {
     try {
       const sanitized = sanitizeSettingsInput(settings);
       configStore.set('settings', sanitized);
+
+      // Re-init auto-updater with the new update source (packaged only).
+      if (!process.env.ELECTRON_DEV && app.isPackaged) {
+        try {
+          autoUpdaterModule.initAutoUpdater({
+            currentVersion: app.getVersion(),
+            updateUrl: 'https://10.230.121.212/electron/latest/',
+            updateUrlHttp: 'http://10.230.121.212/electron/latest/',
+            useGithub: sanitized?.updates?.useGithub === true
+          });
+        } catch (e) {
+          logger('warn', `Auto-updater re-init on save-settings failed: ${e?.message || String(e)}`);
+        }
+      }
+
       return ok(true);
     } catch (e) {
       logger('error', `save-settings failed: ${e?.message || String(e)}`);
@@ -938,23 +958,6 @@ function setupIpcHandlers() {
       return ok(true);
     } catch (error) {
       logger('error', `VPN launch error: ${error.message}`);
-      return fail(error);
-    }
-  });
-
-  ipcMain.handle('launch-rudesktop', async () => {
-    try {
-      rudesktopLauncher.launchRuDesktop();
-      return ok(true);
-    } catch (error) {
-      const code = error?.code;
-      if (code === 'RUDESKTOP_NOT_INSTALLED') {
-        return { success: false, notInstalled: true, downloadUrl: error?.downloadUrl || rudesktopLauncher.DOWNLOAD_URL };
-      }
-      if (code === 'RUDESKTOP_UNSUPPORTED_PLATFORM') {
-        return fail(error?.message || 'Unsupported platform');
-      }
-      logger('error', `RuDesktop launch error: ${error?.message || String(error)}`);
       return fail(error);
     }
   });
@@ -1152,11 +1155,16 @@ app.whenReady().then(() => {
 
     // Initialize auto-updater (only in production)
     if (!process.env.ELECTRON_DEV && app.isPackaged) {
-      // Используем кастомный сервер обновлений (HTTPS с fallback на HTTP)
+      const settings = configStore ? (configStore.get('settings') || {}) : BUILTIN_DEFAULTS.settings;
+      const useGithub = settings?.updates?.useGithub === true;
+
       const updateConfig = {
         currentVersion: app.getVersion(),
+        // By default use corporate update server (HTTPS with optional HTTP fallback).
         updateUrl: 'https://10.230.121.212/electron/latest/',
-        updateUrlHttp: 'http://10.230.121.212/electron/latest/'
+        updateUrlHttp: 'http://10.230.121.212/electron/latest/',
+        // Dev/test switch: use GitHub releases instead of corporate server.
+        useGithub
       };
       autoUpdaterModule.initAutoUpdater(updateConfig);
 
