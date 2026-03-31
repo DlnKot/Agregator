@@ -442,12 +442,12 @@
         </div>
 
         <div class="form-group update-dev-toggle">
-          <label for="updates-use-github">Dev канал (обновления с GitHub)</label>
+          <label for="updates-use-github">Обновления через GitHub</label>
           <label class="toggle">
             <input type="checkbox" id="updates-use-github" v-model="localSettings.updates.useGithub">
             <span class="toggle-slider"></span>
           </label>
-          <small>Если включено, приложение обновляется только из dev канала (GitHub dev-latest), без stable релизов.</small>
+          <small>Если включено, проверка обновлений идет через GitHub Releases. Если выключено — через внутренний сервер.</small>
         </div>
 
         <div class="update-info-text">

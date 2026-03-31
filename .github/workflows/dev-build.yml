@@ -7,39 +7,10 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  compute-dev-version:
-    runs-on: ubuntu-latest
-    outputs:
-      dev_version: ${{ steps.ver.outputs.dev_version }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Compute dev version
-        id: ver
-        run: |
-          BASE=$(node -e "const v=String(require('./package.json').version||'').trim(); console.log(v)")
-          DEV_VERSION=$(node - <<'NODE'
-          const fs = require('fs');
-          const pkg = JSON.parse(fs.readFileSync('package.json','utf8'));
-          const base = String(pkg.version || '').trim();
-          const m = base.match(/^(\d+)\.(\d+)\.(\d+)/);
-          if (!m) throw new Error('Invalid base version: ' + base);
-          const major = Number(m[1]);
-          const minor = Number(m[2]);
-          const patch = Number(m[3]) + 1;
-          const run = process.env.GITHUB_RUN_NUMBER || '0';
-          console.log(`${major}.${minor}.${patch}-dev.${run}`);
-          NODE
-          )
-          echo "dev_version=${DEV_VERSION}" >> $GITHUB_OUTPUT
-          echo "Dev version: ${DEV_VERSION} (base ${BASE})"
-
   build-windows:
-    needs: compute-dev-version
     runs-on: windows-latest
     steps:
       - name: Checkout code
@@ -53,12 +24,6 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-
-      - name: Set dev version
-        shell: pwsh
-        run: |
-          node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json','utf8'));p.version='${{ needs.compute-dev-version.outputs.dev_version }}';fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n');"
-          node scripts/sync-version.js
 
       - name: Build Windows
         run: npm run build:win
@@ -76,7 +41,6 @@ jobs:
           retention-days: 7
 
   build-macos:
-    needs: compute-dev-version
     runs-on: macos-latest
     steps:
       - name: Checkout code
@@ -90,11 +54,6 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-
-      - name: Set dev version
-        run: |
-          node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json','utf8'));p.version='${{ needs.compute-dev-version.outputs.dev_version }}';fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n');"
-          node scripts/sync-version.js
 
       - name: Build macOS
         run: npm run build:mac
@@ -113,42 +72,6 @@ jobs:
             dist/latest-mac.yml
           retention-days: 7
 
-  create-dev-release:
-    needs: [compute-dev-version, build-windows, build-macos]
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Prepare release files
-        run: |
-          mkdir -p release-files
-          find artifacts -type f \( -name "*.exe" -o -name "*.dmg" -o -name "*.zip" -o -name "*.yml" -o -name "*.blockmap" \) -exec cp {} release-files/ \;
-          ls -lah release-files/
-
-      - name: Ensure dev-latest prerelease exists
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          if gh release view dev-latest >/dev/null 2>&1; then
-            echo "dev-latest release exists"
-          else
-            gh release create dev-latest --prerelease --title "Dev Latest" --notes "Dev channel (auto-updated)"
-          fi
-
-      - name: Replace dev-latest assets
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          ASSETS=$(gh release view dev-latest --json assets -q '.assets[].name' || true)
-          for a in $ASSETS; do
-            gh release delete-asset dev-latest "$a" -y || true
-          done
-          gh release edit dev-latest --prerelease --title "Dev Latest" --notes "Dev version: ${{ needs.compute-dev-version.outputs.dev_version }}\nCommit: ${{ github.sha }}\nRun: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          gh release upload dev-latest release-files/* --clobber
+  # Note: this workflow only produces build artifacts for testing.
+  # Auto-updates are controlled in-app via the "GitHub" toggle (stable releases)
+  # or internal server (default).

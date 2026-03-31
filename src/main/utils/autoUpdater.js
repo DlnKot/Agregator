@@ -63,14 +63,6 @@ const CUSTOM_UPDATE_URL_HTTP = 'http://10.230.121.212/electron/latest/';
 // GitHub updates (public repo by default). Can be overridden via init config.
 const DEFAULT_GITHUB_OWNER = 'DlnKot';
 const DEFAULT_GITHUB_REPO = 'Agregator';
-const DEFAULT_GITHUB_DEV_TAG = 'dev-latest';
-
-function getGithubDevLatestBaseUrl(owner, repo) {
-    const o = String(owner || '').trim();
-    const r = String(repo || '').trim();
-    const tag = DEFAULT_GITHUB_DEV_TAG;
-    return `https://github.com/${o}/${r}/releases/download/${tag}/`;
-}
 
 function getExpectedUpdateConfigPath() {
     // electron-updater:
@@ -151,17 +143,15 @@ function initAutoUpdater(config = {}) {
             return;
         }
 
-        // Strict dev channel: point generic provider to a fixed GitHub release/tag.
-        // This avoids picking up stable releases from main.
-        const baseUrl = getGithubDevLatestBaseUrl(githubOwner, githubRepo);
-        autoUpdater.allowPrerelease = true;
+        // GitHub stable releases.
+        autoUpdater.allowPrerelease = false;
         autoUpdater.setFeedURL({
-            provider: 'generic',
-            url: baseUrl,
-            channel: 'latest'
+            provider: 'github',
+            owner: githubOwner,
+            repo: githubRepo
         });
 
-        logger('info', `AutoUpdater: Initialized with GitHub dev channel: ${baseUrl}`);
+        logger('info', `AutoUpdater: Initialized with GitHub releases: ${githubOwner}/${githubRepo}`);
         logger('info', `AutoUpdater: Current version - ${config.currentVersion}`);
     } else if (updateUrl) {
         // Set initial feed URL (will retry with HTTP on error)
@@ -250,7 +240,7 @@ function initAutoUpdater(config = {}) {
 
         // Security: never downgrade update transport unless explicitly allowed.
         // Self-signed/enterprise PKI should be handled via a custom CA (NODE_EXTRA_CA_CERTS / ca.pem).
-        if (!useGithub && allowHttpFallback && updateUrl.startsWith('https') && rawMessage.includes('CERT_')) {
+        if (allowHttpFallback && updateUrl.startsWith('https') && rawMessage.includes('CERT_')) {
             logger('warn', 'AutoUpdater: HTTPS failed with cert error, trying HTTP fallback (allowHttpFallback=true)...');
             const feedUrl = updateUrlHttp;
             try {
@@ -271,7 +261,7 @@ function initAutoUpdater(config = {}) {
                 notifyRenderer('update-error', { message: msg });
             }
             return;
-        } else if (!useGithub && updateUrl.startsWith('https') && rawMessage.includes('CERT_')) {
+        } else if (updateUrl.startsWith('https') && rawMessage.includes('CERT_')) {
             const msg = `AutoUpdater: TLS certificate error. Install the corporate CA (ca.pem / NODE_EXTRA_CA_CERTS) for ${updateUrl}. Details: ${rawMessage}`;
             logger('error', msg);
             notifyRenderer('update-error', { message: msg });
@@ -425,13 +415,16 @@ function installUpdate() {
  */
 function getUpdateStatus() {
     const updateUrl = publishConfig?.updateUrl || CUSTOM_UPDATE_URL;
-    const updateSource = publishConfig?.useGithub === true ? 'github-dev-latest' : 'generic';
+    const updateSource = publishConfig?.useGithub === true ? 'github' : 'internal';
+    const githubOwner = String(publishConfig?.githubOwner || DEFAULT_GITHUB_OWNER).trim();
+    const githubRepo = String(publishConfig?.githubRepo || DEFAULT_GITHUB_REPO).trim();
+    const effectiveSource = updateSource === 'github' ? `${githubOwner}/${githubRepo}` : updateUrl;
 
     return { success: true, data: {
         updateAvailable,
         updateDownloaded,
         version: updateInfo?.version || null,
-        updateUrl,
+        updateUrl: effectiveSource,
         updateSource
     }};
 }
