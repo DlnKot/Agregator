@@ -48,22 +48,142 @@ function parseWindowsCommandExe(raw = '') {
   return token.replace(/^"+|"+$/g, '');
 }
 
-function getRuDesktopExeFromRegistryWindows() {
-  try {
-    const key = 'HKLM\\SOFTWARE\\Classes\\.rudesktop\\shell\\open\\command';
-    const res = spawnSync('reg', ['query', key, '/ve'], { encoding: 'utf8' });
-    if (res.status !== 0) return '';
-
-    const out = (res.stdout || '').split(/\r?\n/);
-    // Example line: (Default)    REG_SZ    "C:\...\RuDesktop.exe" "%1"
-    for (const line of out) {
-      const m = line.match(/\(Default\)\s+REG_\w+\s+(.+)$/i);
-      if (m && m[1]) return parseWindowsCommandExe(m[1]);
-    }
-  } catch {
-    // ignore
+function getEnvCaseInsensitive(name) {
+  const needle = String(name || '').toLowerCase();
+  if (!needle) return '';
+  const direct = process.env[name];
+  if (direct) return direct;
+  for (const k of Object.keys(process.env || {})) {
+    if (String(k).toLowerCase() === needle) return process.env[k] || '';
   }
   return '';
+}
+
+function expandWindowsEnvVars(input = '') {
+  const s = String(input || '');
+  return s.replace(/%([^%]+)%/g, (m, varName) => {
+    const v = getEnvCaseInsensitive(varName);
+    return v ? v : m;
+  });
+}
+
+function parseRegQueryDefaultValue(stdout = '') {
+  const lines = String(stdout || '').split(/\r?\n/);
+
+  // We intentionally do NOT depend on locale strings like "(Default)" / "(По умолчанию)".
+  // We simply look for the last column after "REG_*".
+  for (const line of lines) {
+    const m = line.match(/\sREG_\w+\s+(.+)$/i);
+    if (m && m[1]) {
+      const raw = m[1].trim();
+      if (!raw) continue;
+      return raw;
+    }
+  }
+
+  return '';
+}
+
+function queryRegDefaultCommandWindows(key, extraArgs = []) {
+  try {
+    const res = spawnSync('reg', ['query', key, '/ve', ...extraArgs], { encoding: 'utf8' });
+    if (res.status !== 0) return '';
+    return parseRegQueryDefaultValue(res.stdout);
+  } catch {
+    return '';
+  }
+}
+
+function getRuDesktopExeFromRegistryWindows() {
+  const keys = [
+    // File association
+    'HKCU\\SOFTWARE\\Classes\\.rudesktop\\shell\\open\\command',
+    'HKLM\\SOFTWARE\\Classes\\.rudesktop\\shell\\open\\command',
+    'HKCR\\.rudesktop\\shell\\open\\command',
+
+    // Protocol association (best-effort)
+    'HKCU\\SOFTWARE\\Classes\\rudesktop\\shell\\open\\command',
+    'HKLM\\SOFTWARE\\Classes\\rudesktop\\shell\\open\\command',
+    'HKCR\\rudesktop\\shell\\open\\command',
+
+    // Some installers may register a class name
+    'HKLM\\SOFTWARE\\Classes\\RuDesktop\\shell\\open\\command',
+    'HKCR\\RuDesktop\\shell\\open\\command'
+  ];
+
+  const views = [
+    ['/reg:64'],
+    ['/reg:32'],
+    []
+  ];
+
+  for (const key of keys) {
+    for (const viewArgs of views) {
+      const raw = queryRegDefaultCommandWindows(key, viewArgs);
+      const exe = expandWindowsEnvVars(parseWindowsCommandExe(raw));
+      if (exe) {
+        logger('info', `RuDesktop Launcher: registry candidate (${viewArgs.join(' ') || 'default'}) ${key} -> ${exe}`);
+        return exe;
+      }
+    }
+  }
+
+  return '';
+}
+
+function findRuDesktopExeWindowsFallback() {
+  const programFiles = process.env.ProgramW6432 || process.env.ProgramFiles || 'C:\\Program Files';
+  const programFilesX86 = process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)';
+  const localAppData = process.env.LOCALAPPDATA || '';
+
+  const exeNames = ['RuDesktop.exe', 'RuDesktopClient.exe'];
+  const candidates = [];
+
+  for (const exeName of exeNames) {
+    candidates.push(
+      path.join(programFiles, 'RuDesktop', exeName),
+      path.join(programFiles, 'RuDesktop Client', exeName),
+      path.join(programFilesX86, 'RuDesktop', exeName),
+      path.join(programFilesX86, 'RuDesktop Client', exeName)
+    );
+
+    if (localAppData) {
+      candidates.push(
+        path.join(localAppData, 'Programs', 'RuDesktop', exeName),
+        path.join(localAppData, 'Programs', 'RuDesktop Client', exeName)
+      );
+    }
+  }
+
+  const direct = findFirstExistingPath(candidates);
+  if (direct) {
+    logger('info', `RuDesktop Launcher: found via common paths: ${direct}`);
+    return direct;
+  }
+
+  // Last resort: PATH lookup.
+  for (const exeName of exeNames) {
+    try {
+      const where = spawnSync('where', [exeName], { encoding: 'utf8', shell: true });
+      if (where.status === 0) {
+        const p = String(where.stdout || '').split(/\r?\n/)[0].trim();
+        if (p && fs.existsSync(p)) {
+          logger('info', `RuDesktop Launcher: found via where(${exeName}): ${p}`);
+          return p;
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  return '';
+}
+
+function resolveRuDesktopExeWindows() {
+  const fromReg = getRuDesktopExeFromRegistryWindows();
+  if (fromReg) return fromReg;
+  return findRuDesktopExeWindowsFallback();
 }
 
 function findRuDesktopMacApp() {
@@ -114,7 +234,7 @@ function isInstalled() {
   }
 
   if (process.platform === 'win32') {
-    const exe = getRuDesktopExeFromRegistryWindows();
+    const exe = resolveRuDesktopExeWindows();
     if (!exe) return false;
     try {
       return fs.existsSync(exe);
@@ -142,7 +262,7 @@ function launchRuDesktop() {
   }
 
   if (process.platform === 'win32') {
-    const exePath = getRuDesktopExeFromRegistryWindows();
+    const exePath = resolveRuDesktopExeWindows();
     if (!exePath) {
       const err = new Error('RuDesktop not installed');
       err.code = 'RUDESKTOP_NOT_INSTALLED';
@@ -152,6 +272,7 @@ function launchRuDesktop() {
 
     try {
       if (!fs.existsSync(exePath)) {
+        logger('warn', `RuDesktop Launcher: resolved path but exe missing: ${exePath}`);
         const err = new Error('RuDesktop not installed');
         err.code = 'RUDESKTOP_NOT_INSTALLED';
         err.downloadUrl = DOWNLOAD_URL;
