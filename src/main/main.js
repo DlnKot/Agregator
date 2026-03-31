@@ -972,6 +972,9 @@ function setupIpcHandlers() {
       if (code === 'RUDESKTOP_NOT_INSTALLED') {
         return { success: false, notInstalled: true, downloadUrl: error?.downloadUrl || rudesktopLauncher.DOWNLOAD_URL };
       }
+      if (code === 'RUDESKTOP_LAUNCH_FAILED') {
+        return fail(error?.message || 'Failed to launch RuDesktop');
+      }
       if (code === 'RUDESKTOP_UNSUPPORTED_PLATFORM') {
         return fail(error?.message || 'Unsupported platform');
       }

@@ -24,6 +24,79 @@ function spawnDetached(command, args = [], options = {}) {
   return child;
 }
 
+function sleepMs(ms) {
+  const n = Number(ms);
+  if (!Number.isFinite(n) || n <= 0) return;
+  try {
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, n);
+  } catch {
+    // ignore
+  }
+}
+
+function queryWindowsServiceState(serviceName) {
+  const name = String(serviceName || '').trim();
+  if (!name) return '';
+
+  try {
+    const res = spawnSync('sc', ['query', name], { encoding: 'utf8' });
+    if (res.status !== 0) return '';
+    const out = String(res.stdout || '');
+    // Example: STATE              : 4  RUNNING
+    const m = out.match(/\bSTATE\s*:\s*\d+\s+(\w+)\b/i);
+    return m && m[1] ? String(m[1]).toUpperCase() : '';
+  } catch {
+    return '';
+  }
+}
+
+function ensureWindowsServiceRunning(serviceName) {
+  const name = String(serviceName || '').trim();
+  if (!name) return false;
+
+  const state = queryWindowsServiceState(name);
+  if (!state) {
+    logger('debug', `RuDesktop Launcher: service not found: ${name}`);
+    return false;
+  }
+  if (state === 'RUNNING') {
+    logger('debug', `RuDesktop Launcher: service already running: ${name}`);
+    return true;
+  }
+
+  logger('info', `RuDesktop Launcher: starting service ${name} (state=${state})`);
+  try {
+    const startRes = spawnSync('sc', ['start', name], { encoding: 'utf8' });
+    if (startRes.status !== 0) {
+      logger('warn', `RuDesktop Launcher: failed to start service ${name}: ${String(startRes.stderr || startRes.stdout || '').trim()}`);
+      return false;
+    }
+  } catch {
+    logger('warn', `RuDesktop Launcher: failed to start service ${name}`);
+    return false;
+  }
+
+  sleepMs(600);
+  const next = queryWindowsServiceState(name);
+  logger('info', `RuDesktop Launcher: service ${name} state after start: ${next || 'unknown'}`);
+  return next === 'RUNNING';
+}
+
+function isWindowsProcessRunning(imageName) {
+  const img = String(imageName || '').trim();
+  if (!img) return false;
+
+  try {
+    const res = spawnSync('tasklist', ['/FI', `IMAGENAME eq ${img}`], { encoding: 'utf8' });
+    if (res.status !== 0) return false;
+    const out = String(res.stdout || '').toLowerCase();
+    if (out.includes('no tasks are running')) return false;
+    return out.includes(img.toLowerCase());
+  } catch {
+    return false;
+  }
+}
+
 function findFirstExistingPath(paths) {
   for (const p of paths) {
     try {
@@ -154,7 +227,7 @@ function findRuDesktopExeWindowsFallback() {
   const programFilesX86 = process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)';
   const localAppData = process.env.LOCALAPPDATA || '';
 
-  const exeNames = ['RuDesktop.exe', 'RuDesktopClient.exe'];
+  const exeNames = ['RuDesktop.exe', 'rudesktop.exe', 'RuDesktopClient.exe'];
   const candidates = [];
 
   for (const exeName of exeNames) {
@@ -290,6 +363,10 @@ function launchRuDesktop() {
   }
 
   if (process.platform === 'win32') {
+    // Ensure the background service is running (best-effort).
+    // Service name: RuDesktop (display name may be different).
+    try { ensureWindowsServiceRunning('RuDesktop'); } catch { /* ignore */ }
+
     const exePath = resolveRuDesktopExeWindows();
     if (!exePath) {
       const err = new Error('RuDesktop not installed');
@@ -313,7 +390,19 @@ function launchRuDesktop() {
       throw err;
     }
 
-    spawnDetached(exePath, []);
+    const exeName = path.basename(exePath);
+    const wasRunning = isWindowsProcessRunning(exeName);
+
+    spawnDetached(exePath, [], { cwd: path.dirname(exePath) });
+
+    // Best-effort: verify the process exists shortly after spawn.
+    sleepMs(900);
+    const isRunning = isWindowsProcessRunning(exeName);
+    if (!wasRunning && !isRunning) {
+      const err = new Error('RuDesktop failed to start');
+      err.code = 'RUDESKTOP_LAUNCH_FAILED';
+      throw err;
+    }
     return;
   }
 
