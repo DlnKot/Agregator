@@ -174,7 +174,7 @@
     <ConfirmModal
       v-if="showRuDesktopInstallPrompt"
       title="RuDesktop не установлен"
-      message="Открыть сайт для установки?"
+      message="Хотите перейти на сайт для установки?"
       confirm-text="Открыть сайт"
       cancel-text="Не сейчас"
       @confirm="openRuDesktopInstallSite"

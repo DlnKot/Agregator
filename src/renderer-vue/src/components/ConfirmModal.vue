@@ -185,7 +185,7 @@ onBeforeUnmount(() => {
 
 .modal-text {
   margin: 0;
-  color: var(--text-inverse);
+  color: var(--text-primary);
   font-size: 14px;
   line-height: 1.5;
 }

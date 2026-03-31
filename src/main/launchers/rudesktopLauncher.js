@@ -39,13 +39,31 @@ function parseWindowsCommandExe(raw = '') {
   const s = String(raw || '').trim();
   if (!s) return '';
 
-  // Typical form: "C:\Path\RuDesktop.exe" "%1"
-  const quoted = s.match(/^"([^"]+\.exe)"/i);
-  if (quoted && quoted[1]) return quoted[1];
+  const clean = (p) => String(p || '').trim().replace(/^"+|"+$/g, '');
 
-  // Fallback: first token until whitespace.
+  // Typical form: "C:\Path\RuDesktop.exe" "%1"
+  const startQuoted = s.match(/^"([^"]+\.exe)"/i);
+  if (startQuoted && startQuoted[1]) return clean(startQuoted[1]);
+
+  // Some commands wrap the exe later in the string.
+  const anyQuoted = s.match(/"([^"]+\.exe)"/i);
+  if (anyQuoted && anyQuoted[1]) return clean(anyQuoted[1]);
+
+  // Common case: non-quoted path with spaces (e.g. C:\Program Files\...\RuDesktop.exe)
+  const drivePath = s.match(/([A-Za-z]:\\.+?\.exe)/i);
+  if (drivePath && drivePath[1]) return clean(drivePath[1]);
+
+  // UNC path (best-effort)
+  const uncPath = s.match(/(\\\\[^\\\s"]+\\.+?\.exe)/i);
+  if (uncPath && uncPath[1]) return clean(uncPath[1]);
+
+  // Fallback: first token that ends with .exe
+  const tokenExe = s.match(/([^\s"]+\.exe)/i);
+  if (tokenExe && tokenExe[1]) return clean(tokenExe[1]);
+
+  // Final fallback: first token.
   const token = s.split(/\s+/)[0] || '';
-  return token.replace(/^"+|"+$/g, '');
+  return clean(token);
 }
 
 function getEnvCaseInsensitive(name) {
