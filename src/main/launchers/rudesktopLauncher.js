@@ -139,7 +139,7 @@ function getRuDesktopExeFromRegistryWindows() {
     for (const viewArgs of views) {
       const raw = queryRegDefaultCommandWindows(key, viewArgs);
       const exe = expandWindowsEnvVars(parseWindowsCommandExe(raw));
-      if (exe) {
+      if (exe && /\.exe$/i.test(exe)) {
         logger('info', `RuDesktop Launcher: registry candidate (${viewArgs.join(' ') || 'default'}) ${key} -> ${exe}`);
         return exe;
       }
@@ -200,7 +200,17 @@ function findRuDesktopExeWindowsFallback() {
 
 function resolveRuDesktopExeWindows() {
   const fromReg = getRuDesktopExeFromRegistryWindows();
-  if (fromReg) return fromReg;
+  if (fromReg) {
+    try {
+      if (/\.exe$/i.test(fromReg) && fs.existsSync(fromReg)) {
+        const stat = fs.statSync(fromReg);
+        if (stat && stat.isFile()) return fromReg;
+      }
+      logger('warn', `RuDesktop Launcher: registry path found but exe missing: ${fromReg}`);
+    } catch {
+      logger('warn', `RuDesktop Launcher: registry path found but cannot verify exe: ${fromReg}`);
+    }
+  }
   return findRuDesktopExeWindowsFallback();
 }
 
