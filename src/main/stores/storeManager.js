@@ -25,6 +25,8 @@ function initializeStores(logger) {
     // New model
     connectionsUser: [],
     defaultConnectionOverrides: {},
+    // Recent connection tracking
+    lastConnectionId: null,
     // Legacy keys kept for safe migrations
     connections: [],
     profiles: []

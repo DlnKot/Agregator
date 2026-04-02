@@ -79,6 +79,14 @@
           <section v-if="currentView === 'connections'" id="connections-view" class="view active">
             <div class="view-header">
               <div class="client-tabs">
+                <button class="client-tab" :class="{ active: currentClientFilter === 'recent' }"
+                  @click="currentClientFilter = 'recent'" v-if="lastConnectionId">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                  </svg>
+                  Недавнее
+                </button>
                 <button class="client-tab" :class="{ active: currentClientFilter === 'all' }"
                   @click="currentClientFilter = 'all'">Все</button>
                 <button class="client-tab" :class="{ active: currentClientFilter === 'rdp' }"
@@ -181,7 +189,10 @@ const {
   connections, 
   filteredConnections, 
   currentClientFilter, 
+  lastConnectionId,
   loadConnections, 
+  loadLastConnection,
+  setLastConnection,
   saveConnection, 
   deleteConnection, 
   resetDefaultConnections,
@@ -198,6 +209,14 @@ const headerMarkSrc = computed(() => (theme.value === 'dark' ? headerMarkWhite :
 // Load data function
 async function loadData() {
   await Promise.all([loadConnections(), loadSettings()])
+  await loadLastConnection()
+  
+  // Set initial filter based on last connection
+  if (lastConnectionId.value) {
+    currentClientFilter.value = 'recent'
+  } else {
+    currentClientFilter.value = 'all'
+  }
 }
 
 // Computed default username from settings
@@ -284,6 +303,8 @@ async function handleLaunch(id) {
 
   const result = await launchConnection(conn, settings.value)
   if (result && result.success) {
+    // Save this connection as the last used
+    await setLastConnection(id)
     showToast('Клиент запущен', 'success')
   } else {
     showToast(result?.error || 'Ошибка запуска', 'error')
@@ -663,6 +684,11 @@ initTheme()
 .client-tab.active {
   background: var(--bg-tertiary);
   color: var(--text-inverse);
+}
+
+.client-tab svg {
+  margin-right: 4px;
+  vertical-align: middle;
 }
 
 .btn-vpn {

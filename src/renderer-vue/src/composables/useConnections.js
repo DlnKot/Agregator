@@ -3,20 +3,33 @@ import { useIpc } from './useIpc'
 
 /**
  * Connections composable
- * Handles CRUD operations for connections
+ * Handles CRUD operations for connections and recent connection tracking
  */
 export function useConnections() {
   const { unwrapIpc } = useIpc()
   
   const connections = ref([])
   const currentClientFilter = ref('all')
+  const lastConnectionId = ref(null)
   const isLoading = ref(false)
 
-  const filteredConnections = computed(() =>
-    currentClientFilter.value === 'all'
-      ? connections.value
-      : connections.value.filter(c => c.type === currentClientFilter.value)
-  )
+  // Get the last connection object
+  const lastConnection = computed(() => {
+    if (!lastConnectionId.value) return null
+    return connections.value.find(c => c.id === lastConnectionId.value) || null
+  })
+
+  // Filtered connections based on current tab
+  const filteredConnections = computed(() => {
+    if (currentClientFilter.value === 'recent') {
+      // Show only the last connection if exists
+      return lastConnection.value ? [lastConnection.value] : []
+    }
+    if (currentClientFilter.value === 'all') {
+      return connections.value
+    }
+    return connections.value.filter(c => c.type === currentClientFilter.value)
+  })
 
   async function loadConnections() {
     isLoading.value = true
@@ -35,6 +48,27 @@ export function useConnections() {
       }
     } finally {
       isLoading.value = false
+    }
+  }
+
+  async function loadLastConnection() {
+    try {
+      if (!window.api?.getLastConnection) return
+      const data = unwrapIpc(await window.api.getLastConnection())
+      lastConnectionId.value = data || null
+    } catch (error) {
+      console.error('Error loading last connection:', error)
+    }
+  }
+
+  async function setLastConnection(id) {
+    try {
+      lastConnectionId.value = id
+      if (window.api?.setLastConnection) {
+        await window.api.setLastConnection(id)
+      }
+    } catch (error) {
+      console.error('Error saving last connection:', error)
     }
   }
 
@@ -75,6 +109,11 @@ export function useConnections() {
 
       unwrapIpc(await window.api.deleteConnection(id))
       connections.value = unwrapIpc(await window.api.getConnections())
+
+      // Clear last connection if it was deleted
+      if (lastConnectionId.value === id) {
+        await setLastConnection(null)
+      }
 
       if (window.api?.trackEvent) {
         window.api.trackEvent('connection_delete', { type: connectionType })
@@ -144,8 +183,12 @@ export function useConnections() {
     connections,
     filteredConnections,
     currentClientFilter,
+    lastConnectionId,
+    lastConnection,
     isLoading,
     loadConnections,
+    loadLastConnection,
+    setLastConnection,
     saveConnection,
     deleteConnection,
     resetDefaultConnections,
