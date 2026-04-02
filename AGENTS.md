@@ -10,8 +10,9 @@ This repo is an Electron app with a Vue 3 renderer.
 - App metadata/version: `src/version.js` (single source of truth used by main + renderer)
 - Deployment defaults (enterprise): `config/deployment-defaults.json`
 - Main-process persistence: `src/main/stores/simpleStore.js` (JSON file under Electron `app.getPath('userData')`)
-- Auto updates: `src/main/utils/autoUpdater.js` (electron-updater + custom server)
-- CI build/release: `.github/workflows/build-and-release.yml`
+- Auto updates: `src/main/utils/autoUpdater.js` (electron-updater; internal server by default; optional GitHub stable releases via settings toggle)
+- CI stable release: `.github/workflows/build-and-release.yml` (main/tags)
+- CI dev artifacts: `.github/workflows/dev-build.yml` (dev branch; artifacts only)
 
 ## Commands
 Package manager: npm (repo includes `package-lock.json`).
@@ -53,7 +54,10 @@ Use these when changing behavior (since there is no test suite):
 - Connections: add/edit/delete; verify persistence across app restart.
 - Launchers: try at least one of RDP/Horizon/Citrix flows on your OS (error paths should return `{ success: false, error }`).
 - Network Check: run full check + ping; verify latency threshold behavior (`settings.networkCheck.latencyThresholdMs`).
-- Auto-updater: only exercised in packaged builds (guarded by `app.isPackaged` and `!ELECTRON_DEV`).
+- Auto-updater: only exercised in packaged builds (guarded by `app.isPackaged` and `!ELECTRON_DEV`). Validate both sources: internal server (default) and GitHub stable releases (toggle in Settings).
+
+## Notes
+- RuDesktop integration is removed from this repo (no UI, no IPC, no launcher).
 
 ## Lint / Format / Tests
 

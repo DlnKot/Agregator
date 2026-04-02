@@ -30,7 +30,7 @@
 - Настройка параметров для каждого типа подключения
 - Автоматический запуск соответствующего клиента
 - Поддержка нескольких мониторов
-- Автообновление через GitHub Releases
+- Автообновление: внутренний сервер по умолчанию; опционально GitHub Releases (stable) через toggle в настройках
 - Логирование событий
 
 ---
@@ -45,7 +45,7 @@
 │  ┌─────────────────────────────────────────────────────┐    │
 │  │                    Vue.js App                        │    │
 │  │  ┌──────────┐ ┌──────────┐ ┌────────────────────┐  │    │
-│  │  │ Connections│ │ Profiles │ │ SettingsView      │  │    │
+│  │  │ Connections│ │ Settings │ │ Network/Help      │  │    │
 │  │  │   List    │ │          │ │                    │  │    │
 │  │  └──────────┘ └──────────┘ └────────────────────┘  │    │
 │  │                        │                            │    │
@@ -280,7 +280,11 @@ open -a "Citrix Workspace" --args -launch "Desktop"
 
 ### 4.5 Auto Updater (autoUpdater.js)
 
-Автоматическое обновление через GitHub Releases.
+Автоматическое обновление через `electron-updater`.
+
+Источники обновлений:
+- Internal (по умолчанию): `https://10.230.121.212/electron/latest/` (generic feed)
+- GitHub (stable): включается toggle в настройках (GitHub Releases, без prerelease)
 
 **Процесс:**
 1. При запуске проверяет наличие обновлений на GitHub
@@ -419,9 +423,8 @@ npm run build:mac
       "target": [{ "target": "nsis", "arch": ["x64"] }],
       "icon": "assets/icon.ico",
       "publish": {
-        "provider": "github",
-        "owner": "DlnKot",
-        "repo": "Agregator"
+        "provider": "generic",
+        "url": "https://10.230.121.212/electron/latest/"
       }
     },
     "nsis": {
@@ -436,41 +439,33 @@ npm run build:mac
 
 ## 7. Автообновление
 
-### 7.1 Настройка GitHub
+### 7.1 Источники обновлений
 
-1. Создайте репозиторий на GitHub
-2. Обновите `package.json` с вашим owner и repo:
-   ```json
-   "publish": {
-     "provider": "github",
-     "owner": "ваш-username",
-     "repo": "ваш-репозиторий"
-   }
-   ```
-3. Обновите `src/main/main.js`:
-   ```javascript
-   const githubConfig = {
-     owner: 'ваш-username',
-     repo: 'ваш-репозиторий',
-     currentVersion: app.getVersion()
-   };
-   ```
+В приложении предусмотрено два источника обновлений:
 
-### 7.2 Создание Release
+1) Internal server (по умолчанию)
+- Generic feed: `https://10.230.121.212/electron/latest/`
+- Используется в packaged сборках (guard: `app.isPackaged` и `!ELECTRON_DEV`).
 
-1. Соберите приложение: `npm run build:win`
-2. Зайдите в репозиторий → **Releases** → **Create a new release**
-3. Укажите тег версии: `v0.2.1` (должен совпадать с version в package.json)
-4. Загрузите файлы из папки `dist`:
-   - `Alfa Remote Client Setup.exe`
-   - `latest.yml` (создаётся автоматически при публикации)
+2) GitHub Releases (stable)
+- Включается в UI через чекбокс в настройках: `settings.updates.useGithub`.
+- Использует GitHub provider (owner/repo задаются в `src/main/utils/autoUpdater.js`).
+- Prerelease игнорируются.
+
+### 7.2 Stable release (GitHub)
+
+Workflow `.github/workflows/build-and-release.yml` публикует стабильные сборки для `main`/`v*`.
+
+Для корректной работы обновления через GitHub релиз должен содержать:
+- Windows: `latest.yml`, installer `.exe` и `.blockmap`
+- macOS: `latest-mac.yml`, `.dmg`/`.zip` и `.blockmap`
 
 ### 7.3 Процесс обновления
 
 ```
 1. Запуск приложения
       ↓
-2. autoUpdater проверяет GitHub API
+2. autoUpdater проверяет выбранный источник (internal server или GitHub)
       ↓
 3. Если есть новая версия → 'update-available' event
       ↓
@@ -500,6 +495,7 @@ window.api.getSettings()              // Получить настройки
 window.api.saveSettings(settings)     // Сохранить настройки
 
 // Профили
+// Примечание: API профилей может быть доступно в приложении, но UI для профилей может быть не выведен.
 window.api.getProfiles()
 window.api.saveProfile(profile)
 window.api.deleteProfile(id)

@@ -1,165 +1,91 @@
-# Remote Desktop Manager - Specification
+# Alfa Remote Client - Specification
 
-## 1. Project Overview
+## 1. Обзор
 
-**Project Name:** Remote Desktop Manager  
-**Type:** Desktop Application (Electron)  
-**Core Functionality:** Агрегатор для запуска клиентов подключения к удалённым рабочим столам (RDP, VMware Horizon, Citrix Workspace)  
-**Target Users:** IT-специалисты, сотрудники с удалённым доступом
+**Название:** Alfa Remote Client  
+**Тип:** Desktop Application (Electron)  
+**Назначение:** агрегатор для запуска клиентов удаленных рабочих столов (RDP, VMware Horizon, Citrix Workspace) и вспомогательных утилит (VPN).  
+**Целевая аудитория:** сотрудники и ИТ, которым нужно быстро запускать корпоративные подключения.
 
-## 2. UI/UX Specification
+Исключено из продукта:
+- RuDesktop (полностью удалено из UI и backend).
 
-### Layout Structure
+## 2. UI/UX
 
-- **Single Window Application** с боковой панелью навигации
-- **Sidebar (Left):** 200px фиксированная ширина, содержит табы навигации
-- **Main Content (Right):** остальное пространство, динамический контент
-- **Window Controls:** стандартные (минимизация, максимизация, закрытие)
+### 2.1 Общая структура
 
-### Visual Design
+- Single window.
+- Визуально: две большие панели со скруглением (sidebar + main content) и внутренним отступом.
+- Навигация: sidebar слева, основной контент справа.
+- Тема по умолчанию: светлая, есть переключатель на темную.
 
-**Color Palette:**
-- Background Primary: `#0f0f0f` (тёмный фон)
-- Background Secondary: `#1a1a1a` (карточки, панели)
-- Background Tertiary: `#252525` (hover states)
-- Accent Primary: `#3b82f6` (синий - основные действия)
-- Accent Secondary: `#10b981` (зелёный - успех/подключено)
-- Accent Warning: `#f59e0b` (оранжевый - предупреждение)
-- Accent Danger: `#ef4444` (красный - ошибка/отключено)
-- Text Primary: `#ffffff`
-- Text Secondary: `#a1a1aa`
-- Border: `#2d2d2d`
+### 2.2 Навигация и экраны
 
-**Typography:**
-- Font Family: `'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif`
-- Headings: 18px (h1), 16px (h2), 14px (h3)
-- Body: 14px
-- Small: 12px
+Sidebar:
+- Подключения
+- Настройки
+- Проверка сети
+- Помощь
 
-**Spacing System:**
-- Base unit: 4px
-- Padding small: 8px
-- Padding medium: 16px
-- Padding large: 24px
-- Gap: 12px
-- Border radius: 8px
+Connections:
+- Фильтры по типу: Все / RDP / Horizon / Citrix.
+- Кнопки действий: VPN (secondary) и "Добавить подключение" (primary).
+- Список карточек подключений.
 
-**Visual Effects:**
-- Card shadows: `0 2px 8px rgba(0,0,0,0.3)`
-- Hover transitions: 150ms ease
-- Active tab indicator: 3px left border accent color
+Settings:
+- Секции настроек для RDP/Horizon/Citrix/Общие/Сеть/Обновление.
 
-### Components
+Network Check:
+- Полная проверка и ping с оценкой по порогу задержки.
 
-**Sidebar Navigation:**
-- Логотип/название приложения сверху
-- Навигационные табы:
-  - Подключения (иконка монитора)
-  - Профили (иконка пользователя)
-  - Настройки (иконка шестерёнки)
-- Активный таб: подсветка + left border
+Help:
+- Текстовая справка.
 
-**Connection Cards:**
-- Card для каждого подключения
-- Отображает: название, тип (RDP/Horizon/Citrix), статус
-- Кнопки: Подключить, Редактировать, Удалить
-- Hover: slight elevation + border highlight
+### 2.3 Визуальный стиль (источник истины)
 
-**Settings Panel:**
-- Tabs для каждого клиента (RDP, Horizon, Citrix)
-- Формы с инпутами для флагов подключения
-- Кнопка сохранения
+Источник истины по темам/цветам: `src/renderer-vue/src/styles.css` (CSS variables).
 
-**Modal Dialogs:**
-- Для создания/редактирования подключений
-- Полутемный оверлей
-- Центрированное окно
+Typography:
+- Шрифт: "Styrene A Web" (встроенные woff2).
 
-## 3. Functional Specification
+## 3. Функциональная спецификация
 
-### Core Features
+### 3.1 Управление подключениями
 
-**1. Connection Manager**
-- Создание, редактирование, удаление подключений
-- Типы подключений: RDP, VMware Horizon, Citrix Workspace
-- Хранение настроек подключения в JSON файле
-- Запуск соответствующего клиента с параметрами
+- Создание/редактирование/удаление подключений.
+- Типы: `rdp`, `horizon`, `citrix`.
+- Данные хранятся локально в JSON (main-process store).
 
-**2. Launcher (запуск клиентов)**
-- **RDP:** запуск `mstsc.exe` с переданными параметрами
-- **VMware Horizon:** запуск `vmware-view.exe`
-- **Citrix Workspace:** запуск `Citrix Workspace.exe` или `selfservice.exe`
+### 3.2 Запуск внешних клиентов
 
-**3. Credential Store**
-- Хранение учётных данных (опционально)
-- Использует system keychain или зашифрованный файл
+- RDP: `mstsc.exe` (Windows), Windows App / Microsoft Remote Desktop (macOS).
+- Horizon: VMware Horizon Client.
+- Citrix: Citrix Workspace / SelfService.
+- VPN: корпоративный VPN клиент (best-effort запуск по known-path).
 
-**4. Profiles**
-- Управление профилями подключений
-- Импорт/экспорт профилей
+Все запуски:
+- Только через arg arrays (без склейки строк).
+- Возврат в UI в формате `{ success: true, data }` / `{ success: false, error }`.
 
-**5. Settings**
-- Глобальные настройки
-- Настройки для каждого клиента отдельно:
-  - **RDP:** разрешение, глубина цвета, multimon, clipboard, drive mapping
-  - **Horizon:** broker URL, desktop pool, options
-  - **Citrix:** store URL, HDX mode, receiver options
+### 3.3 Настройки
 
-### User Interactions
+- Глобальные настройки хранятся локально.
+- Настройки нормализуются/санитизируются в main-process перед сохранением.
 
-1. Выбор типа подключения в sidebar
-2. Просмотр списка подключений
-3. Создание нового подключения (кнопка +)
-4. Редактирование подключения (клик на карточку или кнопка)
-5. Запуск подключения (кнопка "Подключить")
-6. Переход в настройки для конфигурации флагов
+### 3.4 Автообновление
 
-### Data Flow
+- По умолчанию: внутренний сервер (generic feed).
+- Опционально: GitHub Releases (stable) по toggle в настройках.
 
-```
-User Action → IPC (Renderer → Main) → Business Logic → External Client Launch
-                    ↓
-            Config Store (JSON)
-                    ↓
-            Credential Store (encrypted)
-```
+## 4. Критерии приемки
 
-### Key Modules
+UI:
+- [ ] Приложение открывается в светлой теме, переключение темы работает.
+- [ ] Sidebar содержит 4 пункта: Подключения/Настройки/Проверка сети/Помощь.
+- [ ] Модальное окно добавления/редактирования подключения работает.
 
-**Main Process (main.js):**
-- Window management
-- IPC handlers
-- Client launcher
-- Config storage
-- Logging
-
-**Renderer Process:**
-- React/Vue или Vanilla JS UI
-- State management
-- IPC communication
-
-**Modules:**
-- `launcher.js` - запуск внешних клиентов
-- `config-store.js` - работа с конфигурацией
-- `credential-store.js` - безопасное хранение учётных данных
-
-## 4. Acceptance Criteria
-
-### Visual Checkpoints
-- [ ] Приложение запускается с тёмной темой
-- [ ] Sidebar отображает 3 таба с иконками
-- [ ] Активный таб имеет визуальную индикацию
-- [ ] Карточки подключений отображаются корректно
-- [ ] Настройки разделены по клиентам (RDP, Horizon, Citrix)
-- [ ] Модальные окна открываются и закрываются
-- [ ] Формы имеют современный вид
-
-### Functional Checkpoints
-- [ ] Создание подключения работает
-- [ ] Редактирование подключения работает
-- [ ] Удаление подключения работает
-- [ ] Запуск RDP через mstsc работает
-- [ ] Запуск Horizon client работает
-- [ ] Запуск Citrix Workspace работает
-- [ ] Настройки сохраняются и загружаются
-- [ ] Приложение сворачивается, разворачивается, закрывается
+Функции:
+- [ ] CRUD подключений работает и сохраняется между перезапусками.
+- [ ] Запуск RDP/Horizon/Citrix работает (минимум 1 успешный сценарий на целевой ОС).
+- [ ] Проверка сети выполняется.
+- [ ] Проверка обновлений работает на обоих источниках (internal/GitHub).

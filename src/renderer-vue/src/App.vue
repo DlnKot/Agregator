@@ -160,9 +160,9 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import { useApp } from './composables/useApp.js'
+import { useConnections, useSettings, useLauncher, useAutoUpdate, useTheme } from './composables'
 import ConnectionsList from './components/ConnectionsList.vue'
-import SettingsView from './components/SettingsView.vue'
+import { SettingsView } from './components/settings'
 import NetworkCheckView from './components/NetworkCheckView.vue'
 import HelpView from './components/HelpView.vue'
 import ConnectionModal from './components/ConnectionModal.vue'
@@ -173,30 +173,36 @@ import headerLogoWhite from './assets/icons/logo-white.svg'
 import headerMarkBlack from './assets/icons/arc-black.svg'
 import headerMarkWhite from './assets/icons/arc-white.svg'
 
-const appVersion = ref(versionData.version)  // Will be loaded from API when running in Electron
-const theme = ref('light')
+const appVersion = ref(versionData.version)
+
+// Composables
+const { theme, toggleTheme, initTheme } = useTheme()
+const { 
+  connections, 
+  filteredConnections, 
+  currentClientFilter, 
+  loadConnections, 
+  saveConnection, 
+  deleteConnection, 
+  resetDefaultConnections,
+  getUserCredentials 
+} = useConnections()
+const { settings, isFirstRun, loadSettings, saveSettings } = useSettings()
+const { launchConnection, launchVpn } = useLauncher()
+const { initAutoUpdater } = useAutoUpdate()
+
+const currentView = ref('connections')
 const headerLogoSrc = computed(() => (theme.value === 'dark' ? headerLogoWhite : headerLogoBlack))
 const headerMarkSrc = computed(() => (theme.value === 'dark' ? headerMarkWhite : headerMarkBlack))
 
-  const {
-  connections,
-  settings,
-  currentView,
-  currentClientFilter,
-  filteredConnections,
-  isFirstRun,
-  loadData,
-    saveConnection,
-    deleteConnection,
-    resetDefaultConnections,
-    saveSettings,
-  launchConnection,
-  getUserCredentials
-} = useApp()
+// Load data function
+async function loadData() {
+  await Promise.all([loadConnections(), loadSettings()])
+}
 
 // Computed default username from settings
 const defaultUsername = computed(() => {
-  const creds = getUserCredentials()
+  const creds = getUserCredentials(settings.value)
   if (creds.domain && creds.username) {
     return `${creds.domain}\\${creds.username}`
   }
@@ -276,7 +282,7 @@ async function handleLaunch(id) {
   const conn = connections.value.find(c => c.id === id)
   if (!conn) return
 
-  const result = await launchConnection(conn)
+  const result = await launchConnection(conn, settings.value)
   if (result && result.success) {
     showToast('Клиент запущен', 'success')
   } else {
@@ -286,23 +292,11 @@ async function handleLaunch(id) {
 
 // VPN handler - launching bank VPN
 async function handleVpnClick() {
-  try {
-    if (!window.api?.launchVpn) {
-      showToast('VPN доступен только при запуске в приложении (Electron)', 'error')
-      return
-    }
-    const result = await window.api.launchVpn()
-    if (result && result.success) {
-      showToast('VPN клиент запущен', 'success')
-      // Трекинг метрик
-      if (window.api?.trackConnectionLaunch) {
-        window.api.trackConnectionLaunch('vpn', true)
-      }
-    } else {
-      showToast(result?.error || 'Не удалось запустить VPN клиент', 'error')
-    }
-  } catch (error) {
-    showToast('Ошибка при подключении к VPN', 'error')
+  const result = await launchVpn()
+  if (result && result.success) {
+    showToast('VPN клиент запущен', 'success')
+  } else {
+    showToast(result?.error || 'Не удалось запустить VPN клиент', 'error')
   }
 }
 
@@ -364,6 +358,7 @@ async function handleFirstRunSave(userData) {
 
 // Initialize
 onMounted(async () => {
+  initTheme()
   await loadData()
 
   // Load app version from main process
@@ -376,39 +371,8 @@ onMounted(async () => {
   }
 })
 
-function applyTheme(nextTheme) {
-  const t = nextTheme === 'dark' ? 'dark' : 'light'
-  theme.value = t
-  document.documentElement.dataset.theme = t
-  try {
-    localStorage.setItem('arc_theme', t)
-  } catch (e) {
-    // Ignore storage errors (private mode, etc.)
-  }
-}
-
-function toggleTheme() {
-  const newTheme = theme.value === 'dark' ? 'light' : 'dark'
-  applyTheme(newTheme)
-  // Трекинг метрик
-  if (window.api?.trackEvent) {
-    window.api.trackEvent('theme_toggle', { theme: newTheme })
-  }
-}
-
 // Apply theme ASAP (before first paint when possible)
-try {
-  const saved = localStorage.getItem('arc_theme')
-  if (saved === 'dark' || saved === 'light') {
-    applyTheme(saved)
-  } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-    applyTheme('dark')
-  } else {
-    applyTheme('light')
-  }
-} catch (e) {
-  applyTheme('light')
-}
+initTheme()
 </script>
 
 <style scoped>
