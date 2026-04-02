@@ -78,9 +78,10 @@
           <!-- Connections View -->
           <section v-if="currentView === 'connections'" id="connections-view" class="view active">
             <div class="view-header">
-              <div class="client-tabs">
+              <div class="client-tabs" ref="clientTabsRef">
+                <div class="tab-slider" :style="clientSliderStyle"></div>
                 <button class="client-tab" :class="{ active: currentClientFilter === 'recent' }"
-                  @click="currentClientFilter = 'recent'" v-if="lastConnectionId">
+                  @click="currentClientFilter = 'recent'" v-if="lastConnectionId" ref="tabRecent">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
                     <circle cx="12" cy="12" r="10"></circle>
                     <polyline points="12 6 12 12 16 14"></polyline>
@@ -88,13 +89,13 @@
                   Недавнее
                 </button>
                 <button class="client-tab" :class="{ active: currentClientFilter === 'all' }"
-                  @click="currentClientFilter = 'all'">Все</button>
+                  @click="currentClientFilter = 'all'" ref="tabAll">Все</button>
                 <button class="client-tab" :class="{ active: currentClientFilter === 'rdp' }"
-                  @click="currentClientFilter = 'rdp'">RDP</button>
+                  @click="currentClientFilter = 'rdp'" ref="tabRdp">RDP</button>
                 <button class="client-tab" :class="{ active: currentClientFilter === 'horizon' }"
-                  @click="currentClientFilter = 'horizon'">Horizon</button>
+                  @click="currentClientFilter = 'horizon'" ref="tabHorizon">Horizon</button>
                 <button class="client-tab" :class="{ active: currentClientFilter === 'citrix' }"
-                  @click="currentClientFilter = 'citrix'">Citrix</button>
+                  @click="currentClientFilter = 'citrix'" ref="tabCitrix">Citrix</button>
               </div>
               <div class="view-header-actions">
                 <button class="btn btn-secondary btn-vpn" title="Запустить VPN" @click="handleVpnClick">
@@ -229,6 +230,43 @@ function handleInstallComplete(filePath) {
 const currentView = ref('connections')
 const headerLogoSrc = computed(() => (theme.value === 'dark' ? headerLogoWhite : headerLogoBlack))
 const headerMarkSrc = computed(() => (theme.value === 'dark' ? headerMarkWhite : headerMarkBlack))
+
+// Client tabs slider refs
+const clientTabsRef = ref(null)
+const tabAll = ref(null)
+const tabRdp = ref(null)
+const tabHorizon = ref(null)
+const tabCitrix = ref(null)
+const tabRecent = ref(null)
+
+const clientSliderStyle = computed(() => {
+  if (!clientTabsRef.value) return {}
+  
+  const filter = currentClientFilter.value
+  let targetRef = null
+  
+  if (filter === 'recent' && tabRecent.value) {
+    targetRef = tabRecent.value
+  } else if (filter === 'all' && tabAll.value) {
+    targetRef = tabAll.value
+  } else if (filter === 'rdp' && tabRdp.value) {
+    targetRef = tabRdp.value
+  } else if (filter === 'horizon' && tabHorizon.value) {
+    targetRef = tabHorizon.value
+  } else if (filter === 'citrix' && tabCitrix.value) {
+    targetRef = tabCitrix.value
+  }
+  
+  if (!targetRef) return {}
+  
+  const containerRect = clientTabsRef.value.getBoundingClientRect()
+  const tabRect = targetRef.getBoundingClientRect()
+  
+  return {
+    width: `${tabRect.width}px`,
+    transform: `translateX(${tabRect.left - containerRect.left}px)`
+  }
+})
 
 // Load data function
 async function loadData() {
@@ -691,6 +729,18 @@ initTheme()
   border-radius: var(--radius-xl);
   width: fit-content;
   border: 1px solid var(--border-color);
+  position: relative;
+}
+
+.tab-slider {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  height: calc(100% - 8px);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-xl);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 0;
 }
 
 .client-tab {
@@ -702,7 +752,9 @@ initTheme()
   font-weight: 500;
   cursor: pointer;
   border-radius: var(--radius-xl);
-  transition: var(--transition);
+  transition: color 0.2s ease;
+  position: relative;
+  z-index: 1;
 }
 
 .client-tab:hover {
@@ -710,7 +762,6 @@ initTheme()
 }
 
 .client-tab.active {
-  background: var(--bg-tertiary);
   color: var(--text-inverse);
 }
 

@@ -1,7 +1,11 @@
 <template>
   <div class="settings-container">
-    <div class="settings-tabs">
-      <button v-for="tab in tabs" :key="tab.id" class="settings-tab" :class="{ active: activeTab === tab.id }"
+    <div class="settings-tabs" ref="settingsTabsRef">
+      <div class="tab-slider" :style="sliderStyle"></div>
+      <button v-for="tab in tabs" :key="tab.id" 
+        class="settings-tab" 
+        :class="{ active: activeTab === tab.id }"
+        :ref="el => setTabRef(tab.id, el)"
         @click="activeTab = tab.id">
         {{ tab.label }}
       </button>
@@ -40,7 +44,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useApp } from '../../composables/useApp'
 import { useSettingsForm } from './useSettingsForm'
 import versionData from '../../../../version.js'
@@ -133,6 +137,31 @@ const tabs = [
 
 const activeTab = ref('user')
 
+// Settings tabs slider
+const settingsTabsRef = ref(null)
+const tabRefs = ref({})
+
+function setTabRef(id, el) {
+  if (el) {
+    tabRefs.value[id] = el
+  }
+}
+
+const sliderStyle = computed(() => {
+  if (!settingsTabsRef.value) return {}
+  
+  const currentTabEl = tabRefs.value[activeTab.value]
+  if (!currentTabEl) return {}
+  
+  const containerRect = settingsTabsRef.value.getBoundingClientRect()
+  const tabRect = currentTabEl.getBoundingClientRect()
+  
+  return {
+    width: `${tabRect.width}px`,
+    transform: `translateX(${tabRect.left - containerRect.left}px)`
+  }
+})
+
 watch(() => props.settings, (newSettings) => {
   initSettings(newSettings)
 }, { immediate: true, deep: true })
@@ -162,6 +191,18 @@ function saveSettings() {
   background: var(--bg-secondary);
   border-radius: var(--radius-xl);
   width: fit-content;
+  position: relative;
+}
+
+.tab-slider {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  height: calc(100% - 8px);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-xl);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 0;
 }
 
 .settings-tab {
@@ -174,18 +215,18 @@ function saveSettings() {
   font-weight: 500;
   cursor: pointer;
   border-radius: 25px;
-  transition: var(--transition);
+  transition: color 0.2s ease;
+  position: relative;
+  z-index: 1;
 }
 
 .settings-tab:hover {
-  color: var(--text-inverse);
-  background: var(--bg-tertiary);
+  opacity: 1;
 }
 
 .settings-tab.active {
-  background: var(--bg-tertiary);
-  color: var(--text-inverse);
   opacity: 1;
+  color: var(--text-inverse);
 }
 
 .settings-sections {
