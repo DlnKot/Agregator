@@ -22,19 +22,6 @@ function setupLifecycleHandlers(deps) {
   } = deps;
 
   app.whenReady().then(() => {
-    // SECURITY NOTE:
-    // Do NOT globally disable TLS/certificate verification. If internal endpoints use a private CA,
-    // ship that CA and rely on NODE_EXTRA_CA_CERTS (see src/main/utils/autoUpdater.js).
-    //
-    // If you *must* temporarily bypass TLS verification for debugging, set:
-    //   ARC_ALLOW_INSECURE_TLS=1
-    // This keeps the default secure.
-    if (process.env.ARC_ALLOW_INSECURE_TLS === '1') {
-      app.commandLine.appendSwitch('ignore-certificate-errors');
-      // Intentionally do NOT set ignore-certificate-errors-spki-list='*' (too broad).
-      logger('warn', 'SECURITY: ARC_ALLOW_INSECURE_TLS=1 enabled. TLS certificate verification is disabled.');
-    }
-
     logger('info', 'App ready, starting...');
     logger('info', `Platform: ${process.platform}`);
     logger('info', `Electron: ${process.versions.electron}`);
@@ -71,8 +58,7 @@ function setupLifecycleHandlers(deps) {
 
       // Initialize auto-updater (only in production)
       if (!process.env.ELECTRON_DEV && app.isPackaged) {
-        const settings = configStore ? (configStore.get('settings') || {}) : {};
-        const updateConfig = getAutoUpdateConfig(settings);
+        const updateConfig = getAutoUpdateConfig();
         initAutoUpdater(updateConfig);
 
         // Check for updates after startup (with delay)

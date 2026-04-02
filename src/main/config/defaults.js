@@ -81,9 +81,7 @@ const BUILTIN_DEFAULTS = {
       startMinimized: false
     },
     updates: {
-      // For test/dev builds: allow switching update source to GitHub releases.
-      // Default is the corporate update server.
-      useGithub: false
+      // Updates are served from custom internal server only
     },
     networkCheck: {
       latencyThresholdMs: 100

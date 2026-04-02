@@ -59,7 +59,7 @@ const defaultSettings = {
     startMinimized: false
   },
   updates: {
-    useGithub: false
+    // Updates are served from custom internal server only
   },
   networkCheck: {
     latencyThresholdMs: 100

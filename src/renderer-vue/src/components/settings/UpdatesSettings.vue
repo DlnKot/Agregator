@@ -14,15 +14,6 @@
       @install="$emit('install-update')"
     />
 
-    <div class="form-group update-dev-toggle">
-      <label for="updates-use-github">Обновления через GitHub</label>
-      <label class="toggle">
-        <input type="checkbox" id="updates-use-github" v-model="localSettings.updates.useGithub">
-        <span class="toggle-slider"></span>
-      </label>
-      <small>Если включено, проверка обновлений идет через GitHub Releases. Если выключено — через внутренний сервер.</small>
-    </div>
-
     <div class="update-info-text">
       <p>После загрузки обновления приложение будет перезапущено для установки.</p>
     </div>
@@ -65,19 +56,14 @@ const props = defineProps({
 })
 
 defineEmits(['check-update', 'download-update', 'install-update'])
-
-const localSettings = computed(() => props.settings)
 </script>
 
 <style scoped>
-.update-dev-toggle {
-  margin-top: 20px;
-}
-
 .update-info-text {
   font-size: 12px;
   color: var(--text-muted);
   line-height: 1.5;
+  margin-top: 16px;
 }
 
 .update-info-text p {

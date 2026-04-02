@@ -33,16 +33,12 @@ try {
 
 // ==================== Auto-updater Configuration ====================
 
-function getAutoUpdateConfig(settings) {
-  const useGithub = settings?.updates?.useGithub === true;
-  
+function getAutoUpdateConfig() {
   return {
     currentVersion: app.getVersion(),
-    // By default use corporate update server (HTTPS with optional HTTP fallback).
     updateUrl: 'https://10.230.121.212/electron/latest/',
     updateUrlHttp: 'http://10.230.121.212/electron/latest/',
-    // Dev/test switch: use GitHub releases instead of corporate server.
-    useGithub
+    allowHttpFallback: true
   };
 }
 
