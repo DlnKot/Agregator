@@ -58,5 +58,17 @@ contextBridge.exposeInMainWorld('api', {
   trackHelpView: (section) => ipcRenderer.invoke('track-help-view', section),
   trackError: (error) => ipcRenderer.invoke('track-error', error),
 
+  // Installer - Check and install client distributions
+  checkClientInstalled: (clientType) => ipcRenderer.invoke('check-client-installed', clientType),
+  checkDistributionDownloaded: (clientType) => ipcRenderer.invoke('check-distribution-downloaded', clientType),
+  downloadDistribution: (clientType) => ipcRenderer.invoke('download-distribution', clientType),
+  openInstaller: (filePath) => ipcRenderer.invoke('open-installer', filePath),
+  ensureClientInstalled: (clientType) => ipcRenderer.invoke('ensure-client-installed', clientType),
+  onDownloadProgress: (callback) => {
+    const handler = (event, data) => callback(data);
+    ipcRenderer.on('download-progress', handler);
+    return () => ipcRenderer.removeListener('download-progress', handler);
+  },
+
   // No credentials storage (username is stored in connection profile)
 });

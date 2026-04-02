@@ -4,6 +4,7 @@ import { useConnections } from './useConnections'
 /**
  * Launcher composable
  * Handles launching connections (RDP, Horizon, Citrix, VPN)
+ * Includes installation checking for Horizon and Citrix
  */
 export function useLauncher() {
   const { unwrapIpc } = useIpc()
@@ -25,6 +26,24 @@ export function useLauncher() {
       else out[k] = bv
     }
     return out
+  }
+
+  /**
+   * Check if client is installed (for Horizon and Citrix)
+   * @param {string} clientType - 'horizon' or 'citrix'
+   * @returns {Promise<{installed: boolean, path: string|null}>}
+   */
+  async function checkClientInstalled(clientType) {
+    try {
+      if (!window.api?.checkClientInstalled) {
+        return { installed: true } // Assume installed if API not available (browser mode)
+      }
+      const result = unwrapIpc(await window.api.checkClientInstalled(clientType))
+      return result
+    } catch (error) {
+      console.error(`Error checking ${clientType} installation:`, error)
+      return { installed: true } // Assume installed on error to not block launch
+    }
   }
 
   async function launchConnection(conn, settings) {
@@ -49,6 +68,19 @@ export function useLauncher() {
         }
       }
 
+      // Check installation for Horizon and Citrix
+      if (plainConnection.type === 'horizon' || plainConnection.type === 'citrix') {
+        const installStatus = await checkClientInstalled(plainConnection.type)
+        if (!installStatus.installed) {
+          return {
+            success: false,
+            error: 'not_installed',
+            clientType: plainConnection.type,
+            needsInstall: true
+          }
+        }
+      }
+
       let result
 
       switch (plainConnection.type) {
@@ -61,6 +93,10 @@ export function useLauncher() {
 
         case 'horizon':
           result = await window.api.launchHorizon(connectionWithCreds, mergedSettings)
+          // Check if IPC returned needsInstall
+          if (result?.needsInstall) {
+            return { success: false, error: 'not_installed', clientType: result.clientType || 'horizon', needsInstall: true }
+          }
           if (result?.success && window.api?.trackConnectionLaunch) {
             window.api.trackConnectionLaunch('horizon', true)
           }
@@ -68,6 +104,10 @@ export function useLauncher() {
 
         case 'citrix':
           result = await window.api.launchCitrix(connectionWithCreds, mergedSettings)
+          // Check if IPC returned needsInstall
+          if (result?.needsInstall) {
+            return { success: false, error: 'not_installed', clientType: result.clientType || 'citrix', needsInstall: true }
+          }
           if (result?.success && window.api?.trackConnectionLaunch) {
             window.api.trackConnectionLaunch('citrix', true)
           }
@@ -113,6 +153,7 @@ export function useLauncher() {
 
   return {
     launchConnection,
-    launchVpn
+    launchVpn,
+    checkClientInstalled
   }
 }

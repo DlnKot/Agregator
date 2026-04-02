@@ -159,6 +159,15 @@
     <!-- First Run Modal -->
     <FirstRunModal v-if="isFirstRun" @save="handleFirstRunSave" />
 
+    <!-- Install Dialog -->
+    <InstallDialog 
+      v-if="showInstallDialog" 
+      :show="showInstallDialog" 
+      :client-type="pendingInstallClient"
+      @close="closeInstallDialog"
+      @installed="handleInstallComplete"
+    />
+
     <!-- Toast -->
     <div v-if="toast.show" :class="['toast', toast.type]">
       <span class="toast-message">{{ toast.message }}</span>
@@ -168,13 +177,14 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import { useConnections, useSettings, useLauncher, useAutoUpdate, useTheme } from './composables'
+import { useConnections, useSettings, useLauncher, useAutoUpdate, useTheme, useInstaller } from './composables'
 import ConnectionsList from './components/ConnectionsList.vue'
 import { SettingsView } from './components/settings'
 import NetworkCheckView from './components/NetworkCheckView.vue'
 import HelpView from './components/HelpView.vue'
 import ConnectionModal from './components/ConnectionModal.vue'
 import FirstRunModal from './components/FirstRunModal.vue'
+import InstallDialog from './components/InstallDialog.vue'
 import versionData from '../../version.js'
 import headerLogoBlack from './assets/icons/logo-black.svg'
 import headerLogoWhite from './assets/icons/logo-white.svg'
@@ -201,6 +211,20 @@ const {
 const { settings, isFirstRun, loadSettings, saveSettings } = useSettings()
 const { launchConnection, launchVpn } = useLauncher()
 const { initAutoUpdater } = useAutoUpdate()
+
+// Install dialog state
+const showInstallDialog = ref(false)
+const pendingInstallClient = ref(null)
+
+function closeInstallDialog() {
+  showInstallDialog.value = false
+  pendingInstallClient.value = null
+}
+
+function handleInstallComplete(filePath) {
+  showToast('Установщик открыт', 'success')
+  closeInstallDialog()
+}
 
 const currentView = ref('connections')
 const headerLogoSrc = computed(() => (theme.value === 'dark' ? headerLogoWhite : headerLogoBlack))
@@ -306,6 +330,10 @@ async function handleLaunch(id) {
     // Save this connection as the last used
     await setLastConnection(id)
     showToast('Клиент запущен', 'success')
+  } else if (result?.needsInstall) {
+    // Client not installed - show install dialog
+    pendingInstallClient.value = result.clientType
+    showInstallDialog.value = true
   } else {
     showToast(result?.error || 'Ошибка запуска', 'error')
   }

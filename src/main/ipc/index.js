@@ -12,6 +12,7 @@ const { setupProfileIpcHandlers } = require('./profiles');
 const { setupLauncherIpcHandlers, killAllLaunchedProcesses } = require('./launchers');
 const { setupNetworkIpcHandlers } = require('./network');
 const { setupMetricsIpcHandlers } = require('./metrics');
+const { setupInstallerIpcHandlers } = require('./installer');
 
 function setupAllIpcHandlers(logger) {
   setupAppIpcHandlers(logger);
@@ -21,6 +22,7 @@ function setupAllIpcHandlers(logger) {
   setupLauncherIpcHandlers(logger);
   setupNetworkIpcHandlers(logger);
   setupMetricsIpcHandlers();
+  setupInstallerIpcHandlers(logger);
   
   // Auto-updater handlers (setup in its own module)
   autoUpdaterModule.setupIpcHandlers();
@@ -35,5 +37,6 @@ module.exports = {
   setupLauncherIpcHandlers,
   setupNetworkIpcHandlers,
   setupMetricsIpcHandlers,
+  setupInstallerIpcHandlers,
   killAllLaunchedProcesses
 };
