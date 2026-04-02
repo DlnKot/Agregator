@@ -110,6 +110,32 @@ function setupConnectionIpcHandlers(logger) {
       return fail(e);
     }
   });
+
+  // Get last connection ID
+  ipcMain.handle('get-last-connection', () => {
+    try {
+      const configStore = getStore();
+      const lastId = configStore ? configStore.get('lastConnectionId') : null;
+      return ok(lastId);
+    } catch (e) {
+      if (logger) logger('error', `get-last-connection failed: ${e?.message || String(e)}`);
+      return fail(e);
+    }
+  });
+
+  // Set last connection ID
+  ipcMain.handle('set-last-connection', (event, connectionId) => {
+    try {
+      const configStore = getStore();
+      if (configStore) {
+        configStore.set('lastConnectionId', connectionId || null);
+      }
+      return ok(true);
+    } catch (e) {
+      if (logger) logger('error', `set-last-connection failed: ${e?.message || String(e)}`);
+      return fail(e);
+    }
+  });
 }
 
 module.exports = { setupConnectionIpcHandlers };
