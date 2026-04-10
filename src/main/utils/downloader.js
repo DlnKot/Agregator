@@ -28,6 +28,16 @@ const DISTRO_FILES = {
   }
 };
 
+const activeDownloads = new Map();
+
+function safeCloseStream(file, context) {
+  try {
+    file.close();
+  } catch (err) {
+    logger('warn', `Downloader: failed to close stream (${context}): ${err.message}`);
+  }
+}
+
 /**
  * Get the download URL for a client
  * @param {string} clientType - 'horizon' or 'citrix'
@@ -77,6 +87,26 @@ function downloadFile(url, destPath, onProgress, onError, onComplete) {
   const file = fs.createWriteStream(destPath);
   const isHttps = url.startsWith('https');
   const httpModule = isHttps ? https : http;
+  let done = false;
+
+  const finishError = (err) => {
+    if (done) return;
+    done = true;
+    safeCloseStream(file, 'error');
+    fs.unlink(destPath, () => {});
+    onError(err);
+  };
+
+  const finishSuccess = () => {
+    if (done) return;
+    done = true;
+    safeCloseStream(file, 'success');
+    if (onComplete) onComplete(destPath);
+  };
+
+  file.on('error', (err) => {
+    finishError(err);
+  });
 
   const request = httpModule.get(url, {
     timeout: 30000,
@@ -86,15 +116,15 @@ function downloadFile(url, destPath, onProgress, onError, onComplete) {
     if (response.statusCode === 301 || response.statusCode === 302) {
       const redirectUrl = response.headers.location;
       if (redirectUrl) {
+        request.destroy();
+        safeCloseStream(file, 'redirect');
         downloadFile(redirectUrl, destPath, onProgress, onError, onComplete);
         return;
       }
     }
 
     if (response.statusCode !== 200) {
-      file.close();
-      fs.unlink(destPath, () => {});
-      onError(new Error(`Server returned status: ${response.statusCode}`));
+      finishError(new Error(`Server returned status: ${response.statusCode}`));
       return;
     }
 
@@ -112,22 +142,17 @@ function downloadFile(url, destPath, onProgress, onError, onComplete) {
     response.pipe(file);
 
     file.on('finish', () => {
-      file.close();
-      if (onComplete) onComplete(destPath);
+      finishSuccess();
     });
   });
 
   request.on('error', (err) => {
-    file.close();
-    fs.unlink(destPath, () => {});
-    onError(err);
+    finishError(err);
   });
 
   request.on('timeout', () => {
     request.destroy();
-    file.close();
-    fs.unlink(destPath, () => {});
-    onError(new Error('Download timeout'));
+    finishError(new Error('Download timeout'));
   });
 }
 
@@ -138,7 +163,17 @@ function downloadFile(url, destPath, onProgress, onError, onComplete) {
  * @returns {Promise}
  */
 function downloadDistribution(clientType, onProgress) {
-  return new Promise((resolve, reject) => {
+  const normalizedClientType = String(clientType || '').toLowerCase();
+  if (!normalizedClientType) {
+    return Promise.reject(new Error('Client type is required'));
+  }
+
+  if (activeDownloads.has(normalizedClientType)) {
+    logger('info', `Download already in progress for: ${normalizedClientType}`);
+    return activeDownloads.get(normalizedClientType);
+  }
+
+  const downloadPromise = new Promise((resolve, reject) => {
     const { url, urlHttp, filename, error } = getDownloadInfo(clientType, process.platform);
 
     if (error) {
@@ -173,6 +208,15 @@ function downloadDistribution(clientType, onProgress) {
       }
     );
   });
+
+  activeDownloads.set(normalizedClientType, downloadPromise);
+  downloadPromise.then(() => {
+    activeDownloads.delete(normalizedClientType);
+  }).catch(() => {
+    activeDownloads.delete(normalizedClientType);
+  });
+
+  return downloadPromise;
 }
 
 /**

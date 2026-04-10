@@ -26,7 +26,9 @@ function resolveAssetPath(relPath) {
   for (const p of candidates) {
     try {
       if (p && fs.existsSync(p)) return p;
-    } catch { /* ignore */ }
+    } catch {
+      // Best effort path probing; continue to the next candidate.
+    }
   }
   return null;
 }
@@ -63,7 +65,9 @@ function createWindow(logger, appVersion) {
     mainWindow.setMenu(null);
     mainWindow.setMenuBarVisibility(false);
     mainWindow.setAutoHideMenuBar(true);
-  } catch { /* ignore */ }
+  } catch (e) {
+    if (logger) logger('warn', `Failed to hide menu bar: ${e.message}`);
+  }
 
   // Dev: load Vite dev server for hot reload.
   if (!app.isPackaged && process.env.ELECTRON_DEV) {

@@ -7,10 +7,18 @@ const { ipcMain } = require('electron');
 const { getStore } = require('../stores/storeManager');
 const { sanitizeSettingsInput } = require('../validation');
 const { BUILTIN_DEFAULTS } = require('../config/defaults');
+const { 
+  createErrorResponse, 
+  createSuccessResponse,
+  ERROR_CODES 
+} = require('./errorCodes');
 
 function setupSettingsIpcHandlers(logger) {
-  const ok = (data) => ({ success: true, data });
-  const fail = (error) => ({ success: false, error: error?.message || String(error) });
+  const ok = (data) => createSuccessResponse(data);
+  const fail = (error) => {
+    if (logger) logger('error', `Settings error: ${error?.message || String(error)}`);
+    return createErrorResponse(ERROR_CODES.STORAGE_ERROR, 'Settings operation failed', error?.message);
+  };
 
   // Get settings
   ipcMain.handle('get-settings', () => {

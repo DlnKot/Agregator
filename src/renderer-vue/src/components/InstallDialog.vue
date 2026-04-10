@@ -160,6 +160,11 @@ async function handleInstall() {
   } catch (error) {
     errorMessage.value = error?.message || 'Сервер недоступен. Попробуйте позже.'
     state.value = 'error'
+  } finally {
+    if (removeProgressListener) {
+      removeProgressListener()
+      removeProgressListener = null
+    }
   }
 }
 

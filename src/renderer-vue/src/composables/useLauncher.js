@@ -10,6 +10,30 @@ export function useLauncher() {
   const { unwrapIpc } = useIpc()
   const { applyCredentialsToConnection } = useConnections()
 
+  function extractNeedsInstall(result, fallbackClientType) {
+    if (!result || typeof result !== 'object') return null
+    if (result.needsInstall) {
+      return {
+        success: false,
+        error: 'not_installed',
+        clientType: result.clientType || fallbackClientType,
+        needsInstall: true
+      }
+    }
+
+    const details = result.details
+    if (details && typeof details === 'object' && details.needsInstall) {
+      return {
+        success: false,
+        error: 'not_installed',
+        clientType: details.clientType || fallbackClientType,
+        needsInstall: true
+      }
+    }
+
+    return null
+  }
+
   function isPlainObject(v) {
     return v && typeof v === 'object' && !Array.isArray(v)
   }
@@ -93,9 +117,9 @@ export function useLauncher() {
 
         case 'horizon':
           result = await window.api.launchHorizon(connectionWithCreds, mergedSettings)
-          // Check if IPC returned needsInstall
-          if (result?.needsInstall) {
-            return { success: false, error: 'not_installed', clientType: result.clientType || 'horizon', needsInstall: true }
+          {
+            const needsInstallResult = extractNeedsInstall(result, 'horizon')
+            if (needsInstallResult) return needsInstallResult
           }
           if (result?.success && window.api?.trackConnectionLaunch) {
             window.api.trackConnectionLaunch('horizon', true)
@@ -104,9 +128,9 @@ export function useLauncher() {
 
         case 'citrix':
           result = await window.api.launchCitrix(connectionWithCreds, mergedSettings)
-          // Check if IPC returned needsInstall
-          if (result?.needsInstall) {
-            return { success: false, error: 'not_installed', clientType: result.clientType || 'citrix', needsInstall: true }
+          {
+            const needsInstallResult = extractNeedsInstall(result, 'citrix')
+            if (needsInstallResult) return needsInstallResult
           }
           if (result?.success && window.api?.trackConnectionLaunch) {
             window.api.trackConnectionLaunch('citrix', true)

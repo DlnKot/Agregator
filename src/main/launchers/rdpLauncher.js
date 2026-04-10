@@ -248,8 +248,11 @@ function createRdpFile(connection, settings) {
 function scheduleDelete(file, timeout = 10000) {
 
     setTimeout(() => {
-        try { fs.unlinkSync(file); }
-        catch { }
+        try {
+            fs.unlinkSync(file);
+        } catch (e) {
+            logger('warn', `RDP Launcher: failed to delete temp file ${file}: ${e.message}`);
+        }
     }, timeout);
 }
 
@@ -269,7 +272,9 @@ function findMacWindowsApp() {
             const found = res.stdout.toString().split('\n')[0].trim();
             if (found) return { bundleId, appPath: found };
         }
-    } catch { /* ignore */ }
+    } catch (e) {
+        logger('warn', `RDP Launcher: mdfind failed for ${bundleId}: ${e.message}`);
+    }
 
     const candidates = [
         '/Applications/Windows App.app',
@@ -281,7 +286,9 @@ function findMacWindowsApp() {
     for (const p of candidates) {
         try {
             if (fs.existsSync(p)) return { bundleId, appPath: p };
-        } catch { /* ignore */ }
+        } catch (e) {
+            logger('warn', `RDP Launcher: failed to check app path ${p}: ${e.message}`);
+        }
     }
 
     return { bundleId, appPath: null };

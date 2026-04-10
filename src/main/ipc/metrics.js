@@ -5,10 +5,17 @@
 
 const { ipcMain } = require('electron');
 const metricsCollector = require('../utils/metricsCollector');
+const { 
+  createErrorResponse, 
+  createSuccessResponse,
+  ERROR_CODES 
+} = require('./errorCodes');
 
 function setupMetricsIpcHandlers() {
-  const ok = (data) => ({ success: true, data });
-  const fail = (error) => ({ success: false, error: error?.message || String(error) });
+  const ok = (data) => createSuccessResponse(data);
+  const fail = (error) => {
+    return createErrorResponse(ERROR_CODES.UNKNOWN_ERROR, 'Metrics operation failed', error?.message);
+  };
 
   // Track custom event
   ipcMain.handle('track-event', (event, type, data) => {

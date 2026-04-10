@@ -4,15 +4,19 @@
  */
 
 const fs = require('fs');
-const path = require('path');
-const { execSync, exec } = require('child_process');
+const { execSync } = require('child_process');
+const { findHorizonExecutable } = require('../launchers/horizonLauncher');
+const { log: logger } = require('./logger');
 
 // Common installation paths for different platforms
 const HORIZON_PATHS = {
   win32: [
+    'C:\\Program Files\\VMware\\VMware Horizon Client\\bin\\vmware-view.exe',
+    'C:\\Program Files (x86)\\VMware\\VMware Horizon Client\\bin\\vmware-view.exe',
     'C:\\Program Files\\VMware\\VMware Horizon Client\\bin\\wswc.exe',
     'C:\\Program Files (x86)\\VMware\\VMware Horizon Client\\bin\\wswc.exe',
-    'C:\\Program Files\\VMware\\Horizon Client\\bin\\wswc.exe'
+    'C:\\Program Files\\VMware\\Horizon Client\\bin\\wswc.exe',
+    'C:\\Program Files\\VMware\\Horizon Client\\bin\\vmware-view.exe'
   ],
   darwin: [
     '/Applications/VMware Horizon Client.app',
@@ -49,7 +53,8 @@ const CITRIX_PATHS = {
 function pathExists(filePath) {
   try {
     return fs.existsSync(filePath);
-  } catch {
+  } catch (e) {
+    logger('warn', `InstallChecker: path check failed for ${filePath}: ${e.message}`);
     return false;
   }
 }
@@ -60,6 +65,19 @@ function pathExists(filePath) {
  */
 function checkHorizonInstalled() {
   const platform = process.platform;
+
+  // Use the same resolution logic as launcher to avoid false negatives.
+  if (platform === 'win32') {
+    try {
+      const exePath = findHorizonExecutable();
+      if (exePath) {
+        return { installed: true, path: exePath };
+      }
+    } catch (e) {
+      logger('warn', `InstallChecker: horizon launcher lookup failed: ${e.message}`);
+    }
+  }
+
   const paths = HORIZON_PATHS[platform] || [];
 
   for (const p of paths) {
@@ -78,20 +96,31 @@ function checkHorizonInstalled() {
       if (result) {
         return { installed: true, path: result.split('\n')[0] };
       }
-    } catch { /* ignore */ }
+    } catch (e) {
+      logger('warn', `InstallChecker: mdfind horizon lookup failed: ${e.message}`);
+    }
   }
 
   // Additional check via command (Windows)
   if (platform === 'win32') {
+    const regKeys = [
+      'HKLM\\SOFTWARE\\VMware, Inc.\\VMware VDM',
+      'HKLM\\SOFTWARE\\VMware, Inc.\\VMware Horizon View Client'
+    ];
+
     try {
-      const result = execSync('reg query "HKLM\\SOFTWARE\\VMware, Inc.\\VMware Horizon View Client" /ve 2>nul', {
-        encoding: 'utf8',
-        timeout: 5000
-      });
-      if (result.includes('REG_SZ')) {
-        return { installed: true, path: 'registry' };
+      for (const regKey of regKeys) {
+        const result = execSync(`reg query "${regKey}" /s`, {
+          encoding: 'utf8',
+          timeout: 5000
+        });
+        if (result.includes('REG_SZ')) {
+          return { installed: true, path: `registry:${regKey}` };
+        }
       }
-    } catch { /* ignore */ }
+    } catch (e) {
+      logger('warn', `InstallChecker: registry horizon lookup failed: ${e.message}`);
+    }
   }
 
   return { installed: false, path: null };
@@ -121,7 +150,9 @@ function checkCitrixInstalled() {
       if (result) {
         return { installed: true, path: result.split('\n')[0] };
       }
-    } catch { /* ignore */ }
+    } catch (e) {
+      logger('warn', `InstallChecker: mdfind citrix lookup failed: ${e.message}`);
+    }
   }
 
   // Additional check via command (Windows)
@@ -134,7 +165,9 @@ function checkCitrixInstalled() {
       if (result.includes('REG_SZ')) {
         return { installed: true, path: 'registry' };
       }
-    } catch { /* ignore */ }
+    } catch (e) {
+      logger('warn', `InstallChecker: registry citrix lookup failed: ${e.message}`);
+    }
   }
 
   return { installed: false, path: null };

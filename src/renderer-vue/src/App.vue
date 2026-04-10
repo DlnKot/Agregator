@@ -240,7 +240,7 @@ const tabCitrix = ref(null)
 const tabRecent = ref(null)
 
 const clientSliderStyle = computed(() => {
-  if (!clientTabsRef.value) return {}
+  if (!clientTabsRef.value) return { width: '0px', transform: 'translateX(0)' }
   
   const filter = currentClientFilter.value
   let targetRef = null
@@ -257,14 +257,16 @@ const clientSliderStyle = computed(() => {
     targetRef = tabCitrix.value
   }
   
-  if (!targetRef) return {}
+  // If no target ref found (e.g., 'recent' tab doesn't exist), hide slider
+  if (!targetRef) return { width: '0px', transform: 'translateX(0)', opacity: '0' }
   
   const containerRect = clientTabsRef.value.getBoundingClientRect()
   const tabRect = targetRef.getBoundingClientRect()
   
   return {
     width: `${tabRect.width}px`,
-    transform: `translateX(${tabRect.left - containerRect.left}px)`
+    transform: `translateX(${tabRect.left - containerRect.left}px)`,
+    opacity: '1'
   }
 })
 
@@ -739,7 +741,7 @@ initTheme()
   height: calc(100% - 8px);
   background: var(--bg-tertiary);
   border-radius: var(--radius-xl);
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
   z-index: 0;
 }
 

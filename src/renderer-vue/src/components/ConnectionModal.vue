@@ -27,7 +27,8 @@
             <input ref="nameInput" type="text" id="connection-name" v-model="form.name" required placeholder="Например: Рабочий стол">
           </div>
 
-          <div class="form-group">
+          <!-- Host field - hidden for Citrix -->
+          <div class="form-group" v-if="form.type !== 'citrix'">
             <label for="connection-host">Хост / IP адрес</label>
             <input type="text" id="connection-host" v-model="form.host" required :disabled="isFactory"
               placeholder="192.168.1.100 или hostname">
@@ -40,8 +41,15 @@
 
           <div class="form-group citrix-fields" :style="{ display: form.type === 'citrix' ? 'block' : 'none' }">
             <label for="connection-store">Citrix Store URL</label>
-            <input type="text" id="connection-store" v-model="form.storeUrl" :disabled="isFactory"
+            <input type="text" id="connection-store" v-model="form.storeUrl" :disabled="isFactory" required
               placeholder="https://store.company.com/Citrix/Store">
+          </div>
+
+          <div class="form-group citrix-fields" :style="{ display: form.type === 'citrix' ? 'block' : 'none' }">
+            <label for="connection-citrix-app">Приложение (опционально)</label>
+            <input type="text" id="connection-citrix-app" v-model="form.citrixApp" :disabled="isFactory"
+              placeholder="CITRIX-VDI Win11">
+            <small class="form-hint">Оставьте пустым для открытия списка приложений</small>
           </div>
 
           <div class="form-group">
@@ -88,6 +96,7 @@ const form = reactive({
   host: '',
   desktopPool: '',
   storeUrl: '',
+  citrixApp: '',
   username: '',
   description: ''
 })
@@ -134,6 +143,7 @@ watch(() => props.connection, (newVal) => {
       host: newVal.host || '',
       desktopPool: newVal.desktopPool || '',
       storeUrl: newVal.storeUrl || '',
+      citrixApp: newVal.citrixApp || '',
       username: newVal.username || '',
       description: newVal.description || ''
     })
@@ -147,6 +157,7 @@ watch(() => props.connection, (newVal) => {
       host: '',
       desktopPool: '',
       storeUrl: '',
+      citrixApp: '',
       username: props.defaultUsername || '',
       description: ''
     })
@@ -183,20 +194,35 @@ function save() {
     return
   }
 
-  if (!form.name || !form.host) {
+  // Validation: name is always required
+  if (!form.name) {
     alert('Заполните обязательные поля')
     return
   }
 
-  if (form.type === 'citrix' && !String(form.storeUrl || '').trim()) {
-    alert('Заполните обязательные поля')
-    return
+  // For Citrix: storeUrl is required, host is not needed
+  if (form.type === 'citrix') {
+    if (!String(form.storeUrl || '').trim()) {
+      alert('Укажите Citrix Store URL')
+      return
+    }
+  } else {
+    // For RDP and Horizon: host is required
+    if (!form.host) {
+      alert('Заполните обязательные поля')
+      return
+    }
   }
 
   // For Horizon connections, normalize server URL (add https:// if missing)
   let normalizedHost = form.host.trim()
   if (form.type === 'horizon') {
     normalizedHost = normalizeServerUrl(form.host)
+  }
+
+  // For Citrix, use storeUrl as host
+  if (form.type === 'citrix') {
+    normalizedHost = normalizeCitrixStoreUrl(form.storeUrl || '')
   }
 
   const connectionData = {
@@ -206,6 +232,7 @@ function save() {
     host: normalizedHost,
     desktopPool: form.desktopPool.trim(),
     storeUrl: form.type === 'citrix' ? normalizeCitrixStoreUrl(form.storeUrl || '') : (form.storeUrl || '').trim(),
+    citrixApp: form.citrixApp.trim(),
     username: form.username.trim(),
     description: form.description.trim()
   }
@@ -248,6 +275,7 @@ onBeforeUnmount(() => {
   left: 0;
   right: 0;
   bottom: 0;
+  z-index: 1000;
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(4px);
   z-index: 1;
@@ -315,8 +343,17 @@ onBeforeUnmount(() => {
 }
 
 .modal-body {
-  padding: 24px;
+  flex: 1;
   overflow-y: auto;
+  padding: 24px;
+  pointer-events: auto;
+}
+
+.modal-body form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  pointer-events: auto;
 }
 
 .factory-note {
@@ -416,5 +453,21 @@ onBeforeUnmount(() => {
 .form-group select {
   cursor: pointer;
   background: var(--bg-secondary);
+}
+
+.form-group input[type="text"]:disabled,
+.form-group select:disabled,
+.form-group textarea:disabled {
+  background: var(--bg-primary);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.form-hint {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
 }
 </style>

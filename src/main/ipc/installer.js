@@ -63,9 +63,12 @@ function setupInstallerIpcHandlers(logger) {
   });
 
   // Open/launch installer
-  ipcMain.handle('open-installer', (event, filePath) => {
+  ipcMain.handle('open-installer', async (event, filePath) => {
     try {
-      openInstaller(filePath);
+      const result = await openInstaller(filePath);
+      if (result) {
+        throw new Error(result);
+      }
       if (logger) logger('info', `open-installer: ${filePath}`);
       return ok(true);
     } catch (e) {

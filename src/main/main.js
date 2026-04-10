@@ -29,16 +29,16 @@ try {
   // Best-effort: some surfaces in dev use process title or app.name.
   process.title = desiredName;
   app.name = desiredName;
-} catch { /* ignore */ }
+} catch (err) {
+  logger('warn', `Failed to set app name: ${err.message}`);
+}
 
 // ==================== Auto-updater Configuration ====================
 
 function getAutoUpdateConfig() {
   return {
     currentVersion: app.getVersion(),
-    updateUrl: 'https://10.230.121.212/electron/latest/',
-    updateUrlHttp: 'http://10.230.121.212/electron/latest/',
-    allowHttpFallback: true
+    updateUrl: 'https://10.230.121.212/electron/latest/'
   };
 }
 
@@ -54,7 +54,11 @@ process.on('uncaughtException', (error) => {
   // Трекинг ошибки в метриках
   const metricsCollector = require('./utils/metricsCollector');
   if (metricsCollector && typeof metricsCollector.trackError === 'function') {
-    try { metricsCollector.trackError(error); } catch (e) { /* ignore */ }
+    try {
+      metricsCollector.trackError(error);
+    } catch (e) {
+      logger('warn', `Failed to track uncaught exception in metrics: ${e.message}`);
+    }
   }
   
   logger('error', `Uncaught Exception: ${error.message}`);
@@ -62,13 +66,29 @@ process.on('uncaughtException', (error) => {
 
   // Best-effort graceful shutdown so we don't lose store changes.
   const configStore = getStore();
-  try { if (configStore && typeof configStore.flush === 'function') configStore.flush(); } catch { /* ignore */ }
-  try { flushMetrics(logger); } catch { /* ignore */ }
+  try { 
+    if (configStore && typeof configStore.flush === 'function') configStore.flush(); 
+  } catch (err) {
+    logger('error', `Failed to flush store on uncaught exception: ${err.message}`);
+  }
+  try { 
+    flushMetrics(logger); 
+  } catch (err) {
+    logger('error', `Failed to flush metrics on uncaught exception: ${err.message}`);
+  }
 
   // Quit Electron; if it hangs, force-exit.
-  try { app.quit(); } catch { /* ignore */ }
+  try { 
+    app.quit(); 
+  } catch (err) {
+    logger('error', `Failed to quit app gracefully: ${err.message}`);
+  }
   setTimeout(() => {
-    try { process.exit(1); } catch { /* ignore */ }
+    try { 
+      process.exit(1); 
+    } catch (err) {
+      logger('error', `Failed to force exit: ${err.message}`);
+    }
   }, 1500);
 });
 
@@ -76,7 +96,11 @@ process.on('unhandledRejection', (reason) => {
   // Трекинг ошибки в метриках
   const metricsCollector = require('./utils/metricsCollector');
   if (metricsCollector && typeof metricsCollector.trackError === 'function') {
-    try { metricsCollector.trackError(new Error(String(reason))); } catch (e) { /* ignore */ }
+    try {
+      metricsCollector.trackError(new Error(String(reason)));
+    } catch (e) {
+      logger('warn', `Failed to track unhandled rejection in metrics: ${e.message}`);
+    }
   }
   
   logger('error', `Unhandled Rejection: ${reason}`);
