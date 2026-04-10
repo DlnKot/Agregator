@@ -9,12 +9,18 @@ const { getFactoryTemplates } = require('../config/factory');
 const { composeConnectionsForRenderer } = require('../stores/connectionNormalizer');
 const { sanitizeConnectionInput, deepCloneJsonSafe, isPlainObject } = require('../validation');
 const { uuidv4 } = require('../utils/uuid');
+const { 
+  createErrorResponse, 
+  createSuccessResponse,
+  ERROR_CODES 
+} = require('./errorCodes');
 
 function setupConnectionIpcHandlers(logger) {
-  const ok = (data) => ({ success: true, data });
-  const fail = (error) => ({ success: false, error: error?.message || String(error) });
-
-  // Get all connections
+  const ok = (data) => createSuccessResponse(data);
+  const fail = (error) => {
+    if (logger) logger('error', `Connection error: ${error?.message || String(error)}`);
+    return createErrorResponse(ERROR_CODES.STORAGE_ERROR, 'Connection operation failed', error?.message);
+  };
   ipcMain.handle('get-connections', () => {
     try {
       const configStore = getStore();

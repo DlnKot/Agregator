@@ -33,7 +33,7 @@ const loadCustomCertificate = () => {
                 logger('info', `AutoUpdater: Custom CA certificate loaded from ${certPath}`);
                 return true;
             } catch (e) {
-                logger('warn', `AutoUpdater: Failed to load custom CA certificate: ${e.message}`);
+                logger('warn', `AutoUpdater: Failed to load custom CA certificate from ${certPath}: ${e.message}`);
             }
         }
     }
@@ -50,7 +50,6 @@ let publishConfig = null;
 
 // Custom server URL for updates
 const CUSTOM_UPDATE_URL = 'https://10.230.121.212/electron/latest/';
-const CUSTOM_UPDATE_URL_HTTP = 'http://10.230.121.212/electron/latest/';
 
 function getExpectedUpdateConfigPath() {
     const fileName = autoUpdater.forceDevUpdateConfig ? 'dev-app-update.yml' : 'app-update.yml';
@@ -81,7 +80,9 @@ function initAutoUpdater(config = {}) {
                 if (listeners > 0) {
                     autoUpdater.removeAllListeners(eventName);
                 }
-            } catch (e) { /* ignore */ }
+            } catch (e) {
+                logger('warn', `AutoUpdater: Failed to remove listeners for ${eventName}: ${e.message}`);
+            }
         }
     }
 
@@ -100,7 +101,6 @@ function initAutoUpdater(config = {}) {
     }
 
     const updateUrl = config.updateUrl || CUSTOM_UPDATE_URL;
-    const allowHttpFallback = config.allowHttpFallback === true;
 
     autoUpdater.autoDownload = false;
     autoUpdater.autoInstallOnAppQuit = true;
@@ -178,27 +178,13 @@ function initAutoUpdater(config = {}) {
 
     autoUpdater.on('error', (error) => {
         const rawMessage = error?.message || String(error);
-
-        // Handle certificate errors
-        if (allowHttpFallback && updateUrl.startsWith('https') && rawMessage.includes('CERT_')) {
-            logger('warn', 'AutoUpdater: HTTPS failed, trying HTTP fallback...');
-            try {
-                autoUpdater.setFeedURL({
-                    provider: 'generic',
-                    url: CUSTOM_UPDATE_URL_HTTP,
-                    channel: 'latest'
-                });
-                autoUpdater.checkForUpdates().catch(err => {
-                    logger('error', `AutoUpdater: HTTP fallback failed: ${err.message}`);
-                    notifyRenderer('update-error', { message: err.message });
-                });
-            } catch (e) {
-                notifyRenderer('update-error', { message: rawMessage });
-            }
-            return;
-        }
-
         logger('error', `AutoUpdater: Error - ${rawMessage}`);
+        
+        // Provide helpful message for certificate errors
+        if (rawMessage.includes('CERT_')) {
+            logger('error', 'AutoUpdater: Certificate error detected. Please ensure NODE_EXTRA_CA_CERTS is configured or place ca.pem in config/ directory.');
+        }
+        
         notifyRenderer('update-error', { message: rawMessage });
     });
 }

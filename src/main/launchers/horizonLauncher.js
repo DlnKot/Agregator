@@ -216,7 +216,9 @@ function findExeRecursive(dir, exeName, depth = 0, maxDepth = 6) {
             }
         }
 
-    } catch { }
+    } catch (e) {
+        logger('warn', `Horizon Launcher: failed to scan directory ${dir}: ${e.message}`);
+    }
 
     return null;
 }
@@ -298,7 +300,9 @@ function findHorizonExecutable(customPath) {
                 return p;
         }
 
-    } catch { }
+    } catch (e) {
+        logger('warn', `Horizon Launcher: where lookup failed: ${e.message}`);
+    }
 
     return null;
 }
@@ -331,7 +335,9 @@ function findMacApp() {
             if (found) return found;
         }
 
-    } catch { }
+    } catch (e) {
+        logger('warn', `Horizon Launcher: mdfind lookup failed: ${e.message}`);
+    }
 
     return null;
 }
@@ -375,7 +381,7 @@ function launchWindows(connection, settings) {
     const args = [];
 
     if (connection.host)
-        args.push('-serverURL', connection.host);
+        args.push('-serverURL', normalizeUrl(connection.host));
 
     const userName = stripDomainFromUserName(connection.username);
     if (userName)
@@ -471,6 +477,7 @@ function killAllProcesses() {
 
 /* ------------------------------------------------ */
 module.exports = {
+    findHorizonExecutable,
     launchHorizon,
     killAllProcesses
 };

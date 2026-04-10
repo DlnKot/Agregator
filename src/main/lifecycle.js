@@ -33,7 +33,11 @@ function setupLifecycleHandlers(deps) {
       const path = require('path');
       
       // Remove menu bar everywhere (including macOS app menu).
-      try { Menu.setApplicationMenu(null); } catch { /* ignore */ }
+      try {
+        Menu.setApplicationMenu(null);
+      } catch (e) {
+        logger('warn', `Failed to clear app menu: ${e.message}`);
+      }
 
       // Initialize logger with app reference
       const loggerModule = require('./utils/logger');
@@ -43,7 +47,11 @@ function setupLifecycleHandlers(deps) {
       const logFilePath = path.join(userDataPath, 'app.log');
       loggerModule.setLogFile(logFilePath);
 
-      try { fs.writeFileSync(logFilePath, ''); } catch (e) { /* ignore */ }
+      try {
+        fs.writeFileSync(logFilePath, '');
+      } catch (e) {
+        logger('warn', `Failed to truncate log file: ${e.message}`);
+      }
 
       logger('info', `Log file: ${logFilePath}`);
 
@@ -88,21 +96,37 @@ function setupLifecycleHandlers(deps) {
 
   app.on('before-quit', (event) => {
     logger('info', 'App is quitting...');
-    killAllLaunchedProcesses(logger);
+    try {
+      killAllLaunchedProcesses(logger);
+    } catch (e) {
+      logger('warn', `Failed to kill launched processes on quit: ${e.message}`);
+    }
 
     // Отправка метрик перед закрытием
-    flushMetrics(logger);
+    try {
+      flushMetrics(logger);
+    } catch (e) {
+      logger('warn', `Failed to flush metrics on quit: ${e.message}`);
+    }
 
     // Принудительно сохраняем все данные перед закрытием
     const configStore = getStore();
     if (configStore && typeof configStore.flush === 'function') {
-      configStore.flush();
+      try {
+        configStore.flush();
+      } catch (e) {
+        logger('warn', `Failed to flush store on quit: ${e.message}`);
+      }
     }
 
     // Give processes time to cleanup
     const mainWindow = getMainWindow();
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.destroy();
+      try {
+        mainWindow.destroy();
+      } catch (e) {
+        logger('warn', `Failed to destroy main window on quit: ${e.message}`);
+      }
     }
   });
 }

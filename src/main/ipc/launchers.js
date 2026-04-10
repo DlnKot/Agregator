@@ -8,19 +8,25 @@ const rdpLauncher = require('../launchers/rdpLauncher');
 const horizonLauncher = require('../launchers/horizonLauncher');
 const citrixLauncher = require('../launchers/citrixLauncher');
 const vpnLauncher = require('../launchers/vpnLauncher');
+const { 
+  createErrorResponse, 
+  createSuccessResponse,
+  ERROR_CODES 
+} = require('./errorCodes');
 
 function setupLauncherIpcHandlers(logger) {
-  const ok = (data) => ({ success: true, data });
-  const fail = (error, extra = {}) => ({ success: false, error: error?.message || String(error), ...extra });
-
   // Launch RDP
   ipcMain.handle('launch-rdp', async (event, connection, settings) => {
     try {
       rdpLauncher.launchRdp(connection, settings || {});
-      return ok(true);
+      return createSuccessResponse(true);
     } catch (error) {
       if (logger) logger('error', `RDP launch error: ${error.message}`);
-      return fail(error);
+      return createErrorResponse(
+        ERROR_CODES.CLIENT_LAUNCH_FAILED, 
+        'Failed to launch RDP connection', 
+        error.message
+      );
     }
   });
 
@@ -28,12 +34,23 @@ function setupLauncherIpcHandlers(logger) {
   ipcMain.handle('launch-horizon', async (event, connection, settings) => {
     try {
       horizonLauncher.launchHorizon(connection, settings || {});
-      return ok(true);
+      return createSuccessResponse(true);
     } catch (error) {
       if (logger) logger('error', `Horizon launch error: ${error.message}`);
       // Check if client not found
       const notFound = error.message?.includes('not found') || error.message?.includes('Not found');
-      return fail(error, notFound ? { needsInstall: true, clientType: 'horizon' } : {});
+      if (notFound) {
+        return createErrorResponse(
+          ERROR_CODES.CLIENT_NOT_FOUND, 
+          'Horizon client not found', 
+          { needsInstall: true, clientType: 'horizon' }
+        );
+      }
+      return createErrorResponse(
+        ERROR_CODES.CLIENT_LAUNCH_FAILED, 
+        'Failed to launch Horizon connection', 
+        error.message
+      );
     }
   });
 
@@ -41,12 +58,23 @@ function setupLauncherIpcHandlers(logger) {
   ipcMain.handle('launch-citrix', async (event, connection, settings) => {
     try {
       citrixLauncher.launchCitrix(connection, settings?.citrix || {});
-      return ok(true);
+      return createSuccessResponse(true);
     } catch (error) {
       if (logger) logger('error', `Citrix launch error: ${error.message}`);
       // Check if client not found
       const notFound = error.message?.includes('not found') || error.message?.includes('Not found');
-      return fail(error, notFound ? { needsInstall: true, clientType: 'citrix' } : {});
+      if (notFound) {
+        return createErrorResponse(
+          ERROR_CODES.CLIENT_NOT_FOUND, 
+          'Citrix client not found', 
+          { needsInstall: true, clientType: 'citrix' }
+        );
+      }
+      return createErrorResponse(
+        ERROR_CODES.CLIENT_LAUNCH_FAILED, 
+        'Failed to launch Citrix connection', 
+        error.message
+      );
     }
   });
 
@@ -54,10 +82,14 @@ function setupLauncherIpcHandlers(logger) {
   ipcMain.handle('launch-vpn', async () => {
     try {
       vpnLauncher.launchVpn();
-      return ok(true);
+      return createSuccessResponse(true);
     } catch (error) {
       if (logger) logger('error', `VPN launch error: ${error.message}`);
-      return fail(error);
+      return createErrorResponse(
+        ERROR_CODES.CLIENT_LAUNCH_FAILED, 
+        'Failed to launch VPN connection', 
+        error.message
+      );
     }
   });
 }

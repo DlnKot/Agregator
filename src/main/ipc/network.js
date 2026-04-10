@@ -7,10 +7,18 @@ const { ipcMain } = require('electron');
 const networkCheck = require('../utils/networkCheck');
 const { getStore } = require('../stores/storeManager');
 const { BUILTIN_DEFAULTS } = require('../config/defaults');
+const { 
+  createErrorResponse, 
+  createSuccessResponse,
+  ERROR_CODES 
+} = require('./errorCodes');
 
 function setupNetworkIpcHandlers(logger) {
-  const ok = (data) => ({ success: true, data });
-  const fail = (error) => ({ success: false, error: error?.message || String(error) });
+  const ok = (data) => createSuccessResponse(data);
+  const fail = (error) => {
+    if (logger) logger('error', `Network check error: ${error?.message || String(error)}`);
+    return createErrorResponse(ERROR_CODES.NETWORK_ERROR, 'Network check failed', error?.message);
+  };
 
   // Run full network check
   ipcMain.handle('network-run-full-check', async (event, payload) => {

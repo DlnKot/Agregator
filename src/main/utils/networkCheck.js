@@ -193,7 +193,11 @@ function runPing(host, count = 10) {
           pingChild.stderr.on('data', (d) => { errOut += d.toString(); });
 
           const timeout2 = setTimeout(() => {
-            try { pingChild.kill('SIGKILL'); } catch { /* ignore */ }
+            try {
+              pingChild.kill('SIGKILL');
+            } catch (killErr) {
+              logger('warn', `NetworkCheck: failed to kill fallback ping process: ${killErr.message}`);
+            }
           }, 20000);
 
           pingChild.on('close', (code) => {
@@ -218,7 +222,9 @@ function runPing(host, count = 10) {
             });
           });
           return;
-        } catch { /* ignore */ }
+        } catch (fallbackErr) {
+          logger('warn', `NetworkCheck: fallback ping launch failed: ${fallbackErr.message}`);
+        }
       }
 
       resolve({
@@ -238,7 +244,11 @@ function runPing(host, count = 10) {
 
     const timeout = setTimeout(() => {
       timedOut = true;
-      try { child.kill('SIGKILL'); } catch { /* ignore */ }
+      try {
+        child.kill('SIGKILL');
+      } catch (killErr) {
+        logger('warn', `NetworkCheck: failed to kill ping process on timeout: ${killErr.message}`);
+      }
     }, 20000);
 
     child.on('close', (code) => {
