@@ -79,6 +79,18 @@
             </span>
             <span v-else class="launcher-status not-installed">Не установлено</span>
           </div>
+          <button 
+            class="launcher-refresh" 
+            @click.stop="loadRudesktopStatus" 
+            :class="{ loading: isLoadingStatus }"
+            title="Обновить статус"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M23 4v6h-6"></path>
+              <path d="M1 20v-6h6"></path>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+          </button>
         </button>
       </div>
     </nav>
@@ -134,7 +146,10 @@ const rudesktopStatus = reactive({
   deviceId: null
 })
 
+const isLoadingStatus = ref(false)
+
 async function loadRudesktopStatus() {
+  isLoadingStatus.value = true
   try {
     if (window.api?.getRudesktopStatus) {
       const result = await window.api.getRudesktopStatus()
@@ -145,6 +160,8 @@ async function loadRudesktopStatus() {
     }
   } catch (e) {
     console.error('Failed to get RuDesktop status:', e)
+  } finally {
+    isLoadingStatus.value = false
   }
 }
 
@@ -273,6 +290,7 @@ defineExpose({
   padding: 10px 16px;
   /* background: var(--bg-tertiary); */
   color: var(--text-primary);
+  position: relative;
 }
 
 .launcher-btn:hover {
@@ -282,7 +300,7 @@ defineExpose({
 .launcher-icon {
   width: 28px;
   height: 28px;
-  color: black;
+  color: var(--text-primary);
   flex-shrink: 0;
 }
 
@@ -311,6 +329,47 @@ defineExpose({
 
 .launcher-status.not-installed {
   color: #d97706;
+}
+
+.launcher-refresh {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  padding: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 50%;
+  cursor: pointer;
+  opacity: 0;
+  transition: var(--transition);
+}
+
+.launcher-btn:hover .launcher-refresh {
+  opacity: 1;
+}
+
+.launcher-refresh:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.launcher-refresh.loading svg {
+  animation: spin 1s linear infinite;
+}
+
+.launcher-refresh svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* Sidebar footer */
