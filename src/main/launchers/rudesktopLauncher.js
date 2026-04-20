@@ -7,7 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const { log: logger } = require('../utils/logger');
 
-const RUDESKTOP_DOWNLOAD_URL = 'https://rudesktop.ru';
+const RUDESKTOP_DOWNLOAD_URL = 'https://rudesktop.ru/downloads/';
 
 let cachedDeviceId = null;
 
