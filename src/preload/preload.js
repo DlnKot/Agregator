@@ -28,6 +28,9 @@ contextBridge.exposeInMainWorld('api', {
   launchHorizon: (connection, settings) => ipcRenderer.invoke('launch-horizon', connection, settings),
   launchCitrix: (connection, settings) => ipcRenderer.invoke('launch-citrix', connection, settings),
   launchVpn: () => ipcRenderer.invoke('launch-vpn'),
+  getRudesktopStatus: () => ipcRenderer.invoke('get-rudesktop-status'),
+  launchRudesktop: () => ipcRenderer.invoke('launch-rudesktop'),
+  openRudesktopDownload: () => ipcRenderer.invoke('open-rudesktop-download'),
 
   // Auto-updater
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),

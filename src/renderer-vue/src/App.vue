@@ -7,71 +7,16 @@
       </div>
       <div class="app-content">
         <!-- Sidebar -->
-        <aside class="sidebar">
-          <nav class="sidebar-nav">
-            <button class="nav-item" :class="{ active: currentView === 'connections' }"
-              @click="handleViewChange('connections')">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="2" y="3" width="20" height="14" rx="2" />
-                <line x1="8" y1="21" x2="16" y2="21" />
-                <line x1="12" y1="17" x2="12" y2="21" />
-              </svg>
-              Подключения
-            </button>
-            <button class="nav-item" :class="{ active: currentView === 'settings' }"
-              @click="handleViewChange('settings')">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="3" />
-                <path
-                  d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-              </svg>
-              Настройки
-            </button>
-            <button class="nav-item" :class="{ active: currentView === 'network' }"
-              @click="handleViewChange('network')">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M4 19v-7"></path>
-                <path d="M8 19v-11"></path>
-                <path d="M12 19v-4"></path>
-                <path d="M16 19v-9"></path>
-                <path d="M20 19v-13"></path>
-              </svg>
-              Проверка сети
-            </button>
-            <button class="nav-item" :class="{ active: currentView === 'help' }" @click="handleViewChange('help')">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-                stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                <path d="M12 17h.01" />
-              </svg>
-              Помощь
-            </button>
-          </nav>
-          <div class="sidebar-footer">
-            <button class="theme-toggle" type="button" @click="toggleTheme"
-              :title="theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'">
-              <span class="theme-toggle-icon" aria-hidden="true">
-                <svg v-if="theme === 'dark'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="4"></circle>
-                  <path d="M12 2v2"></path>
-                  <path d="M12 20v2"></path>
-                  <path d="M4.93 4.93l1.41 1.41"></path>
-                  <path d="M17.66 17.66l1.41 1.41"></path>
-                  <path d="M2 12h2"></path>
-                  <path d="M20 12h2"></path>
-                  <path d="M4.93 19.07l1.41-1.41"></path>
-                  <path d="M17.66 6.34l1.41-1.41"></path>
-                </svg>
-                <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path>
-                </svg>
-              </span>
-              <span class="theme-toggle-text">{{ theme === 'dark' ? 'Light' : 'Dark' }}</span>
-            </button>
-            <span class="version">v{{ appVersion }}</span>
-          </div>
-        </aside>
+        <SidebarNav 
+          :current-view="currentView"
+          :theme="theme"
+          :app-version="appVersion"
+          @view-change="handleViewChange"
+          @toggle-theme="toggleTheme"
+          @rudesktop-launched="handleRudesktopLaunched"
+          @show-rudesktop-modal="showRudesktopModal = true"
+          ref="sidebarNavRef"
+        />
 
         <!-- Main Content -->
         <main class="main-content">
@@ -169,6 +114,14 @@
       @installed="handleInstallComplete"
     />
 
+    <!-- RuDesktop not found modal -->
+    <RudesktopNotFoundModal 
+      v-if="showRudesktopModal" 
+      :show="showRudesktopModal"
+      @close="showRudesktopModal = false"
+      @download="handleRudesktopDownload"
+    />
+
     <!-- Toast -->
     <div v-if="toast.show" :class="['toast', toast.type]">
       <span class="toast-message">{{ toast.message }}</span>
@@ -180,12 +133,14 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useConnections, useSettings, useLauncher, useAutoUpdate, useTheme, useInstaller } from './composables'
 import ConnectionsList from './components/ConnectionsList.vue'
+import SidebarNav from './components/SidebarNav.vue'
 import { SettingsView } from './components/settings'
 import NetworkCheckView from './components/NetworkCheckView.vue'
 import HelpView from './components/HelpView.vue'
 import ConnectionModal from './components/ConnectionModal.vue'
 import FirstRunModal from './components/FirstRunModal.vue'
 import InstallDialog from './components/InstallDialog.vue'
+import RudesktopNotFoundModal from './components/RudesktopNotFoundModal.vue'
 import versionData from '../../version.js'
 import headerLogoBlack from './assets/icons/logo-black.svg'
 import headerLogoWhite from './assets/icons/logo-white.svg'
@@ -193,6 +148,7 @@ import headerMarkBlack from './assets/icons/arc-black.svg'
 import headerMarkWhite from './assets/icons/arc-white.svg'
 
 const appVersion = ref(versionData.version)
+const sidebarNavRef = ref(null)
 
 // Composables
 const { theme, toggleTheme, initTheme } = useTheme()
@@ -216,6 +172,9 @@ const { initAutoUpdater } = useAutoUpdate()
 // Install dialog state
 const showInstallDialog = ref(false)
 const pendingInstallClient = ref(null)
+
+// RuDesktop modal state
+const showRudesktopModal = ref(false)
 
 function closeInstallDialog() {
   showInstallDialog.value = false
@@ -387,6 +346,27 @@ async function handleVpnClick() {
   } else {
     showToast(result?.error || 'Не удалось запустить VPN клиент', 'error')
   }
+}
+
+// RuDesktop launch handler
+function handleRudesktopLaunched(data) {
+  if (data?.deviceId) {
+    showToast(`RuDesktop запущен. ID: ${data.deviceId}`, 'success')
+  } else {
+    showToast('RuDesktop запущен', 'success')
+  }
+}
+
+// RuDesktop download handler
+async function handleRudesktopDownload() {
+  try {
+    if (window.api?.openRudesktopDownload) {
+      await window.api.openRudesktopDownload()
+    }
+  } catch (e) {
+    console.error('Failed to open RuDesktop download:', e)
+  }
+  showRudesktopModal.value = false
 }
 
 

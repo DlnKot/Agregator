@@ -8,6 +8,7 @@ const rdpLauncher = require('../launchers/rdpLauncher');
 const horizonLauncher = require('../launchers/horizonLauncher');
 const citrixLauncher = require('../launchers/citrixLauncher');
 const vpnLauncher = require('../launchers/vpnLauncher');
+const rudesktopLauncher = require('../launchers/rudesktopLauncher');
 const { 
   createErrorResponse, 
   createSuccessResponse,
@@ -88,6 +89,58 @@ function setupLauncherIpcHandlers(logger) {
       return createErrorResponse(
         ERROR_CODES.CLIENT_LAUNCH_FAILED, 
         'Failed to launch VPN connection', 
+        error.message
+      );
+    }
+  });
+
+  // Get RuDesktop status
+  ipcMain.handle('get-rudesktop-status', async () => {
+    try {
+      const status = rudesktopLauncher.getStatus();
+      return createSuccessResponse(status);
+    } catch (error) {
+      if (logger) logger('error', `RuDesktop status error: ${error.message}`);
+      return createErrorResponse(
+        ERROR_CODES.UNKNOWN_ERROR,
+        'Failed to get RuDesktop status',
+        error.message
+      );
+    }
+  });
+
+  // Launch RuDesktop
+  ipcMain.handle('launch-rudesktop', async () => {
+    try {
+      const result = rudesktopLauncher.launchRuDesktop();
+      if (result.needsInstall) {
+        return createErrorResponse(
+          ERROR_CODES.CLIENT_NOT_FOUND,
+          'RuDesktop not found',
+          { needsInstall: true, downloadUrl: rudesktopLauncher.RUDESKTOP_DOWNLOAD_URL }
+        );
+      }
+      return createSuccessResponse(result);
+    } catch (error) {
+      if (logger) logger('error', `RuDesktop launch error: ${error.message}`);
+      return createErrorResponse(
+        ERROR_CODES.CLIENT_LAUNCH_FAILED,
+        'Failed to launch RuDesktop',
+        error.message
+      );
+    }
+  });
+
+  // Open RuDesktop download page
+  ipcMain.handle('open-rudesktop-download', async () => {
+    try {
+      rudesktopLauncher.openDownloadPage();
+      return createSuccessResponse(true);
+    } catch (error) {
+      if (logger) logger('error', `RuDesktop download page error: ${error.message}`);
+      return createErrorResponse(
+        ERROR_CODES.UNKNOWN_ERROR,
+        'Failed to open download page',
         error.message
       );
     }
