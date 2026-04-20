@@ -349,9 +349,14 @@ async function handleVpnClick() {
 }
 
 // RuDesktop launch handler
-function handleRudesktopLaunched(data) {
+async function handleRudesktopLaunched(data) {
   if (data?.deviceId) {
-    showToast(`RuDesktop запущен. ID: ${data.deviceId}`, 'success')
+    try {
+      await navigator.clipboard.writeText(data.deviceId)
+      showToast(`RuDesktop запущен. ID ${data.deviceId} скопирован`, 'success')
+    } catch (e) {
+      showToast(`RuDesktop запущен. ID: ${data.deviceId}`, 'success')
+    }
   } else {
     showToast('RuDesktop запущен', 'success')
   }
