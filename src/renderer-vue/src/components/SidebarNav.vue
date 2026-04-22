@@ -92,6 +92,39 @@
             </svg>
           </button>
         </button>
+
+        <!-- VPN launcher button -->
+        <button 
+          class="nav-item launcher-btn" 
+          :class="{ 'vpn-connected': vpnStatus.connected, loading: vpnStatus.loading }"
+          @click="handleVpnClick"
+          :disabled="vpnStatus.platform === 'win32' && !vpnStatus.clientInstalled && !vpnStatus.connected"
+        >
+          <div class="launcher-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              <path v-if="vpnStatus.connected" d="M9 12l2 2 4-4"></path>
+            </svg>
+          </div>
+          <div class="launcher-info">
+            <span class="launcher-name">VPN</span>
+            <span v-if="vpnStatus.connected" class="launcher-status connected">Подключено</span>
+            <span v-else-if="vpnStatus.clientInstalled || vpnStatus.platform === 'darwin'" class="launcher-status">Нажмите для запуска</span>
+            <span v-else class="launcher-status not-installed">Клиент не найден</span>
+          </div>
+          <button 
+            class="launcher-refresh" 
+            @click.stop="loadVpnStatus" 
+            :class="{ loading: vpnStatus.loading }"
+            title="Обновить статус"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M23 4v6h-6"></path>
+              <path d="M1 20v-6h6"></path>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+          </button>
+        </button>
       </div>
     </nav>
 
@@ -139,11 +172,18 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['view-change', 'toggle-theme', 'rudesktop-launched', 'show-rudesktop-modal'])
+const emit = defineEmits(['view-change', 'toggle-theme', 'rudesktop-launched', 'show-rudesktop-modal', 'show-vpn-modal'])
 
 const rudesktopStatus = reactive({
   installed: false,
   deviceId: null
+})
+
+const vpnStatus = reactive({
+  clientInstalled: false,
+  connected: false,
+  loading: false,
+  platform: 'win32'
 })
 
 const isLoadingStatus = ref(false)
@@ -162,6 +202,67 @@ async function loadRudesktopStatus() {
     console.error('Failed to get RuDesktop status:', e)
   } finally {
     isLoadingStatus.value = false
+  }
+}
+
+async function loadVpnStatus() {
+  try {
+    const platformResult = await window.api?.getPlatform?.()
+    vpnStatus.platform = platformResult?.success ? platformResult.data : 'win32'
+    
+    if (vpnStatus.platform === 'darwin') {
+      vpnStatus.clientInstalled = true
+      if (window.api?.vpnStatus) {
+        const statusResult = await window.api.vpnStatus()
+        if (statusResult.success) {
+          vpnStatus.connected = statusResult.data?.connected || false
+        }
+      }
+    } else {
+      if (window.api?.vpnClientStatus) {
+        const clientResult = await window.api.vpnClientStatus()
+        if (clientResult.success) {
+          vpnStatus.clientInstalled = clientResult.data?.installed || false
+        }
+      }
+      if (window.api?.vpnStatus) {
+        const statusResult = await window.api.vpnStatus()
+        if (statusResult.success) {
+          vpnStatus.connected = statusResult.data?.connected || false
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Failed to get VPN status:', e)
+  }
+}
+
+async function handleVpnClick() {
+  vpnStatus.loading = true
+  try {
+    if (vpnStatus.platform === 'darwin') {
+      const result = await window.api?.launchVpn?.()
+      if (result?.success) {
+        // On macOS we can't track connection status easily
+      }
+    } else if (vpnStatus.platform === 'win32') {
+      if (!vpnStatus.clientInstalled) {
+        console.error('VPN client not installed')
+        return
+      }
+      if (vpnStatus.connected) {
+        const result = await window.api.vpnDisconnect()
+        if (result.success) {
+          vpnStatus.connected = false
+        }
+      } else {
+        emit('show-vpn-modal')
+      }
+    }
+  } catch (e) {
+    console.error('VPN toggle error:', e)
+  } finally {
+    vpnStatus.loading = false
   }
 }
 
@@ -189,10 +290,12 @@ async function handleRudesktopClick() {
 
 onMounted(() => {
   loadRudesktopStatus()
+  loadVpnStatus()
 })
 
 defineExpose({
-  loadRudesktopStatus
+  loadRudesktopStatus,
+  loadVpnStatus
 })
 </script>
 
@@ -295,6 +398,23 @@ defineExpose({
 
 .launcher-btn:hover {
   background: rgba(168, 85, 247, 0.15);
+}
+
+.launcher-btn.vpn-connected {
+  background: rgba(34, 197, 94, 0.15);
+}
+
+.launcher-btn.vpn-connected .launcher-icon {
+  color: #22c55e;
+}
+
+.launcher-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.launcher-status.connected {
+  color: #22c55e;
 }
 
 .launcher-icon {
