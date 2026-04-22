@@ -208,21 +208,17 @@ async function connectVpnInteractive(username, domainPassword, indeedCode) {
     });
 
     const sendInput = (text) => {
-      return new Promise((res) => {
-        if (timedOut) {
-          logger('warn', `[VPN Input] ⚠ Попытка ввода после таймаута, игнорируем`);
-          res();
-          return;
-        }
-        logger('info', `[VPN Input] → Записываем в PTY (${text.length} символов)`);
-        try {
-          ptyProcess.write(text + '\r');  // PTY использует \r
-          logger('info', `[VPN Input] ✓ Записано`);
-        } catch (e) {
-          logger('error', `[VPN Input] ❌ Ошибка: ${e.message}`);
-        }
-        setTimeout(res, 300);
-      });
+      if (timedOut) {
+        logger('warn', `[VPN Input] ⚠ Попытка ввода после таймаута, игнорируем`);
+        return;
+      }
+      logger('info', `[VPN Input] → Записываем в PTY (${text.length} символов)`);
+      try {
+        ptyProcess.write(text + '\r');
+        logger('info', `[VPN Input] ✓ Записано`);
+      } catch (e) {
+        logger('error', `[VPN Input] ❌ Ошибка: ${e.message}`);
+      }
     };
 
     const SUCCESS_MARKERS = [
@@ -259,9 +255,8 @@ async function connectVpnInteractive(username, domainPassword, indeedCode) {
       if (!passwordSent && lower.includes('password:')) {
         passwordSent = true;
         logger('info', `[VPN Connect] 🔑 Запрос пароля обнаружен, отправляем...`);
-        sendInput(domainPassword).then(() => {
-          logger('info', `[VPN Connect] 🔑 Пароль отправлен, ожидаем ответа VPN...`);
-        });
+        sendInput(domainPassword);
+        logger('info', `[VPN Connect] 🔑 Пароль отправлен, ожидаем ответа VPN...`);
       }
     };
 
