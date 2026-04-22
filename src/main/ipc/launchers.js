@@ -79,7 +79,7 @@ function setupLauncherIpcHandlers(logger) {
     }
   });
 
-  // Launch VPN
+  // Launch VPN (legacy - opens GUI)
   ipcMain.handle('launch-vpn', async () => {
     try {
       vpnLauncher.launchVpn();
@@ -89,6 +89,84 @@ function setupLauncherIpcHandlers(logger) {
       return createErrorResponse(
         ERROR_CODES.CLIENT_LAUNCH_FAILED, 
         'Failed to launch VPN connection', 
+        error.message
+      );
+    }
+  });
+
+  // VPN connect (interactive with credentials)
+  ipcMain.handle('vpn-connect', async (event, { username, password, challenge }) => {
+    try {
+      if (!username) {
+        return createErrorResponse(
+          ERROR_CODES.INVALID_INPUT,
+          'Username is required',
+          'username'
+        );
+      }
+      const result = await vpnLauncher.connectVpnInteractive(username, password, challenge);
+      return createSuccessResponse(result);
+    } catch (error) {
+      if (logger) logger('error', `VPN connect error: ${error.message}`);
+      return createErrorResponse(
+        ERROR_CODES.CLIENT_LAUNCH_FAILED,
+        'Failed to connect to VPN',
+        error.message
+      );
+    }
+  });
+
+  // VPN disconnect
+  ipcMain.handle('vpn-disconnect', async () => {
+    try {
+      const result = vpnLauncher.disconnectVpn();
+      return createSuccessResponse(result);
+    } catch (error) {
+      if (logger) logger('error', `VPN disconnect error: ${error.message}`);
+      return createErrorResponse(
+        ERROR_CODES.CLIENT_LAUNCH_FAILED,
+        'Failed to disconnect VPN',
+        error.message
+      );
+    }
+  });
+
+  // VPN status check
+  ipcMain.handle('vpn-status', async () => {
+    try {
+      const isConnected = await vpnLauncher.checkVpnConnected();
+      return createSuccessResponse({ connected: isConnected });
+    } catch (error) {
+      if (logger) logger('error', `VPN status error: ${error.message}`);
+      return createErrorResponse(
+        ERROR_CODES.UNKNOWN_ERROR,
+        'Failed to check VPN status',
+        error.message
+      );
+    }
+  });
+
+  // Check if VPN client is installed
+  ipcMain.handle('vpn-client-status', async () => {
+    try {
+      const exePath = vpnLauncher.findTracExecutable();
+      return createSuccessResponse({ installed: !!exePath, path: exePath });
+    } catch (error) {
+      if (logger) logger('error', `VPN client status error: ${error.message}`);
+      return createSuccessResponse({ installed: false, path: null });
+    }
+  });
+
+  // Cancel VPN connection
+  ipcMain.handle('vpn-cancel', async () => {
+    try {
+      const cancelled = vpnLauncher.cancelVpnConnection();
+      return createSuccessResponse({ cancelled });
+    } catch (error) {
+      if (logger) logger('error', `VPN cancel error: ${error.message}`);
+      return createErrorResponse(
+        ERROR_CODES.UNKNOWN_ERROR,
+        'Failed to cancel VPN',
         error.message
       );
     }

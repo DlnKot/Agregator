@@ -175,9 +175,70 @@ export function useLauncher() {
     }
   }
 
+  async function vpnConnect(username) {
+    try {
+      if (!window.api?.vpnConnect) {
+        return { success: false, error: 'VPN доступен только при запуске в приложении (Electron)' }
+      }
+      const result = await window.api.vpnConnect(username)
+      if (result?.success && window.api?.trackConnectionLaunch) {
+        window.api.trackConnectionLaunch('vpn', true)
+      }
+      return result
+    } catch (error) {
+      const errorMsg = error?.message || String(error)
+      console.error('VPN connect error:', errorMsg)
+      return { success: false, error: errorMsg }
+    }
+  }
+
+  async function vpnDisconnect() {
+    try {
+      if (!window.api?.vpnDisconnect) {
+        return { success: false, error: 'VPN доступен только при запуске в приложении (Electron)' }
+      }
+      const result = await window.api.vpnDisconnect()
+      return result
+    } catch (error) {
+      const errorMsg = error?.message || String(error)
+      console.error('VPN disconnect error:', errorMsg)
+      return { success: false, error: errorMsg }
+    }
+  }
+
+  async function vpnStatus() {
+    try {
+      if (!window.api?.vpnStatus) {
+        return { connected: false }
+      }
+      const result = await window.api.vpnStatus()
+      return result?.data || { connected: false }
+    } catch (error) {
+      console.error('VPN status error:', error)
+      return { connected: false }
+    }
+  }
+
+  async function vpnClientStatus() {
+    try {
+      if (!window.api?.vpnClientStatus) {
+        return { installed: false }
+      }
+      const result = await window.api.vpnClientStatus()
+      return result?.data || { installed: false }
+    } catch (error) {
+      console.error('VPN client status error:', error)
+      return { installed: false }
+    }
+  }
+
   return {
     launchConnection,
     launchVpn,
+    vpnConnect,
+    vpnDisconnect,
+    vpnStatus,
+    vpnClientStatus,
     checkClientInstalled
   }
 }

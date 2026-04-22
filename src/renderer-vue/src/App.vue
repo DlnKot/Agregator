@@ -15,6 +15,7 @@
           @toggle-theme="toggleTheme"
           @rudesktop-launched="handleRudesktopLaunched"
           @show-rudesktop-modal="showRudesktopModal = true"
+          @show-vpn-modal="showVpnModal = true"
           ref="sidebarNavRef"
         />
 
@@ -43,15 +44,6 @@
                   @click="currentClientFilter = 'citrix'" ref="tabCitrix">Citrix</button>
               </div>
               <div class="view-header-actions">
-                <button class="btn btn-secondary btn-vpn" title="Запустить VPN" @click="handleVpnClick">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="12 3 20 7.5 20 16.5 12 21 4 16.5 4 7.5 12 3"></polyline>
-                    <line x1="12" y1="12" x2="20" y2="7.5"></line>
-                    <line x1="12" y1="12" x2="12" y2="21"></line>
-                    <line x1="12" y1="12" x2="4" y2="7.5"></line>
-                  </svg>
-                  VPN
-                </button>
                 <button class="btn btn-primary" id="add-connection-btn" @click="openConnectionModal()">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="12" y1="5" x2="12" y2="19" />
@@ -122,6 +114,14 @@
       @download="handleRudesktopDownload"
     />
 
+    <!-- VPN Connect Modal -->
+    <VpnConnectModal 
+      v-if="showVpnModal" 
+      :default-username="defaultUsername"
+      @close="showVpnModal = false"
+      @connect="handleVpnConnected"
+    />
+
     <!-- Toast -->
     <div v-if="toast.show" :class="['toast', toast.type]">
       <span class="toast-message">{{ toast.message }}</span>
@@ -141,6 +141,7 @@ import ConnectionModal from './components/ConnectionModal.vue'
 import FirstRunModal from './components/FirstRunModal.vue'
 import InstallDialog from './components/InstallDialog.vue'
 import RudesktopNotFoundModal from './components/RudesktopNotFoundModal.vue'
+import VpnConnectModal from './components/VpnConnectModal.vue'
 import versionData from '../../version.js'
 import headerLogoBlack from './assets/icons/logo-black.svg'
 import headerLogoWhite from './assets/icons/logo-white.svg'
@@ -175,6 +176,9 @@ const pendingInstallClient = ref(null)
 
 // RuDesktop modal state
 const showRudesktopModal = ref(false)
+
+// VPN modal state
+const showVpnModal = ref(false)
 
 function closeInstallDialog() {
   showInstallDialog.value = false
@@ -338,16 +342,6 @@ async function handleLaunch(id) {
   }
 }
 
-// VPN handler - launching bank VPN
-async function handleVpnClick() {
-  const result = await launchVpn()
-  if (result && result.success) {
-    showToast('VPN клиент запущен', 'success')
-  } else {
-    showToast(result?.error || 'Не удалось запустить VPN клиент', 'error')
-  }
-}
-
 // RuDesktop launch handler
 async function handleRudesktopLaunched(data) {
   if (data?.deviceId) {
@@ -372,6 +366,35 @@ async function handleRudesktopDownload() {
     console.error('Failed to open RuDesktop download:', e)
   }
   showRudesktopModal.value = false
+}
+
+// VPN connect handler
+function handleVpnConnected(data) {
+  showToast('VPN подключен', 'success')
+  if (sidebarNavRef.value?.loadVpnStatus) {
+    sidebarNavRef.value.loadVpnStatus()
+  }
+}
+
+// VPN button click handler
+async function handleVpnClick() {
+  try {
+    const statusResult = await window.api.vpnStatus()
+    if (statusResult.success && statusResult.data?.connected) {
+      const result = await window.api.vpnDisconnect()
+      if (result.success) {
+        showToast('VPN отключен', 'success')
+        if (sidebarNavRef.value?.loadVpnStatus) {
+          sidebarNavRef.value.loadVpnStatus()
+        }
+      }
+    } else {
+      showVpnModal.value = true
+    }
+  } catch (e) {
+    console.error('VPN click error:', e)
+    showVpnModal.value = true
+  }
 }
 
 
