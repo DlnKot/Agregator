@@ -9,6 +9,8 @@ const horizonLauncher = require('../launchers/horizonLauncher');
 const citrixLauncher = require('../launchers/citrixLauncher');
 const vpnLauncher = require('../launchers/vpnLauncher');
 const rudesktopLauncher = require('../launchers/rudesktopLauncher');
+const achatLauncher = require('../launchers/achatLauncher');
+const tolkLauncher = require('../launchers/tolkLauncher');
 const { 
   createErrorResponse, 
   createSuccessResponse,
@@ -219,6 +221,80 @@ function setupLauncherIpcHandlers(logger) {
       return createErrorResponse(
         ERROR_CODES.UNKNOWN_ERROR,
         'Failed to open download page',
+        error.message
+      );
+    }
+  });
+
+  // Launch A-Chat
+  ipcMain.handle('launch-achat', async () => {
+    try {
+      const result = achatLauncher.launchAChat();
+      if (result.needsInstall) {
+        return createErrorResponse(
+          ERROR_CODES.CLIENT_NOT_FOUND,
+          'A-Чат не установлен',
+          { needsInstall: true }
+        );
+      }
+      return createSuccessResponse(result);
+    } catch (error) {
+      if (logger) logger('error', `A-Chat launch error: ${error.message}`);
+      return createErrorResponse(
+        ERROR_CODES.CLIENT_LAUNCH_FAILED,
+        'Failed to launch A-Чат',
+        error.message
+      );
+    }
+  });
+
+  // Open A-Chat web version
+  ipcMain.handle('open-achat-web', async () => {
+    try {
+      achatLauncher.openWebVersion();
+      return createSuccessResponse(true);
+    } catch (error) {
+      if (logger) logger('error', `A-Chat web error: ${error.message}`);
+      return createErrorResponse(
+        ERROR_CODES.UNKNOWN_ERROR,
+        'Failed to open A-Чат',
+        error.message
+      );
+    }
+  });
+
+  // Launch Tolk
+  ipcMain.handle('launch-tolk', async () => {
+    try {
+      const result = tolkLauncher.launchTolk();
+      if (result.needsInstall) {
+        return createErrorResponse(
+          ERROR_CODES.CLIENT_NOT_FOUND,
+          'Толк не установлен',
+          { needsInstall: true }
+        );
+      }
+      return createSuccessResponse(result);
+    } catch (error) {
+      if (logger) logger('error', `Tolk launch error: ${error.message}`);
+      return createErrorResponse(
+        ERROR_CODES.CLIENT_LAUNCH_FAILED,
+        'Failed to launch Толк',
+        error.message
+      );
+    }
+  });
+
+  // Open Tolk web version
+  ipcMain.handle('open-tolk-web', async () => {
+    try {
+      tolkLauncher.openWebVersion();
+      return createSuccessResponse(true);
+    } catch (error) {
+      if (logger) logger('error', `Tolk web error: ${error.message}`);
+      return createErrorResponse(
+        ERROR_CODES.UNKNOWN_ERROR,
+        'Failed to open Толк',
         error.message
       );
     }

@@ -36,6 +36,10 @@ contextBridge.exposeInMainWorld('api', {
   getRudesktopStatus: () => ipcRenderer.invoke('get-rudesktop-status'),
   launchRudesktop: () => ipcRenderer.invoke('launch-rudesktop'),
   openRudesktopDownload: () => ipcRenderer.invoke('open-rudesktop-download'),
+  launchAChat: () => ipcRenderer.invoke('launch-achat'),
+  openAChatWeb: () => ipcRenderer.invoke('open-achat-web'),
+  launchTolk: () => ipcRenderer.invoke('launch-tolk'),
+  openTolkWeb: () => ipcRenderer.invoke('open-tolk-web'),
 
   // Auto-updater
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),

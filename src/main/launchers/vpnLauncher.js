@@ -120,9 +120,10 @@ function spawnVpnProcess(tracArgs) {
   const tracExe = findTracExecutable();
   if (!tracExe) throw new Error('Checkpoint trac.exe не найден');
 
+  const safeArgs = tracArgs.map((arg, i) => (i >= 4 && arg.length > 0) ? '[hidden]' : arg);
   logger('info', `[VPN Spawn] ═══════════════════════════════════════`);
   logger('info', `[VPN Spawn] trac    : ${tracExe}`);
-  logger('info', `[VPN Spawn] args    : ${tracArgs.join(' ')}`);
+  logger('info', `[VPN Spawn] args    : ${safeArgs.join(' ')}`);
   logger('info', `[VPN Spawn] Node PID: ${process.pid}`);
 
   const ptyProcess = pty.spawn(tracExe, tracArgs, {
@@ -167,7 +168,6 @@ async function connectVpnInteractive(username, domainPassword, indeedCode) {
   return new Promise((resolve, reject) => {
     logger('info', `[VPN Connect] ═══════════════════════════════════════`);
     logger('info', `[VPN Connect] Начало подключения к ${CHECKPOINT_SITE}`);
-    logger('info', `[VPN Connect] Пользователь: ${username}`);
     logger('info', `[VPN Connect] Таймаут: ${VPN_CONNECT_TIMEOUT_MS}ms`);
     logger('info', `[VPN Connect] ═══════════════════════════════════════`);
 
@@ -254,9 +254,9 @@ async function connectVpnInteractive(username, domainPassword, indeedCode) {
 
       if (!passwordSent && lower.includes('password:')) {
         passwordSent = true;
-        logger('info', `[VPN Connect] 🔑 Запрос пароля обнаружен, отправляем...`);
+        logger('info', `[VPN Connect] Отправляем пароль...`);
         sendInput(domainPassword);
-        logger('info', `[VPN Connect] 🔑 Пароль отправлен, ожидаем ответа VPN...`);
+        logger('info', `[VPN Connect] Пароль отправлен, ожидаем ответа VPN...`);
       }
     };
 

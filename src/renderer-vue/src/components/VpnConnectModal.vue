@@ -32,19 +32,6 @@
           </div>
           
           <div class="form-group">
-            <label for="vpn-indeed">Паскод Indeed (одноразовый код)</label>
-            <input 
-              type="password" 
-              id="vpn-indeed" 
-              v-model="indeedCode" 
-              placeholder="Код из Indeed"
-              required
-              :disabled="loading"
-              autocomplete="one-time-code"
-            >
-          </div>
-
-          <div class="form-group">
             <label for="vpn-password">Пароль доменной учётной записи</label>
             <input 
               type="password" 
@@ -54,6 +41,19 @@
               required
               :disabled="loading"
               autocomplete="current-password"
+            >
+          </div>
+
+          <div class="form-group">
+            <label for="vpn-indeed">Паскод Indeed (одноразовый код)</label>
+            <input 
+              type="password" 
+              id="vpn-indeed" 
+              v-model="indeedCode" 
+              placeholder="Код из Indeed"
+              required
+              :disabled="loading"
+              autocomplete="one-time-code"
             >
           </div>
         </form>
@@ -250,17 +250,19 @@ async function cancelConnection() {
   color: var(--text-primary);
   font-size: 14px;
   padding: 16px;
-  background: var(--bg-tertiary);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
 }
 
 .spinner {
   width: 20px;
   height: 20px;
-  border: 2px solid var(--border-color);
-  border-top-color: var(--accent-primary);
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-top-color: var(--text-primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
 }
 
 @keyframes spin {

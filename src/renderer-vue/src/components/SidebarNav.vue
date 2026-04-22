@@ -22,19 +22,23 @@
           Настройки
         </button>
 
-        <!-- Placeholder buttons -->
-        <button class="nav-item placeholder">
+        <!-- Tolk button -->
+        <button class="nav-item" @click="handleTolkClick" :disabled="tolkStatus.loading">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
           </svg>
-          Толк
+          <span v-if="tolkStatus.loading">Загрузка...</span>
+          <span v-else>Толк</span>
         </button>
-        <button class="nav-item placeholder">
+
+        <!-- A-Chat button -->
+        <button class="nav-item" @click="handleAChatClick" :disabled="aChatStatus.loading">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path
               d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
           </svg>
-          А-Чат
+          <span v-if="aChatStatus.loading">Загрузка...</span>
+          <span v-else>А-Чат</span>
         </button>
       </div>
 
@@ -63,7 +67,7 @@
         </button>
 
         <!-- RuDesktop launcher button -->
-        <button class="nav-item launcher-btn" @click="handleRudesktopClick">
+        <div class="nav-item launcher-btn" @click="handleRudesktopClick">
           <div class="launcher-icon">
             <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M56 20 A40 40 0 0 0 41 100 L56 20" stroke="currentColor" stroke-width="3" stroke-linecap="round"
@@ -91,14 +95,13 @@
               <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
             </svg>
           </button>
-        </button>
+        </div>
 
         <!-- VPN launcher button -->
-        <button 
+        <div 
           class="nav-item launcher-btn" 
-          :class="{ 'vpn-connected': vpnStatus.connected, loading: vpnStatus.loading }"
+          :class="{ 'vpn-connected': vpnStatus.connected, loading: vpnStatus.loading, disabled: vpnStatus.platform === 'win32' && !vpnStatus.clientInstalled && !vpnStatus.connected }"
           @click="handleVpnClick"
-          :disabled="vpnStatus.platform === 'win32' && !vpnStatus.clientInstalled && !vpnStatus.connected"
         >
           <div class="launcher-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -124,7 +127,7 @@
               <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
             </svg>
           </button>
-        </button>
+        </div>
       </div>
     </nav>
 
@@ -172,7 +175,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['view-change', 'toggle-theme', 'rudesktop-launched', 'show-rudesktop-modal', 'show-vpn-modal'])
+const emit = defineEmits(['view-change', 'toggle-theme', 'rudesktop-launched', 'show-rudesktop-modal', 'show-vpn-modal', 'show-tolk-modal', 'show-achat-modal'])
 
 const rudesktopStatus = reactive({
   installed: false,
@@ -184,6 +187,16 @@ const vpnStatus = reactive({
   connected: false,
   loading: false,
   platform: 'win32'
+})
+
+const aChatStatus = reactive({
+  installed: false,
+  loading: false
+})
+
+const tolkStatus = reactive({
+  installed: false,
+  loading: false
 })
 
 const isLoadingStatus = ref(false)
@@ -285,6 +298,36 @@ async function handleRudesktopClick() {
     }
   } catch (e) {
     console.error('Failed to launch RuDesktop:', e)
+  }
+}
+
+async function handleAChatClick() {
+  aChatStatus.loading = true
+  try {
+    const result = await window.api?.launchAChat?.()
+    if (result?.success) {
+      return
+    }
+    emit('show-achat-modal')
+  } catch (e) {
+    emit('show-achat-modal')
+  } finally {
+    aChatStatus.loading = false
+  }
+}
+
+async function handleTolkClick() {
+  tolkStatus.loading = true
+  try {
+    const result = await window.api?.launchTolk?.()
+    if (result?.success) {
+      return
+    }
+    emit('show-tolk-modal')
+  } catch (e) {
+    emit('show-tolk-modal')
+  } finally {
+    tolkStatus.loading = false
   }
 }
 

@@ -16,6 +16,8 @@
           @rudesktop-launched="handleRudesktopLaunched"
           @show-rudesktop-modal="showRudesktopModal = true"
           @show-vpn-modal="showVpnModal = true"
+          @show-achat-modal="showAChatModal = true"
+          @show-tolk-modal="showTolkModal = true"
           ref="sidebarNavRef"
         />
 
@@ -122,6 +124,40 @@
       @connect="handleVpnConnected"
     />
 
+    <!-- A-Chat not found modal -->
+    <div v-if="showAChatModal" class="modal-overlay" @click.self="showAChatModal = false">
+      <div class="modal-content modal-sm">
+        <div class="modal-header">
+          <h3>А-Чат</h3>
+          <button class="modal-close" @click="showAChatModal = false">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>Приложение А-Чат не установлено. Хотите открыть веб-версию?</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" @click="showAChatModal = false">Нет</button>
+          <button class="btn btn-primary" @click="openAChatWeb">Да</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tolk not found modal -->
+    <div v-if="showTolkModal" class="modal-overlay" @click.self="showTolkModal = false">
+      <div class="modal-content modal-sm">
+        <div class="modal-header">
+          <h3>Толк</h3>
+          <button class="modal-close" @click="showTolkModal = false">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>Приложение Толк не установлено. Хотите открыть веб-версию?</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" @click="showTolkModal = false">Нет</button>
+          <button class="btn btn-primary" @click="openTolkWeb">Да</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Toast -->
     <div v-if="toast.show" :class="['toast', toast.type]">
       <span class="toast-message">{{ toast.message }}</span>
@@ -179,6 +215,30 @@ const showRudesktopModal = ref(false)
 
 // VPN modal state
 const showVpnModal = ref(false)
+
+// A-Chat modal state
+const showAChatModal = ref(false)
+
+// Tolk modal state
+const showTolkModal = ref(false)
+
+async function openAChatWeb() {
+  try {
+    await window.api?.openAChatWeb?.()
+  } catch (e) {
+    console.error('Failed to open A-Chat web:', e)
+  }
+  showAChatModal.value = false
+}
+
+async function openTolkWeb() {
+  try {
+    await window.api?.openTolkWeb?.()
+  } catch (e) {
+    console.error('Failed to open Tolk web:', e)
+  }
+  showTolkModal.value = false
+}
 
 function closeInstallDialog() {
   showInstallDialog.value = false
@@ -473,6 +533,129 @@ initTheme()
 </script>
 
 <style scoped>
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content {
+  position: relative;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 360px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-lg);
+  animation: modalSlideIn 200ms ease;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 22px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.modal-close:hover {
+  color: var(--text-primary);
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.modal-body p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--accent-primary);
+  color: #0b1220;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-primary-hover);
+}
+
+.btn-secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--bg-secondary);
+}
+
 .app {
   height: 100vh;
   width: 100vw;
