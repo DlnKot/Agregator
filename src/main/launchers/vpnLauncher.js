@@ -121,10 +121,6 @@ function spawnVpnProcess(tracArgs) {
   if (!tracExe) throw new Error('Checkpoint trac.exe не найден');
 
   const safeArgs = tracArgs.map((arg, i) => (i >= 4 && arg.length > 0) ? '[hidden]' : arg);
-  logger('info', `[VPN Spawn] ═══════════════════════════════════════`);
-  logger('info', `[VPN Spawn] trac    : ${tracExe}`);
-  logger('info', `[VPN Spawn] args    : ${safeArgs.join(' ')}`);
-  logger('info', `[VPN Spawn] Node PID: ${process.pid}`);
 
   const ptyProcess = pty.spawn(tracExe, tracArgs, {
     name: 'xterm',
@@ -141,7 +137,6 @@ function spawnVpnProcess(tracArgs) {
   currentVpnProcess = ptyProcess;
 
   ptyProcess.onExit(({ exitCode, signal }) => {
-    logger('info', `[VPN Spawn] PTY завершён. Код: ${exitCode}, сигнал: ${signal ?? 'нет'}`);
     currentVpnProcess = null;
   });
 
@@ -166,10 +161,8 @@ function cancelVpnConnection() {
 
 async function connectVpnInteractive(username, domainPassword, indeedCode) {
   return new Promise((resolve, reject) => {
-    logger('info', `[VPN Connect] ═══════════════════════════════════════`);
     logger('info', `[VPN Connect] Начало подключения к ${CHECKPOINT_SITE}`);
     logger('info', `[VPN Connect] Таймаут: ${VPN_CONNECT_TIMEOUT_MS}ms`);
-    logger('info', `[VPN Connect] ═══════════════════════════════════════`);
 
     const ptyProcess = spawnVpnProcess(['connect', '-s', CHECKPOINT_SITE, '-u', username, '-p', indeedCode]);
 
@@ -189,9 +182,7 @@ async function connectVpnInteractive(username, domainPassword, indeedCode) {
 
     const timeout = setTimeout(() => {
       timedOut = true;
-      logger('error', `[VPN Connect] ⏰ ТАЙМАУТ после ${VPN_CONNECT_TIMEOUT_MS}ms`);
-      logger('error', `[VPN Connect] Весь вывод на момент таймаута:\n${output || '(пусто)'}`);
-      logger('error', `[VPN Connect] passwordSent=${passwordSent}, chunks=${chunkCount}`);
+      
       settle(reject, new Error('Таймаут ожидания ответа от VPN'));
     }, VPN_CONNECT_TIMEOUT_MS);
 
@@ -203,19 +194,19 @@ async function connectVpnInteractive(username, domainPassword, indeedCode) {
         .replace(/\r/g, '');                       // carriage returns
       output += clean;
       chunkCount++;
-      logger('info', `[VPN PTY #${chunkCount}] ${JSON.stringify(clean.trim())}`);
+      
       checkOutput();
     });
 
     const sendInput = (text) => {
       if (timedOut) {
-        logger('warn', `[VPN Input] ⚠ Попытка ввода после таймаута, игнорируем`);
+        
         return;
       }
-      logger('info', `[VPN Input] → Записываем в PTY (${text.length} символов)`);
+     
       try {
         ptyProcess.write(text + '\r');
-        logger('info', `[VPN Input] ✓ Записано`);
+        
       } catch (e) {
         logger('error', `[VPN Input] ❌ Ошибка: ${e.message}`);
       }
@@ -246,15 +237,12 @@ async function connectVpnInteractive(username, domainPassword, indeedCode) {
 
       const hitFailure = FAILURE_MARKERS.find(m => lower.includes(m));
       if (hitFailure) {
-        logger('error', `[VPN Connect] ❌ Ошибка. Маркер: "${hitFailure}"`);
-        logger('error', `[VPN Connect] Полный вывод:\n${output}`);
         settle(reject, new Error(output || 'Ошибка подключения к VPN'));
         return;
       }
 
       if (!passwordSent && lower.includes('password:')) {
         passwordSent = true;
-        logger('info', `[VPN Connect] Отправляем пароль...`);
         sendInput(domainPassword);
         logger('info', `[VPN Connect] Пароль отправлен, ожидаем ответа VPN...`);
       }
@@ -262,7 +250,6 @@ async function connectVpnInteractive(username, domainPassword, indeedCode) {
 
     ptyProcess.onExit(({ exitCode }) => {
       logger('info', `[VPN Connect] PTY завершён. Код: ${exitCode}`);
-      logger('info', `[VPN Connect] Итоговый вывод:\n${output || '(пусто)'}`);
 
       if (settled) {
         logger('info', `[VPN Connect] Промис уже завершён ранее, пропускаем`);
