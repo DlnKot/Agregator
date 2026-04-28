@@ -243,6 +243,10 @@ async function cancelConnection() {
   line-height: 1.5;
 }
 
+[data-theme="light"] .vpn-desc {
+  color: #4a5568;
+}
+
 .vpn-status {
   display: flex;
   align-items: center;
@@ -258,7 +262,7 @@ async function cancelConnection() {
 .spinner {
   width: 20px;
   height: 20px;
-  border: 2px solid rgba(0, 0, 0, 0.1);
+  border: 2px solid var(--border-color);
   border-top-color: var(--text-primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -324,8 +328,12 @@ async function cancelConnection() {
   display: block;
   font-size: 13px;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: #4a5568;
   margin-bottom: 8px;
+}
+
+[data-theme="dark"] .form-group label {
+  color: var(--text-secondary);
 }
 
 .form-group input {
@@ -337,6 +345,14 @@ async function cancelConnection() {
   color: var(--text-primary);
   font-size: 14px;
   transition: var(--transition);
+}
+
+.form-group input::placeholder {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .form-group input::placeholder {
+  color: var(--text-muted);
 }
 
 .form-group input:focus {

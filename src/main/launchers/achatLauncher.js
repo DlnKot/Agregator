@@ -3,16 +3,29 @@ const fs = require('fs');
 const path = require('path');
 const { log: logger } = require('../utils/logger');
 
-const A_CHAT_PATH = 'C:\\Program Files\\A_Chat\\A_Chat.exe';
 const A_CHAT_WEB_URL = 'https://a-chat.alfabank.ru/';
 
-function checkInstalled() {
-  if (process.platform !== 'win32') return false;
-  try {
-    return fs.existsSync(A_CHAT_PATH);
-  } catch (e) {
-    return false;
+const A_CHAT_CANDIDATES = [
+  'C:\\Program Files\\A_Chat\\A_Chat.exe',
+  'C:\\Program Files (x86)\\A_Chat\\A_Chat.exe',
+  'C:\\A_Chat\\A_Chat.exe',
+];
+
+function findAChat() {
+  if (process.platform !== 'win32') return null;
+  
+  for (const p of A_CHAT_CANDIDATES) {
+    try {
+      if (fs.existsSync(p)) {
+        return p;
+      }
+    } catch (e) { }
   }
+  return null;
+}
+
+function checkInstalled() {
+  return findAChat() !== null;
 }
 
 function launchAChat() {
@@ -20,20 +33,20 @@ function launchAChat() {
     throw new Error('A-Чат запуск не поддерживается на этой платформе');
   }
 
-  const installed = checkInstalled();
+  const exePath = findAChat();
 
-  if (!installed) {
+  if (!exePath) {
     logger('info', '[A-Chat] Приложение не найдено');
     return { needsInstall: true };
   }
 
-  logger('info', `[A-Chat] Запуск: ${A_CHAT_PATH}`);
+  logger('info', `[A-Chat] Запуск: ${exePath}`);
 
-  const child = spawn(A_CHAT_PATH, [], {
+  const child = spawn(exePath, [], {
     detached: true,
     stdio: 'ignore',
     windowsHide: false,
-    shell: true,
+    shell: false,
   });
 
   child.on('error', (err) => {
@@ -53,6 +66,5 @@ module.exports = {
   checkInstalled,
   launchAChat,
   openWebVersion,
-  A_CHAT_PATH,
   A_CHAT_WEB_URL,
 };

@@ -308,6 +308,10 @@ async function handleAChatClick() {
     if (result?.success) {
       return
     }
+    if (result?.needsInstall) {
+      emit('show-achat-modal')
+      return
+    }
     emit('show-achat-modal')
   } catch (e) {
     emit('show-achat-modal')

@@ -161,8 +161,7 @@ function cancelVpnConnection() {
 
 async function connectVpnInteractive(username, domainPassword, indeedCode) {
   return new Promise((resolve, reject) => {
-    logger('info', `[VPN Connect] Начало подключения к ${CHECKPOINT_SITE}`);
-    logger('info', `[VPN Connect] Таймаут: ${VPN_CONNECT_TIMEOUT_MS}ms`);
+    logger('info', `[VPN Connect] Подключение к ${CHECKPOINT_SITE}`);
 
     const ptyProcess = spawnVpnProcess(['connect', '-s', CHECKPOINT_SITE, '-u', username, '-p', indeedCode]);
 
@@ -230,13 +229,14 @@ async function connectVpnInteractive(username, domainPassword, indeedCode) {
 
       const hitSuccess = SUCCESS_MARKERS.find(m => lower.includes(m));
       if (hitSuccess) {
-        logger('info', `[VPN Connect] ✅ Успешное подключение! Маркер: "${hitSuccess}"`);
+        logger('info', '[VPN Connect] ✅ Успешно');
         settle(resolve, { success: true });
         return;
       }
 
       const hitFailure = FAILURE_MARKERS.find(m => lower.includes(m));
       if (hitFailure) {
+        logger('error', `[VPN Connect] ❌ ${hitFailure}`);
         settle(reject, new Error(output || 'Ошибка подключения к VPN'));
         return;
       }
@@ -244,23 +244,17 @@ async function connectVpnInteractive(username, domainPassword, indeedCode) {
       if (!passwordSent && lower.includes('password:')) {
         passwordSent = true;
         sendInput(domainPassword);
-        logger('info', `[VPN Connect] Пароль отправлен, ожидаем ответа VPN...`);
       }
     };
 
     ptyProcess.onExit(({ exitCode }) => {
-      logger('info', `[VPN Connect] PTY завершён. Код: ${exitCode}`);
-
-      if (settled) {
-        logger('info', `[VPN Connect] Промис уже завершён ранее, пропускаем`);
-        return;
-      }
+      if (settled) return;
 
       checkOutput();
       if (settled) return;
 
       if (exitCode === 0) {
-        logger('info', `[VPN Connect] ✅ Код 0 — считаем успехом`);
+        logger('info', '[VPN Connect] ✅ Успешно');
         settle(resolve, { success: true });
       } else {
         logger('error', `[VPN Connect] ❌ Код ${exitCode}`);
@@ -276,7 +270,7 @@ function disconnectVpn() {
   const exePath = findTracExecutable();
   if (!exePath) throw new Error('Checkpoint trac.exe не найден');
 
-  logger('info', `[VPN Disconnect] Отключение через ${exePath}`);
+  logger('info', `[VPN Disconnect] Отключение...`);
 
   // disconnect не интерактивный — обычный spawnSync работает нормально
   const result = spawnSync(exePath, ['disconnect'], {
@@ -293,10 +287,8 @@ function disconnectVpn() {
     .filter(Boolean)
     .join('\n');
 
-  logger('info', `[VPN Disconnect] Вывод: ${out || '(пусто)'}`);
-  logger('info', `[VPN Disconnect] Код выхода: ${result.status}`);
-
   if (result.status !== 0) {
+    logger('error', `[VPN Disconnect] ❌ Код ${result.status}`);
     throw new Error(`Disconnect завершился с кодом ${result.status}: ${out}`);
   }
 

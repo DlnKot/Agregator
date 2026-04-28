@@ -298,12 +298,9 @@ async function loadData() {
   await Promise.all([loadConnections(), loadSettings()])
   await loadLastConnection()
   
-  // Set initial filter based on last connection
-  if (lastConnectionId.value) {
-    currentClientFilter.value = 'recent'
-  } else {
-    currentClientFilter.value = 'all'
-  }
+  // Set initial filter: always "all" by default (shows all connection types)
+  // "recent" only shows if there's a lastConnectionId
+  currentClientFilter.value = 'all'
 }
 
 // Computed default username from settings
@@ -340,11 +337,14 @@ function openConnectionModal(connection = null) {
   if (connection) {
     editingConnection.value = { ...connection }
   } else {
-    // When creating a new connection, preselect type based on current filter tab.
-    const t = (currentClientFilter.value && currentClientFilter.value !== 'all')
-      ? currentClientFilter.value
-      : 'rdp'
-    editingConnection.value = { type: t }
+    let type = 'rdp'
+    // For "recent" filter, use the last connection's type if available
+    if (currentClientFilter.value === 'recent' && lastConnection.value) {
+      type = lastConnection.value.type
+    } else if (currentClientFilter.value && currentClientFilter.value !== 'all' && currentClientFilter.value !== 'recent') {
+      type = currentClientFilter.value
+    }
+    editingConnection.value = { type }
   }
   showConnectionModal.value = true
 }
