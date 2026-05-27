@@ -19,6 +19,19 @@
         </div>
 
         <form @submit.prevent="connect" v-if="!loading">
+            <div class="form-group">
+            <label for="vpn-address">Адрес</label>
+            <select
+              type="text" 
+              id="vpn-address" 
+              v-model="address" 
+              required
+              :disabled="loading">
+              <option value="mypc.alfabank.ru">mypc.alfabank.ru</option>
+              <option value="mycc.alfabank.ru">mycc.alfabank.ru</option>
+              <option value="84.201.187.53">резерв</option>
+            </select>
+          </div>
           <div class="form-group">
             <label for="vpn-username">Учётная запись</label>
             <input 
@@ -45,7 +58,7 @@
           </div>
 
           <div class="form-group">
-            <label for="vpn-indeed">Паскод Indeed (одноразовый код)</label>
+            <label for="vpn-indeed">Код Indeed (одноразовый код)</label>
             <input 
               type="password" 
               id="vpn-indeed" 
@@ -59,7 +72,7 @@
         </form>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" @click="cancelConnection" :disabled="!loading">Отмена</button>
+        <button class="btn btn-secondary" @click="cancelConnection">Отмена</button>
         <button class="btn btn-primary" @click="connect" :disabled="loading || !username || !password || !indeedCode">
           {{ loading ? 'Подключение...' : 'Подключиться' }}
         </button>
@@ -85,6 +98,7 @@ const password = ref('')
 const indeedCode = ref('')
 const loading = ref(false)
 const error = ref('')
+const address = ref('mypc.alfabank.ru')
 const statusMessage = ref('Подключение к VPN...')
 
 function stripDomain(fullUsername) {
@@ -108,7 +122,8 @@ async function connect() {
     const credentials = {
       username: stripDomain(username.value),
       password: password.value,
-      challenge: indeedCode.value
+      challenge: indeedCode.value,
+      address: address.value,
     }
     const result = await window.api.vpnConnect(credentials)
     
@@ -303,7 +318,7 @@ async function cancelConnection() {
 
 .btn-primary {
   background: var(--accent-primary);
-  color: #0b1220;
+  color: var(--text-inverse);
 }
 
 .btn-primary:hover:not(:disabled) {

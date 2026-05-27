@@ -166,7 +166,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
 import { useConnections, useSettings, useLauncher, useAutoUpdate, useTheme, useInstaller } from './composables'
 import ConnectionsList from './components/ConnectionsList.vue'
 import SidebarNav from './components/SidebarNav.vue'
@@ -293,6 +293,16 @@ const clientSliderStyle = computed(() => {
   }
 })
 
+// Force slider update when lastConnectionId changes (tab may appear/disappear)
+watch(lastConnectionId, async () => {
+  await nextTick()
+  // Trigger reactivity by forcing re-evaluation
+  const filter = currentClientFilter.value
+  currentClientFilter.value = ''
+  await nextTick()
+  currentClientFilter.value = filter
+})
+
 // Load data function
 async function loadData() {
   await Promise.all([loadConnections(), loadSettings()])
@@ -339,8 +349,9 @@ function openConnectionModal(connection = null) {
   } else {
     let type = 'rdp'
     // For "recent" filter, use the last connection's type if available
-    if (currentClientFilter.value === 'recent' && lastConnection.value) {
-      type = lastConnection.value.type
+    // If no last connection (empty list), default to 'horizon'
+    if (currentClientFilter.value === 'recent') {
+      type = lastConnection.value?.type || 'horizon'
     } else if (currentClientFilter.value && currentClientFilter.value !== 'all' && currentClientFilter.value !== 'recent') {
       type = currentClientFilter.value
     }

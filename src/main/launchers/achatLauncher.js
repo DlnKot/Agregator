@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { log: logger } = require('../utils/logger');
 
-const A_CHAT_WEB_URL = 'https://a-chat.alfabank.ru/';
+const A_CHAT_WEB_URL = 'https://achat.best/';
 
 const A_CHAT_CANDIDATES = [
   'C:\\Program Files\\A_Chat\\A_Chat.exe',

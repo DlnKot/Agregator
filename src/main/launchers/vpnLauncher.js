@@ -19,7 +19,6 @@ if (process.platform === 'win32') {
   }
 }
 
-const CHECKPOINT_SITE = 'mypc.alfabank.ru';
 const VPN_CHECK_HOST = 'mypc.moscow.alfaintra.net';
 const VPN_CONNECT_TIMEOUT_MS = 60000;
 
@@ -159,11 +158,11 @@ function cancelVpnConnection() {
 
 // ─── Подключение ──────────────────────────────────────────────────────────────
 
-async function connectVpnInteractive(username, domainPassword, indeedCode) {
+async function connectVpnInteractive(username, domainPassword, indeedCode, address) {
   return new Promise((resolve, reject) => {
-    logger('info', `[VPN Connect] Подключение к ${CHECKPOINT_SITE}`);
+    logger('info', `[VPN Connect] Подключение к ${address}`);
 
-    const ptyProcess = spawnVpnProcess(['connect', '-s', CHECKPOINT_SITE, '-u', username, '-p', indeedCode]);
+    const ptyProcess = spawnVpnProcess(['connect', '-s', address, '-u', username, '-p', indeedCode]);
 
     let output = '';
     let chunkCount = 0;
@@ -378,6 +377,5 @@ module.exports = {
   checkVpnConnected,
   killAllProcesses,
   findTracExecutable,
-  CHECKPOINT_SITE,
   VPN_CHECK_HOST,
 };

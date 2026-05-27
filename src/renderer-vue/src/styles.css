@@ -7,8 +7,8 @@
   --bg-tertiary: #1f2937;       /* strong surface (chips/active/hover) */
   --bg-hover: #111827;          /* stronger hover */
 
-  --accent-primary: #dbdde1;
-  --accent-primary-hover: #2563eb;
+  --accent-primary: #2563eb;
+  --accent-primary-hover: #1d4ed8;
   --accent-success: #10b981;
   --accent-warning: #f59e0b;
   --accent-danger: #ef4444;

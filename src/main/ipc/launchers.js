@@ -97,7 +97,7 @@ function setupLauncherIpcHandlers(logger) {
   });
 
   // VPN connect (interactive with credentials)
-  ipcMain.handle('vpn-connect', async (event, { username, password, challenge }) => {
+  ipcMain.handle('vpn-connect', async (event, { username, password, challenge, address }) => {
     try {
       if (!username) {
         return createErrorResponse(
@@ -106,7 +106,7 @@ function setupLauncherIpcHandlers(logger) {
           'username'
         );
       }
-      const result = await vpnLauncher.connectVpnInteractive(username, password, challenge);
+      const result = await vpnLauncher.connectVpnInteractive(username, password, challenge, address);
       return createSuccessResponse(result);
     } catch (error) {
       if (logger) logger('error', `VPN connect error: ${error.message}`);
