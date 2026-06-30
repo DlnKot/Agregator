@@ -43,7 +43,7 @@ function createWindow(logger, appVersion) {
   mainWindow = new BrowserWindow({
     width: 1100,
     height: 880,
-    minWidth: 900,
+    minWidth: 1140,
     minHeight: 600,
     backgroundColor: '#0f0f0f',
     title: appVersion || 'Alfa Remote Client',

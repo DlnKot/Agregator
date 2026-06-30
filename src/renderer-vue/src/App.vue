@@ -3,7 +3,7 @@
     <div class="app-container">
       <div class="header">
         <img class="header-mark" :src="headerMarkSrc" alt="" aria-hidden="true" />
-        <img class="header-logo" :src="headerLogoSrc" alt="Alfa Remote Client" />
+        <h1 class="header-logo"><span class="header-symbol">&gt;</span>remote client<span class="header-symbol">_</span></h1>  
       </div>
       <div class="app-content">
         <!-- Sidebar -->
@@ -30,10 +30,6 @@
                 <div class="tab-slider" :style="clientSliderStyle"></div>
                 <button class="client-tab" :class="{ active: currentClientFilter === 'recent' }"
                   @click="currentClientFilter = 'recent'" v-if="lastConnectionId" ref="tabRecent">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <polyline points="12 6 12 12 16 14"></polyline>
-                  </svg>
                   Недавнее
                 </button>
                 <button class="client-tab" :class="{ active: currentClientFilter === 'all' }"
@@ -57,7 +53,7 @@
             </div>
 
             <div id="connections-list" class="connections-list">
-              <ConnectionsList :connections="filteredConnections" @launch="handleLaunch" @edit="openConnectionModal"
+              <ConnectionsList :connections="filteredConnections" :filter="currentClientFilter" @launch="handleLaunch" @edit="openConnectionModal"
                 @delete="handleDeleteConnection" @add="openConnectionModal" />
             </div>
           </section>
@@ -162,6 +158,9 @@
     <div v-if="toast.show" :class="['toast', toast.type]">
       <span class="toast-message">{{ toast.message }}</span>
     </div>
+
+    <!-- Alert Notification -->
+    <AlertNotification :show="alert.show" :message="alert.message" @close="alert.show = false" />
   </div>
 </template>
 
@@ -176,6 +175,7 @@ import HelpView from './components/HelpView.vue'
 import ConnectionModal from './components/ConnectionModal.vue'
 import FirstRunModal from './components/FirstRunModal.vue'
 import InstallDialog from './components/InstallDialog.vue'
+import AlertNotification from './components/AlertNotification.vue'
 import RudesktopNotFoundModal from './components/RudesktopNotFoundModal.vue'
 import VpnConnectModal from './components/VpnConnectModal.vue'
 import versionData from '../../version.js'
@@ -339,6 +339,20 @@ function showToast(message, type = 'success') {
   toast.show = true
   setTimeout(() => {
     toast.show = false
+  }, 3000)
+}
+
+// Alert Notification state
+const alert = reactive({
+  show: false,
+  message: ''
+})
+
+function showAlert(message) {
+  alert.message = message
+  alert.show = true
+  setTimeout(() => {
+    alert.show = false
   }, 3000)
 }
 
@@ -518,7 +532,7 @@ async function handleFirstRunSave(userData) {
   }
   await saveSettings(currentSettings)
   isFirstRun.value = false
-  showToast('Данные пользователя сохранены', 'success')
+  showAlert('Данные сохранены')
 
   // Reload connections to get default ones
   await loadData()
@@ -695,7 +709,7 @@ initTheme()
 .sidebar {
   width: var(--sidebar-width);
   background: var(--bg-secondary);
-  border-radius: 30px;
+  border-radius: 16px;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -707,30 +721,37 @@ initTheme()
   padding: 20px 8px;
   display: flex;
   align-items: center;
-  border-radius: 30px;
+  border-radius: 16px;
   flex-shrink: 0;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .header-mark {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   margin-left: 14px;
-  flex: 0 0 auto;
-  display: block;
+  -webkit-user-drag: none;
+  pointer-events: none;
 }
 
 .header-logo {
   height: 28px;
   width: auto;
   margin-left: 10px;
-  display: block;
+  margin-bottom: 10px;
+  -webkit-user-drag: none;
 }
 
 .header h1 {
   font-size: 24px;
   margin-inline: 12px;
-  font-weight: 300;
+  font-weight: 400;
   color: var(--text-primary);
+}
+
+.header-symbol {
+  color: var(--accent-danger);
 }
 
 .sidebar-nav {
@@ -840,7 +861,7 @@ initTheme()
   display: flex;
   flex-direction: column;
   background: var(--bg-secondary);
-  border-radius: 30px;
+  border-radius: 16px;
   min-height: 0;
   min-width: 0;
 }
@@ -855,12 +876,11 @@ initTheme()
 }
 
 .view-header {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto;
   align-items: center;
   gap: 16px;
   margin-bottom: 24px;
-  flex-wrap: wrap;
 }
 
 .view-header h2 {
@@ -872,7 +892,6 @@ initTheme()
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-left: auto;
 }
 
 /* Buttons */
@@ -904,6 +923,29 @@ initTheme()
   opacity: 1;
 }
 
+#add-connection-btn {
+  width: 221px;
+  height: 40px;
+  min-width: 88px;
+  min-height: 40px;
+  gap: 2px;
+  padding: 4px 16px;
+  border-radius: 999px;
+  background: #212124;
+  color: var(--text-inverse);
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+#add-connection-btn:hover {
+  background: #2a2a2e;
+}
+
 .btn-secondary {
   background: var(--bg-tertiary);
   color: var(--text-inverse);
@@ -925,48 +967,55 @@ initTheme()
 /* Client Tabs */
 .client-tabs {
   display: flex;
-  align-content: center;
-  justify-content: center;
+  align-items: center;
   gap: 8px;
-  padding: 4px;
+  padding: 2px;
   background: var(--bg-primary);
-  border-radius: var(--radius-xl);
+  border-radius: 20px;
   width: fit-content;
+  height: 40px;
   border: 1px solid var(--border-color);
   position: relative;
+  flex-shrink: 0;
 }
 
 .tab-slider {
   position: absolute;
-  top: 4px;
+  top: 1px;
   left: 0;
-  height: calc(100% - 8px);
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-xl);
+  height: 36px;
+  background: var(--tab-slider-bg);
+  border: 0.5px solid var(--tab-slider-border);
+  border-radius: 20px;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
   z-index: 0;
 }
 
 .client-tab {
-  padding: 8px 16px;
+  padding: 8px 24px;
   border: none;
   background: transparent;
-  color: var(--text-primary);
+  color: var(--tab-text-inactive);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  border-radius: var(--radius-xl);
+  border-radius: 20px;
   transition: color 0.2s ease;
   position: relative;
   z-index: 1;
+  white-space: nowrap;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .client-tab:hover {
-  color: var(--text-primary);
+  color: var(--tab-text-inactive);
 }
 
 .client-tab.active {
-  color: var(--text-inverse);
+  color: var(--tab-text-active);
 }
 
 .client-tab svg {
@@ -994,6 +1043,5 @@ initTheme()
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding-right: 8px;
 }
 </style>

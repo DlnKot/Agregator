@@ -5,38 +5,25 @@
       <div class="nav-section">
         <button class="nav-item" :class="{ active: currentView === 'connections' }"
           @click="$emit('view-change', 'connections')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="2" y="3" width="20" height="14" rx="2" />
-            <line x1="8" y1="21" x2="16" y2="21" />
-            <line x1="12" y1="17" x2="12" y2="21" />
-          </svg>
+          <img class="nav-item-icon" :src="connectionIcon" alt="">
           Подключения
         </button>
         <button class="nav-item" :class="{ active: currentView === 'settings' }"
           @click="$emit('view-change', 'settings')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="3" />
-            <path
-              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-          </svg>
+          <img class="nav-item-icon" :src="settingsIcon" alt="">
           Настройки
         </button>
 
         <!-- Tolk button -->
         <button class="nav-item" @click="handleTolkClick" :disabled="tolkStatus.loading">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
+          <img class="nav-item-icon" :src="tolkIcon" alt="">
           <span v-if="tolkStatus.loading">Загрузка...</span>
           <span v-else>Толк</span>
         </button>
 
         <!-- A-Chat button -->
         <button class="nav-item" @click="handleAChatClick" :disabled="aChatStatus.loading">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path
-              d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-          </svg>
+          <img class="nav-item-icon" :src="achatIcon" alt="">
           <span v-if="aChatStatus.loading">Загрузка...</span>
           <span v-else>А-Чат</span>
         </button>
@@ -46,35 +33,19 @@
       <div class="nav-section nav-section-launchers">
 
         <button class="nav-item" :class="{ active: currentView === 'help' }" @click="$emit('view-change', 'help')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-            stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-            <path d="M12 17h.01" />
-          </svg>
+          <img class="nav-item-icon" :src="helpIcon" alt="">
           Помощь
         </button>
         <button class="nav-item" :class="{ active: currentView === 'network' }"
           @click="$emit('view-change', 'network')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M4 19v-7"></path>
-            <path d="M8 19v-11"></path>
-            <path d="M12 19v-4"></path>
-            <path d="M16 19v-9"></path>
-            <path d="M20 19v-13"></path>
-          </svg>
+          <img class="nav-item-icon" :src="networkIcon" alt="">
           Проверка сети
         </button>
 
         <!-- RuDesktop launcher button -->
         <div class="nav-item launcher-btn" @click="handleRudesktopClick">
           <div class="launcher-icon">
-            <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M56 20 A40 40 0 0 0 41 100 L56 20" stroke="currentColor" stroke-width="3" stroke-linecap="round"
-                stroke-linejoin="round" />
-              <path d="M66 16 A40 40 0 0 1 51 96 L66 16" stroke="currentColor" stroke-width="3" stroke-linecap="round"
-                stroke-linejoin="round" />
-            </svg>
+            <img :src="rudesktopIcon" alt="">
           </div>
           <div class="launcher-info">
             <span class="launcher-name">RuDesktop</span>
@@ -83,12 +54,8 @@
             </span>
             <span v-else class="launcher-status not-installed">Не установлено</span>
           </div>
-          <button 
-            class="launcher-refresh" 
-            @click.stop="loadRudesktopStatus" 
-            :class="{ loading: isLoadingStatus }"
-            title="Обновить статус"
-          >
+          <button class="launcher-refresh" @click.stop="loadRudesktopStatus" :class="{ loading: isLoadingStatus }"
+            title="Обновить статус">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M23 4v6h-6"></path>
               <path d="M1 20v-6h6"></path>
@@ -98,29 +65,21 @@
         </div>
 
         <!-- VPN launcher button -->
-        <div 
-          class="nav-item launcher-btn" 
+        <div class="nav-item launcher-btn"
           :class="{ 'vpn-connected': vpnStatus.connected, loading: vpnStatus.loading, disabled: vpnStatus.platform === 'win32' && !vpnStatus.clientInstalled && !vpnStatus.connected }"
-          @click="handleVpnClick"
-        >
+          @click="handleVpnClick">
           <div class="launcher-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-              <path v-if="vpnStatus.connected" d="M9 12l2 2 4-4"></path>
-            </svg>
+            <img :src="vpnIcon" alt="">
           </div>
           <div class="launcher-info">
             <span class="launcher-name">VPN</span>
             <span v-if="vpnStatus.connected" class="launcher-status connected">Подключено</span>
-            <span v-else-if="vpnStatus.clientInstalled || vpnStatus.platform === 'darwin'" class="launcher-status">Нажмите для запуска</span>
+            <span v-else-if="vpnStatus.clientInstalled || vpnStatus.platform === 'darwin'"
+              class="launcher-status">Нажмите для запуска</span>
             <span v-else class="launcher-status not-installed">Клиент не найден</span>
           </div>
-          <button 
-            class="launcher-refresh" 
-            @click.stop="loadVpnStatus" 
-            :class="{ loading: vpnStatus.loading }"
-            title="Обновить статус"
-          >
+          <button class="launcher-refresh" @click.stop="loadVpnStatus" :class="{ loading: vpnStatus.loading }"
+            title="Обновить статус">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M23 4v6h-6"></path>
               <path d="M1 20v-6h6"></path>
@@ -135,22 +94,10 @@
       <button class="theme-toggle" type="button" @click="$emit('toggle-theme')"
         :title="theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'">
         <span class="theme-toggle-icon" aria-hidden="true">
-          <svg v-if="theme === 'dark'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="4"></circle>
-            <path d="M12 2v2"></path>
-            <path d="M12 20v2"></path>
-            <path d="M4.93 4.93l1.41 1.41"></path>
-            <path d="M17.66 17.66l1.41 1.41"></path>
-            <path d="M2 12h2"></path>
-            <path d="M20 12h2"></path>
-            <path d="M4.93 19.07l1.41-1.41"></path>
-            <path d="M17.66 6.34l1.41-1.41"></path>
-          </svg>
-          <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path>
-          </svg>
+          <img v-if="theme === 'dark'" :src="lightThemeIcon" alt="">
+          <img v-else :src="darkThemeIcon" alt="">
         </span>
-        <span class="theme-toggle-text">{{ theme === 'dark' ? 'Light' : 'Dark' }}</span>
+        <span class="theme-toggle-text">{{ theme === 'dark' ? 'Светлая тема' : 'Темная тема' }}</span>
       </button>
       <span class="version">v{{ appVersion }}</span>
     </div>
@@ -159,6 +106,16 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import connectionIcon from '../assets/icons/connection-icon.svg'
+import settingsIcon from '../assets/icons/settings-icon.svg'
+import tolkIcon from '../assets/icons/tolk-icon.svg'
+import achatIcon from '../assets/icons/achat-icon.svg'
+import helpIcon from '../assets/icons/help-icon.svg'
+import networkIcon from '../assets/icons/network-icon.svg'
+import rudesktopIcon from '../assets/icons/rudesktop-icon.svg'
+import vpnIcon from '../assets/icons/vpn-icon.svg'
+import darkThemeIcon from '../assets/icons/dark-theme-icon.svg'
+import lightThemeIcon from '../assets/icons/ligth-theme-icon.svg'
 
 const props = defineProps({
   currentView: {
@@ -222,7 +179,7 @@ async function loadVpnStatus() {
   try {
     const platformResult = await window.api?.getPlatform?.()
     vpnStatus.platform = platformResult?.success ? platformResult.data : 'win32'
-    
+
     if (vpnStatus.platform === 'darwin') {
       vpnStatus.clientInstalled = true
       if (window.api?.vpnStatus) {
@@ -353,6 +310,7 @@ defineExpose({
   border-radius: 30px;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   flex-shrink: 0;
   min-height: 0;
 }
@@ -361,7 +319,7 @@ defineExpose({
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 12px 8px;
+  padding: 24px 16px;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -380,7 +338,7 @@ defineExpose({
 }
 
 .launchers-header {
-  font-size: 11px;
+  font-size: 18px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -392,30 +350,39 @@ defineExpose({
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: 8px;
+  padding: 12px;
   border: none;
   background: transparent;
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 500;
+  letter-spacing: normal / 18;
   cursor: pointer;
-  border-radius: 25px;
+  border-radius: 20px;
   transition: var(--transition);
   text-align: left;
   width: 100%;
+  height: 56px;
+}
+
+.nav-item-icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  filter: var(--icon-filter, none);
 }
 
 .nav-item:hover {
-  background: var(--bg-tertiary);
-  color: var(--text-inverse);
+  background: var(--item-hover-bg);
+  color: var(--text-primary);
   transition: var(--transition);
-  opacity: 0.9;
+  opacity: 1;
 }
 
 .nav-item.active {
-  background: var(--accent-danger);
-  color: var(--text-inverse);
+  background: var(--item-active-bg);
+  color: var(--text-primary);
 }
 
 .nav-item.placeholder {
@@ -429,22 +396,16 @@ defineExpose({
   opacity: 0.4;
 }
 
-.nav-item svg {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-}
-
 /* Launcher button styles */
 .launcher-btn {
-  padding: 10px 16px;
-  /* background: var(--bg-tertiary); */
+  padding: 12px;
+  height: 56px;
   color: var(--text-primary);
   position: relative;
 }
 
 .launcher-btn:hover {
-  background: rgba(168, 85, 247, 0.15);
+  background: var(--item-hover-bg);
 }
 
 .launcher-btn.vpn-connected {
@@ -465,10 +426,14 @@ defineExpose({
 }
 
 .launcher-icon {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   color: var(--text-primary);
   flex-shrink: 0;
+}
+
+.launcher-icon img {
+  filter: var(--icon-filter, none);
 }
 
 .launcher-icon svg {
@@ -520,7 +485,7 @@ defineExpose({
 }
 
 .launcher-refresh:hover {
-  background: var(--bg-tertiary);
+  background: var(--item-hover-bg);
   color: var(--text-primary);
 }
 
@@ -535,8 +500,13 @@ defineExpose({
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Sidebar footer */
@@ -571,7 +541,7 @@ defineExpose({
 
 .theme-toggle:hover {
   border-color: var(--border-light);
-  background: var(--bg-tertiary);
+  background: var(--toggle-hover-bg, var(--bg-tertiary));
   color: var(--text-inverse);
 }
 
@@ -583,10 +553,19 @@ defineExpose({
   justify-content: center;
 }
 
+.theme-toggle-icon img,
 .theme-toggle-icon svg {
   width: 18px;
   height: 18px;
   display: block;
+  filter: var(--icon-filter, none);
+  opacity: var(--toggle-icon-opacity, 1);
+  transition: var(--transition);
+}
+
+.theme-toggle:hover .theme-toggle-icon img,
+.theme-toggle:hover .theme-toggle-icon svg {
+  opacity: 1;
 }
 
 .theme-toggle-text {
