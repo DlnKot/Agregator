@@ -1,20 +1,17 @@
 <template>
-  <div class="network-check">
-    <div class="net-head">
-      <div class="net-title">
-        <h3>Проверка сети</h3>
-        <p class="net-subtitle">Проверяем доступность сервисов через ping ({{ packets }} пакетов)</p>
+  <div class="network-check-container">
+    <div class="network-check">
+      <div class="net-head">
+        <div class="net-title">
+          <h3>Проверка сети</h3>
+          <p class="net-subtitle">Проверка доступности сервисов через ping ({{ packets }} пакетов)</p>
+        </div>
+        <div class="net-meta">
+          <button class="btn btn-primary" type="button" @click="runAll" :disabled="runAllLoading">
+            {{ runAllLoading ? 'Проверяем...' : 'Проверить все' }}
+          </button>
+        </div>
       </div>
-      <div class="net-meta">
-        <span>Порог: <span class="mono">{{ thresholdMs }}</span> мс</span>
-        <button class="btn btn-primary" type="button" @click="runAll" :disabled="runAllLoading">
-          {{ runAllLoading ? 'Проверяем...' : 'Проверить все' }}
-        </button>
-        <button class="btn btn-secondary" type="button" @click="refreshGeo" :disabled="geoLoading">
-          {{ geoLoading ? 'Обновление...' : 'Обновить гео' }}
-        </button>
-      </div>
-    </div>
 
     <div v-if="geoOk && geo.countryCode !== 'RU'" class="net-alert net-alert-warning">
       <div class="net-alert-title">Возможно, у вас включен VPN</div>
@@ -27,23 +24,6 @@
     <p v-if="globalError" class="net-error">{{ globalError }}</p>
 
     <div class="net-grid">
-      <div class="card geo">
-        <h3>Гео и провайдер</h3>
-        <div v-if="geoOk" class="kv">
-          <div class="row"><span class="k">IP</span><span class="v mono">{{ geo.query }}</span></div>
-          <div class="row"><span class="k">Страна</span><span class="v">{{ geo.country }} ({{ geo.countryCode }})</span>
-          </div>
-          <div class="row"><span class="k">Регион</span><span class="v">{{ geo.regionName }}</span></div>
-          <div class="row"><span class="k">Город</span><span class="v">{{ geo.city }}</span></div>
-          <div class="row"><span class="k">Провайдер</span><span class="v">{{ geo.isp }}</span></div>
-          <div class="row"><span class="k">Орг.</span><span class="v">{{ geo.org }}</span></div>
-        </div>
-        <div v-else class="muted">
-          {{ geoLoading ? 'Загрузка...' : 'Не удалось получить данные ip-api' }}
-          <span v-if="geoError" class="mono">({{ geoError }})</span>
-        </div>
-      </div>
-
       <div v-for="t in targets" :key="t.id" class="card host">
         <div class="host-head">
           <div class="host-left">
@@ -64,40 +44,66 @@
 
         <p v-if="results[t.id]?.error" class="net-error">{{ results[t.id].error }}</p>
 
-        <div v-if="results[t.id]?.ping && results[t.id]?.evaluation" class="metrics">
-          <div class="metric">
-            <span class="k">Потери</span>
-            <span class="v mono">{{ fmtLoss(results[t.id].ping.lossPercent) }}</span>
-          </div>
-          <div class="metric">
-            <span class="k">Средняя</span>
-            <span class="v mono">{{ fmtMs(results[t.id].ping.avgMs) }}</span>
-          </div>
-          <div class="metric">
-            <span class="k">Мин/Макс</span>
-            <span class="v mono">{{ fmtMinMax(results[t.id].ping.minMs, results[t.id].ping.maxMs) }}</span>
-          </div>
-        </div>
-
-        <p v-if="results[t.id]?.evaluation?.recommendation" class="recommendation">
-          {{ results[t.id].evaluation.recommendation }}
-        </p>
-
         <p v-if="results[t.id]?.evaluation" class="hint" :class="hintClass(results[t.id].evaluation.status)">
           {{ hintText(results[t.id].evaluation.status) }}
         </p>
 
         <details v-if="results[t.id]?.ping" class="details">
-          <summary>Детали</summary>
-          <pre class="raw">{{ results[t.id].ping.raw || results[t.id].ping.error || 'Нет данных' }}</pre>
+          <summary class="details-summary">Для инженера</summary>
+          <div class="details-content">
+            <div class="metrics">
+              <div class="metric">
+                <span class="k">Потери</span>
+                <span class="v mono">{{ fmtLoss(results[t.id].ping.lossPercent) }}</span>
+              </div>
+              <div class="metric">
+                <span class="k">Средняя</span>
+                <span class="v mono">{{ fmtMs(results[t.id].ping.avgMs) }}</span>
+              </div>
+              <div class="metric">
+                <span class="k">Мин/Макс</span>
+                <span class="v mono">{{ fmtMinMax(results[t.id].ping.minMs, results[t.id].ping.maxMs) }}</span>
+              </div>
+            </div>
+            <p v-if="results[t.id]?.evaluation?.recommendation" class="recommendation">
+              {{ results[t.id].evaluation.recommendation }}
+            </p>
+            <pre class="raw">{{ results[t.id].ping.raw || results[t.id].ping.error || 'Нет данных' }}</pre>
+          </div>
         </details>
       </div>
     </div>
+
+    <details class="details geo-details" v-if="geoOk || geoError || geoLoading">
+      <summary class="details-summary">Для инженера (гео)</summary>
+      <div class="details-content">
+        <div class="geo-info">
+          <div v-if="geoOk" class="kv">
+            <div class="row"><span class="k">IP</span><span class="v mono">{{ geo.query }}</span></div>
+            <div class="row"><span class="k">Страна</span><span class="v">{{ geo.country }} ({{ geo.countryCode }})</span></div>
+            <div class="row"><span class="k">Регион</span><span class="v">{{ geo.regionName }}</span></div>
+            <div class="row"><span class="k">Город</span><span class="v">{{ geo.city }}</span></div>
+            <div class="row"><span class="k">Провайдер</span><span class="v">{{ geo.isp }}</span></div>
+            <div class="row"><span class="k">Орг.</span><span class="v">{{ geo.org }}</span></div>
+          </div>
+          <div v-else-if="geoLoading" class="muted">Загрузка...</div>
+          <div v-else class="muted">
+            Не удалось получить данные ip-api
+            <span v-if="geoError" class="mono">({{ geoError }})</span>
+          </div>
+          <button class="btn btn-secondary btn-geo" type="button" @click="refreshGeo" :disabled="geoLoading">
+            {{ geoLoading ? 'Обновление...' : 'Обновить гео' }}
+          </button>
+        </div>
+      </div>
+    </details>
+  </div>
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { networkApi, networkGeo, trackingApi } from '../api'
 
 const props = defineProps({
   settings: {
@@ -170,17 +176,8 @@ async function refreshGeo() {
   geoError.value = ''
   geoLoading.value = true
   try {
-    if (!window.api?.networkGeo) {
-      geoError.value = 'Недоступно в браузере'
-      return
-    }
-
-    const res = await window.api.networkGeo()
-    if (!res?.success) {
-      geoError.value = res?.error || 'Ошибка'
-      return
-    }
-    geo.value = res.data
+    const data = await networkGeo()
+    geo.value = data
   } catch (e) {
     geoError.value = e?.message || String(e)
   } finally {
@@ -189,49 +186,29 @@ async function refreshGeo() {
 }
 
 async function runTarget(t) {
-  // Трекинг метрик
-  if (window.api?.trackNetworkCheck) {
-    window.api.trackNetworkCheck()
-  }
-  
+  trackingApi.trackNetworkCheck()
+
   globalError.value = ''
-  // Avoid race conditions when multiple checks run in parallel.
   results.value = {
     ...results.value,
     [t.id]: { ...(results.value[t.id] || {}), loading: true, error: '' }
   }
 
   try {
-    if (!window.api?.networkPing) {
-      results.value = {
-        ...results.value,
-        [t.id]: { ...(results.value[t.id] || {}), loading: false, error: 'Проверка доступна только в Electron' }
-      }
-      return
-    }
-
     // Ensure geo is present, but do not block checks if it fails.
     if (!geo.value && !geoLoading.value) {
       refreshGeo().catch(() => { })
     }
 
-    const res = await window.api.networkPing(t.host, packets)
-    if (!res?.success) {
-      results.value = {
-        ...results.value,
-        [t.id]: { ...(results.value[t.id] || {}), loading: false, error: res?.error || 'Ошибка' }
-      }
-      return
-    }
-
+    const result = await networkApi.ping(t.host, packets)
     results.value = {
       ...results.value,
       [t.id]: {
         ...(results.value[t.id] || {}),
         loading: false,
         error: '',
-        ping: res.data.ping,
-        evaluation: res.data.evaluation,
+        ping: result.ping,
+        evaluation: result.evaluation,
         lastRunAt: Date.now()
       }
     }
@@ -261,6 +238,17 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.network-check-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  background: var(--bg-primary);
+  border-radius: 30px;
+  padding: 20px;
+  overflow: hidden;
+}
+
 .network-check {
   display: flex;
   flex-direction: column;
@@ -588,22 +576,56 @@ html[data-theme="dark"] .hint-ok {
   margin: 0 0 10px;
 }
 
-.details summary {
+.details {
+  margin-top: 8px;
+}
+
+.details-summary {
   cursor: pointer;
   font-size: 12px;
   color: var(--text-muted);
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  user-select: none;
 }
 
-.raw {
-  margin-top: 10px;
+.details-summary:hover {
+  background: var(--item-hover-bg);
+  color: var(--text-primary);
+}
+
+.details-content {
+  margin-top: 8px;
   padding: 12px;
   border-radius: var(--radius);
   background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.geo-details {
+  margin-top: 0;
+}
+
+.geo-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.btn-geo {
+  align-self: flex-start;
+}
+
+.raw {
+  padding: 12px;
+  border-radius: var(--radius);
+  background: var(--bg-primary);
   border: 1px solid var(--border-color);
   overflow: auto;
   max-height: 220px;
   font-size: 11px;
   color: var(--text-primary);
+  margin-top: 8px;
 }
 
 .empty {

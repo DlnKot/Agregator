@@ -2,17 +2,28 @@
   <div class="settings-section">
     <h3>Автообновление</h3>
 
-    <UpdateStatusCard
-      :app-version="appVersion"
-      :update-status="updateStatus"
-      :update-progress="updateProgress"
-      :update-error="updateError"
-      :is-checking="isChecking"
-      :is-downloading="isDownloading"
-      @check="$emit('check-update')"
-      @download="$emit('download-update')"
-      @install="$emit('install-update')"
-    />
+    <div class="settings-group">
+      <div class="group-header">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16">
+          <path d="M23 4v6h-6"/>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
+        <span>Состояние</span>
+      </div>
+      <div class="group-body">
+        <UpdateStatusCard
+          :app-version="appVersion"
+          :update-status="updateStatus"
+          :update-progress="updateProgress"
+          :update-error="updateError"
+          :is-checking="isChecking"
+          :is-downloading="isDownloading"
+          @check="$emit('check-update')"
+          @download="$emit('download-update')"
+          @install="$emit('install-update')"
+        />
+      </div>
+    </div>
 
     <div class="update-info-text">
       <p>После загрузки обновления приложение будет перезапущено для установки.</p>

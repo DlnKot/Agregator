@@ -36,21 +36,34 @@ defineEmits(['close', 'download'])
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  animation: modalSlideIn 200ms ease;
 }
 
 .modal {
   background: var(--bg-secondary);
-  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
   padding: 32px;
   max-width: 400px;
   width: 90%;
   text-align: center;
   box-shadow: var(--shadow-lg);
+  animation: modalSlideIn 200ms ease;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .modal-icon {
@@ -89,9 +102,9 @@ defineEmits(['close', 'download'])
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 24px;
+  padding: 10px 20px;
   border: none;
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -101,31 +114,18 @@ defineEmits(['close', 'download'])
 .btn-secondary {
   background: var(--bg-tertiary);
   color: var(--text-inverse);
-  padding: 12px 24px;
 }
 
 .btn-secondary:hover {
   background: var(--bg-hover);
-  color: var(--text-inverse);
 }
 
 .btn-primary {
-  background: #a855f7;
-  color: white;
+  background: var(--accent-primary);
+  color: var(--text-inverse);
 }
 
 .btn-primary:hover {
-  background: #9333ea;
-}
-
-@keyframes modalSlideIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  background: var(--accent-primary-hover);
 }
 </style>

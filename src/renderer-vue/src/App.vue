@@ -23,8 +23,7 @@
 
         <!-- Main Content -->
         <main class="main-content">
-          <!-- Connections View -->
-          <section v-if="currentView === 'connections'" id="connections-view" class="view active">
+          <section v-show="currentView === 'connections'" class="view">
             <div class="view-header">
               <div class="client-tabs" ref="clientTabsRef">
                 <div class="tab-slider" :style="clientSliderStyle"></div>
@@ -58,25 +57,24 @@
             </div>
           </section>
 
-          <!-- Settings View -->
-          <section v-if="currentView === 'settings'" id="settings-view" class="view">
+          <section v-show="currentView === 'settings'" class="view">
             <div class="view-header">
               <h2>Настройки</h2>
             </div>
-
             <SettingsView :settings="settings" @save="handleSaveSettings" @reset-default-connections="handleResetDefaultConnections" />
           </section>
 
-          <!-- Network Check View -->
-          <section v-if="currentView === 'network'" id="network-view" class="view">
+          <section v-show="currentView === 'network'" class="view">
             <div class="view-header">
               <h2>Проверка сети</h2>
             </div>
             <NetworkCheckView :settings="settings" />
           </section>
 
-          <!-- Help View -->
-          <section v-if="currentView === 'help'" id="help-view" class="view">
+          <section v-show="currentView === 'help'" class="view">
+            <div class="view-header">
+              <h2>Помощь</h2>
+            </div>
             <HelpView />
           </section>
         </main>
@@ -161,12 +159,33 @@
 
     <!-- Alert Notification -->
     <AlertNotification :show="alert.show" :message="alert.message" @close="alert.show = false" />
+
+    <!-- Confirm Dialog -->
+    <div v-if="confirm.show" class="modal-overlay" @click.self="confirmCancel">
+      <div class="modal-content modal-sm">
+        <div class="modal-header">
+          <h3>{{ confirm.title }}</h3>
+          <button class="modal-close" @click="confirmCancel">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>{{ confirm.message }}</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" @click="confirmCancel">Отмена</button>
+          <button class="btn btn-primary" @click="confirmOk">Подтвердить</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dev Panel -->
+    <DevPanel :visible="showDevPanel" @close="showDevPanel = false" @show="handleDevShow" />
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
-import { useConnections, useSettings, useLauncher, useAutoUpdate, useTheme, useInstaller } from './composables'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
+import { useConnections, useSettings, useLauncher, useTheme } from './composables'
+import { appApi, externalApi, launchersApi, trackingApi } from './api'
 import ConnectionsList from './components/ConnectionsList.vue'
 import SidebarNav from './components/SidebarNav.vue'
 import { SettingsView } from './components/settings'
@@ -176,6 +195,7 @@ import ConnectionModal from './components/ConnectionModal.vue'
 import FirstRunModal from './components/FirstRunModal.vue'
 import InstallDialog from './components/InstallDialog.vue'
 import AlertNotification from './components/AlertNotification.vue'
+import DevPanel from './components/DevPanel.vue'
 import RudesktopNotFoundModal from './components/RudesktopNotFoundModal.vue'
 import VpnConnectModal from './components/VpnConnectModal.vue'
 import versionData from '../../version.js'
@@ -186,6 +206,7 @@ import headerMarkWhite from './assets/icons/arc-white.svg'
 
 const appVersion = ref(versionData.version)
 const sidebarNavRef = ref(null)
+const sliderReEval = ref(0)
 
 // Composables
 const { theme, toggleTheme, initTheme } = useTheme()
@@ -194,6 +215,7 @@ const {
   filteredConnections, 
   currentClientFilter, 
   lastConnectionId,
+  lastConnection,
   loadConnections, 
   loadLastConnection,
   setLastConnection,
@@ -204,7 +226,22 @@ const {
 } = useConnections()
 const { settings, isFirstRun, loadSettings, saveSettings } = useSettings()
 const { launchConnection, launchVpn } = useLauncher()
-const { initAutoUpdater } = useAutoUpdate()
+
+// Dev panel
+const showDevPanel = ref(false)
+
+function handleDevShow(target) {
+  switch (target) {
+    case 'firstrun': isFirstRun.value = true; break
+    case 'connection': openConnectionModal(); break
+    case 'vpn': showVpnModal.value = true; break
+    case 'rudesktop': showRudesktopModal.value = true; break
+    case 'install': showInstallDialog.value = true; break
+    case 'achat': showAChatModal.value = true; break
+    case 'tolk': showTolkModal.value = true; break
+  }
+  showDevPanel.value = false
+}
 
 // Install dialog state
 const showInstallDialog = ref(false)
@@ -224,7 +261,7 @@ const showTolkModal = ref(false)
 
 async function openAChatWeb() {
   try {
-    await window.api?.openAChatWeb?.()
+    await externalApi.openAChatWeb()
   } catch (e) {
     console.error('Failed to open A-Chat web:', e)
   }
@@ -233,7 +270,7 @@ async function openAChatWeb() {
 
 async function openTolkWeb() {
   try {
-    await window.api?.openTolkWeb?.()
+    await externalApi.openTolkWeb()
   } catch (e) {
     console.error('Failed to open Tolk web:', e)
   }
@@ -263,6 +300,8 @@ const tabCitrix = ref(null)
 const tabRecent = ref(null)
 
 const clientSliderStyle = computed(() => {
+  // Force re-evaluation via sliderReEval (used for tab appear/disappear)
+  void sliderReEval.value
   if (!clientTabsRef.value) return { width: '0px', transform: 'translateX(0)' }
   
   const filter = currentClientFilter.value
@@ -293,14 +332,9 @@ const clientSliderStyle = computed(() => {
   }
 })
 
-// Force slider update when lastConnectionId changes (tab may appear/disappear)
-watch(lastConnectionId, async () => {
-  await nextTick()
-  // Trigger reactivity by forcing re-evaluation
-  const filter = currentClientFilter.value
-  currentClientFilter.value = ''
-  await nextTick()
-  currentClientFilter.value = filter
+// Force slider re-evaluation when lastConnectionId changes (tab may appear/disappear)
+watch(lastConnectionId, () => {
+  nextTick().then(() => { sliderReEval.value++ })
 })
 
 // Load data function
@@ -308,9 +342,8 @@ async function loadData() {
   await Promise.all([loadConnections(), loadSettings()])
   await loadLastConnection()
   
-  // Set initial filter: always "all" by default (shows all connection types)
-  // "recent" only shows if there's a lastConnectionId
-  currentClientFilter.value = 'all'
+  // Set initial filter: "recent" if user has connected before, otherwise "all"
+  currentClientFilter.value = lastConnectionId.value ? 'recent' : 'all'
 }
 
 // Computed default username from settings
@@ -356,18 +389,45 @@ function showAlert(message) {
   }, 3000)
 }
 
+// Confirm dialog
+const confirm = reactive({
+  show: false,
+  title: '',
+  message: '',
+  resolve: null
+})
+
+function showConfirm(title, message) {
+  return new Promise((resolve) => {
+    confirm.title = title
+    confirm.message = message
+    confirm.show = true
+    confirm.resolve = resolve
+  })
+}
+
+function confirmOk() {
+  confirm.show = false
+  if (confirm.resolve) confirm.resolve(true)
+}
+
+function confirmCancel() {
+  confirm.show = false
+  if (confirm.resolve) confirm.resolve(false)
+}
+
 // Connection modal
 function openConnectionModal(connection = null) {
   if (connection) {
     editingConnection.value = { ...connection }
   } else {
-    let type = 'rdp'
-    // For "recent" filter, use the last connection's type if available
-    // If no last connection (empty list), default to 'horizon'
-    if (currentClientFilter.value === 'recent') {
-      type = lastConnection.value?.type || 'horizon'
-    } else if (currentClientFilter.value && currentClientFilter.value !== 'all' && currentClientFilter.value !== 'recent') {
+    let type
+    if (currentClientFilter.value && currentClientFilter.value !== 'all' && currentClientFilter.value !== 'recent') {
       type = currentClientFilter.value
+    } else if (currentClientFilter.value === 'recent') {
+      type = lastConnection.value?.type || 'horizon'
+    } else {
+      type = connections.value.length === 0 ? 'horizon' : (lastConnection.value?.type || 'rdp')
     }
     editingConnection.value = { type }
   }
@@ -394,11 +454,16 @@ async function handleSaveConnection(connection) {
 }
 
 async function handleDeleteConnection(id) {
-  if (!confirm('Вы уверены, что хотите удалить это подключение?')) return
+  const ok = await showConfirm('Удаление подключения', 'Вы уверены, что хотите удалить это подключение?')
+  if (!ok) return
 
   try {
     const result = await deleteConnection(id)
     if (result.success) {
+      // If we were on the "Недавнее" tab and it no longer has a connection, switch to "Все"
+      if (currentClientFilter.value === 'recent' && !lastConnectionId.value) {
+        currentClientFilter.value = 'all'
+      }
       showToast('Подключение удалено', 'success')
     } else {
       showToast(result.error || 'Ошибка удаления подключения', 'error')
@@ -413,17 +478,27 @@ async function handleLaunch(id) {
   const conn = connections.value.find(c => c.id === id)
   if (!conn) return
 
-  const result = await launchConnection(conn, settings.value)
-  if (result && result.success) {
-    // Save this connection as the last used
+  let result
+  try {
+    result = await launchConnection(conn, settings.value)
+  } finally {
     await setLastConnection(id)
-    showToast('Клиент запущен', 'success')
+    currentClientFilter.value = 'recent'
+  }
+
+  const found = !!(connections.value.find(c => c.id === id))
+  showToast(
+    `id="${id}" lastId="${lastConnectionId.value}" found=${found} filter=${currentClientFilter.value} conns=${connections.value.length}`,
+    'success'
+  )
+
+  if (result && result.success) {
+    setTimeout(() => showToast('Клиент запущен', 'success'), 100)
   } else if (result?.needsInstall) {
-    // Client not installed - show install dialog
     pendingInstallClient.value = result.clientType
     showInstallDialog.value = true
   } else {
-    showToast(result?.error || 'Ошибка запуска', 'error')
+    setTimeout(() => showToast(result?.error || 'Ошибка запуска', 'error'), 100)
   }
 }
 
@@ -444,9 +519,7 @@ async function handleRudesktopLaunched(data) {
 // RuDesktop download handler
 async function handleRudesktopDownload() {
   try {
-    if (window.api?.openRudesktopDownload) {
-      await window.api.openRudesktopDownload()
-    }
+    await externalApi.openRudesktopDownload()
   } catch (e) {
     console.error('Failed to open RuDesktop download:', e)
   }
@@ -464,14 +537,12 @@ function handleVpnConnected(data) {
 // VPN button click handler
 async function handleVpnClick() {
   try {
-    const statusResult = await window.api.vpnStatus()
-    if (statusResult.success && statusResult.data?.connected) {
-      const result = await window.api.vpnDisconnect()
-      if (result.success) {
-        showToast('VPN отключен', 'success')
-        if (sidebarNavRef.value?.loadVpnStatus) {
-          sidebarNavRef.value.loadVpnStatus()
-        }
+    const status = await launchersApi.vpnStatus()
+    if (status?.connected) {
+      await launchersApi.vpnDisconnect()
+      showToast('VPN отключен', 'success')
+      if (sidebarNavRef.value?.loadVpnStatus) {
+        sidebarNavRef.value.loadVpnStatus()
       }
     } else {
       showVpnModal.value = true
@@ -486,10 +557,7 @@ async function handleVpnClick() {
 // Handle view change with metrics
 function handleViewChange(view) {
   currentView.value = view
-  // Трекинг метрик
-  if (window.api?.trackTabView) {
-    window.api.trackTabView(view)
-  }
+  trackingApi.trackTabView(view)
 }
 
 // Settings
@@ -507,7 +575,7 @@ async function handleSaveSettings(newSettings) {
 }
 
 async function handleResetDefaultConnections() {
-  const ok = confirm('Сбросить стандартные подключения к заводским настройкам?\n\nПользовательские подключения не будут затронуты.')
+  const ok = await showConfirm('Сброс подключений', 'Сбросить стандартные подключения к заводским настройкам?\n\nПользовательские подключения не будут затронуты.')
   if (!ok) return
 
   try {
@@ -538,6 +606,12 @@ async function handleFirstRunSave(userData) {
   await loadData()
 }
 
+function handleKeydown(e) {
+  if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+    showDevPanel.value = !showDevPanel.value
+  }
+}
+
 // Initialize
 onMounted(async () => {
   initTheme()
@@ -545,12 +619,17 @@ onMounted(async () => {
 
   // Load app version from main process
   try {
-    const res = await window.api?.getVersion?.()
-    const version = res && typeof res === 'object' && res.success === true ? res.data : res
+    const version = await appApi.getVersion()
     if (version) appVersion.value = version
   } catch (e) {
     // Ignore - version will use default value
   }
+
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleKeydown)
 })
 
 // Apply theme ASAP (before first paint when possible)
@@ -876,11 +955,14 @@ initTheme()
 }
 
 .view-header {
-  display: grid;
-  grid-template-columns: 1fr auto;
+  display: flex;
   align-items: center;
   gap: 16px;
   margin-bottom: 24px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  flex-wrap: wrap;
 }
 
 .view-header h2 {
@@ -892,6 +974,7 @@ initTheme()
   display: flex;
   align-items: center;
   gap: 12px;
+  margin-left: auto;
 }
 
 /* Buttons */
@@ -924,14 +1007,13 @@ initTheme()
 }
 
 #add-connection-btn {
-  width: 221px;
   height: 40px;
   min-width: 88px;
   min-height: 40px;
   gap: 2px;
   padding: 4px 16px;
   border-radius: 999px;
-  background: #212124;
+  background: var(--bg-tertiary);
   color: var(--text-inverse);
   font-size: 14px;
   font-weight: 500;
@@ -940,10 +1022,11 @@ initTheme()
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
+  white-space: nowrap;
 }
 
 #add-connection-btn:hover {
-  background: #2a2a2e;
+  background: var(--bg-hover);
 }
 
 .btn-secondary {
@@ -973,10 +1056,11 @@ initTheme()
   background: var(--bg-primary);
   border-radius: 20px;
   width: fit-content;
+  max-width: 100%;
   height: 40px;
   border: 1px solid var(--border-color);
   position: relative;
-  flex-shrink: 0;
+  overflow: hidden;
 }
 
 .tab-slider {

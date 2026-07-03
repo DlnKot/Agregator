@@ -74,7 +74,7 @@
           <div class="launcher-info">
             <span class="launcher-name">VPN</span>
             <span v-if="vpnStatus.connected" class="launcher-status connected">Подключено</span>
-            <span v-else-if="vpnStatus.clientInstalled || vpnStatus.platform === 'darwin'"
+            <span v-else-if="vpnStatus.clientInstalled || vpnStatus.platform === 'macos'"
               class="launcher-status">Нажмите для запуска</span>
             <span v-else class="launcher-status not-installed">Клиент не найден</span>
           </div>
@@ -106,6 +106,7 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { launchersApi, appApi } from '../api'
 import connectionIcon from '../assets/icons/connection-icon.svg'
 import settingsIcon from '../assets/icons/settings-icon.svg'
 import tolkIcon from '../assets/icons/tolk-icon.svg'
@@ -161,13 +162,9 @@ const isLoadingStatus = ref(false)
 async function loadRudesktopStatus() {
   isLoadingStatus.value = true
   try {
-    if (window.api?.getRudesktopStatus) {
-      const result = await window.api.getRudesktopStatus()
-      if (result.success && result.data) {
-        rudesktopStatus.installed = result.data.installed
-        rudesktopStatus.deviceId = result.data.deviceId
-      }
-    }
+    const result = await launchersApi.getRudesktopStatus()
+    rudesktopStatus.installed = result.installed
+    rudesktopStatus.deviceId = result.deviceId
   } catch (e) {
     console.error('Failed to get RuDesktop status:', e)
   } finally {
@@ -177,30 +174,18 @@ async function loadRudesktopStatus() {
 
 async function loadVpnStatus() {
   try {
-    const platformResult = await window.api?.getPlatform?.()
-    vpnStatus.platform = platformResult?.success ? platformResult.data : 'win32'
+    const platform = await appApi.getPlatform()
+    vpnStatus.platform = platform || 'win32'
 
-    if (vpnStatus.platform === 'darwin') {
+    if (vpnStatus.platform === 'macos') {
       vpnStatus.clientInstalled = true
-      if (window.api?.vpnStatus) {
-        const statusResult = await window.api.vpnStatus()
-        if (statusResult.success) {
-          vpnStatus.connected = statusResult.data?.connected || false
-        }
-      }
+      const status = await launchersApi.vpnStatus()
+      vpnStatus.connected = status?.connected || false
     } else {
-      if (window.api?.vpnClientStatus) {
-        const clientResult = await window.api.vpnClientStatus()
-        if (clientResult.success) {
-          vpnStatus.clientInstalled = clientResult.data?.installed || false
-        }
-      }
-      if (window.api?.vpnStatus) {
-        const statusResult = await window.api.vpnStatus()
-        if (statusResult.success) {
-          vpnStatus.connected = statusResult.data?.connected || false
-        }
-      }
+      const client = await launchersApi.vpnClientStatus()
+      vpnStatus.clientInstalled = client?.client_installed || false
+      const status = await launchersApi.vpnStatus()
+      vpnStatus.connected = status?.connected || false
     }
   } catch (e) {
     console.error('Failed to get VPN status:', e)
@@ -210,21 +195,19 @@ async function loadVpnStatus() {
 async function handleVpnClick() {
   vpnStatus.loading = true
   try {
-    if (vpnStatus.platform === 'darwin') {
-      const result = await window.api?.launchVpn?.()
-      if (result?.success) {
-        // On macOS we can't track connection status easily
-      }
+    if (vpnStatus.platform === 'macos') {
+      const result = await launchersApi.launchVpn()
+      // Refresh VPN status to check if connection was established
+      await loadVpnStatus()
     } else if (vpnStatus.platform === 'win32') {
       if (!vpnStatus.clientInstalled) {
         console.error('VPN client not installed')
         return
       }
       if (vpnStatus.connected) {
-        const result = await window.api.vpnDisconnect()
-        if (result.success) {
-          vpnStatus.connected = false
-        }
+        await launchersApi.vpnDisconnect()
+        vpnStatus.connected = false
+        await loadVpnStatus()
       } else {
         emit('show-vpn-modal')
       }
@@ -237,39 +220,25 @@ async function handleVpnClick() {
 }
 
 async function handleRudesktopClick() {
-  // Если не установлен - показать модалку через emit
   if (!rudesktopStatus.installed) {
     emit('show-rudesktop-modal')
     return
   }
 
   try {
-    if (window.api?.launchRudesktop) {
-      const result = await window.api.launchRudesktop()
-      if (result.success) {
-        emit('rudesktop-launched', result.data)
-        await loadRudesktopStatus()
-      } else if (result.details?.needsInstall) {
-        emit('show-rudesktop-modal')
-      }
-    }
+    const data = await launchersApi.launchRudesktop()
+    emit('rudesktop-launched', data)
+    await loadRudesktopStatus()
   } catch (e) {
     console.error('Failed to launch RuDesktop:', e)
+    emit('show-rudesktop-modal')
   }
 }
 
 async function handleAChatClick() {
   aChatStatus.loading = true
   try {
-    const result = await window.api?.launchAChat?.()
-    if (result?.success) {
-      return
-    }
-    if (result?.needsInstall) {
-      emit('show-achat-modal')
-      return
-    }
-    emit('show-achat-modal')
+    await launchersApi.launchAChat()
   } catch (e) {
     emit('show-achat-modal')
   } finally {
@@ -280,11 +249,7 @@ async function handleAChatClick() {
 async function handleTolkClick() {
   tolkStatus.loading = true
   try {
-    const result = await window.api?.launchTolk?.()
-    if (result?.success) {
-      return
-    }
-    emit('show-tolk-modal')
+    await launchersApi.launchTolk()
   } catch (e) {
     emit('show-tolk-modal')
   } finally {

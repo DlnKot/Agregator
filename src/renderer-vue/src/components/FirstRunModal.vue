@@ -8,6 +8,7 @@
       <div class="modal-body">
         <p class="firstrun-desc">Введите данные вашей учётной записи для автоматического подключения к удалённым рабочим столам</p>
         
+        <div v-if="formError" class="form-error">{{ formError }}</div>
         <form @submit.prevent="save">
           <div class="form-group">
             <label for="user-domain">Домен</label>
@@ -40,7 +41,7 @@
 </template>
 
 <script setup>
-import { reactive, computed } from 'vue'
+import { reactive, computed, ref } from 'vue'
 
 const emit = defineEmits(['save'])
 
@@ -48,6 +49,8 @@ const form = reactive({
   domain: 'MOSCOW',
   username: ''
 })
+
+const formError = ref('')
 
 const previewUsername = computed(() => {
   if (form.domain && form.username) {
@@ -57,8 +60,9 @@ const previewUsername = computed(() => {
 })
 
 function save() {
+  formError.value = ''
   if (!form.username.trim()) {
-    alert('Введите имя пользователя')
+    formError.value = 'Введите имя пользователя'
     return
   }
   emit('save', {
@@ -166,6 +170,17 @@ function save() {
 
 .preview-label strong {
   color: var(--accent-primary);
+}
+
+.form-error {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+  font-size: 13px;
+  font-weight: 500;
 }
 
 /* Buttons */

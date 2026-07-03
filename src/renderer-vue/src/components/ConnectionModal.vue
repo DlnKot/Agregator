@@ -10,6 +10,7 @@
         <div v-if="isFactory" class="factory-note" role="note" aria-live="polite">
           Это стандартное подключение. Можно изменить только название.
         </div>
+        <div v-if="formError" class="form-error">{{ formError }}</div>
         <form id="connection-form" @submit.prevent="save">
           <input type="hidden" id="connection-id" v-model="form.id">
 
@@ -101,6 +102,8 @@ const form = reactive({
   description: ''
 })
 
+const formError = ref('')
+
 const isFactory = computed(() => !!props.connection?.factoryId || props.connection?.isDefault === true)
 const isEditing = computed(() => !!props.connection?.id || !!props.connection?.factoryId)
 
@@ -185,31 +188,33 @@ function normalizeCitrixStoreUrl(url) {
 }
 
 function save() {
+  formError.value = ''
+
   if (isFactory.value) {
     if (!form.name) {
-      alert('Заполните обязательные поля')
+      formError.value = 'Заполните обязательные поля'
       return
     }
-    emit('save', { factoryId: form.factoryId, name: form.name.trim() })
+    emit('save', { ...props.connection, name: form.name.trim() })
     return
   }
 
   // Validation: name is always required
   if (!form.name) {
-    alert('Заполните обязательные поля')
+    formError.value = 'Заполните обязательные поля'
     return
   }
 
   // For Citrix: storeUrl is required, host is not needed
   if (form.type === 'citrix') {
     if (!String(form.storeUrl || '').trim()) {
-      alert('Укажите Citrix Store URL')
+      formError.value = 'Укажите Citrix Store URL'
       return
     }
   } else {
     // For RDP and Horizon: host is required
     if (!form.host) {
-      alert('Заполните обязательные поля')
+      formError.value = 'Заполните обязательные поля'
       return
     }
   }
@@ -234,7 +239,8 @@ function save() {
     storeUrl: form.type === 'citrix' ? normalizeCitrixStoreUrl(form.storeUrl || '') : (form.storeUrl || '').trim(),
     citrixApp: form.citrixApp.trim(),
     username: form.username.trim(),
-    description: form.description.trim()
+    description: form.description.trim(),
+    isUserModified: true
   }
 
   emit('save', connectionData)
@@ -365,6 +371,17 @@ onBeforeUnmount(() => {
   background: var(--bg-secondary);
   color: var(--text-primary);
   font-size: 13px;
+}
+
+.form-error {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .modal-footer {

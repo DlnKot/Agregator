@@ -1,21 +1,20 @@
 /**
- * IPC wrapper composable
- * Provides unwrapIpc helper for handling IPC responses
+ * IPC abstraction — wraps Tauri invoke calls.
+ * Provides same interface as old window.api for backward compat during migration.
  */
+import * as api from '../api'
 
 export function useIpc() {
-  function unwrapIpc(res) {
-    if (!res || typeof res !== 'object') return res
-    if (res.success === false) {
-      const err = new Error(res.error || 'IPC request failed')
-      err.ipc = res
-      throw err
+  function unwrapIpc(result) {
+    if (result && typeof result === 'object' && 'success' in result) {
+      if (!result.success) throw new Error(result.error || 'IPC error')
+      return result.data
     }
-    if (res.success === true && Object.prototype.hasOwnProperty.call(res, 'data')) {
-      return res.data
-    }
-    return res
+    return result
   }
 
-  return { unwrapIpc }
+  return {
+    api,
+    unwrapIpc,
+  }
 }

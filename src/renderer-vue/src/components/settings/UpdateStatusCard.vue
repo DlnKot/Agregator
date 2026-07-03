@@ -1,14 +1,15 @@
 <template>
   <div class="update-status-card">
-    <div class="update-info">
-      <span class="update-label">Текущая версия:</span>
-      <span class="update-value">{{ appVersion }}</span>
+    <div class="version-row">
+      <span class="version-label">Текущая версия</span>
+      <span class="version-badge">{{ appVersion }}</span>
     </div>
 
-    <div v-if="updateStatus.updateAvailable && !updateStatus.updateDownloaded" class="update-available">
-      <div class="update-info">
-        <span class="update-label">Доступна версия:</span>
-        <span class="update-value version-new">{{ updateStatus.version }}</span>
+    <div v-if="updateStatus.updateAvailable && !updateStatus.updateDownloaded" class="update-section">
+      <div class="divider"></div>
+      <div class="version-row">
+        <span class="version-label">Доступна версия</span>
+        <span class="version-badge version-new">{{ updateStatus.version }}</span>
       </div>
 
       <div v-if="updateProgress.percent > 0" class="update-progress">
@@ -19,24 +20,40 @@
           formatBytes(updateProgress.bytesPerSecond) }}/с)</span>
       </div>
 
-      <button class="btn btn-primary" @click="$emit('download')" :disabled="isDownloading">
+      <button class="action-btn btn-download" @click="$emit('download')" :disabled="isDownloading">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
         {{ isDownloading ? 'Загрузка...' : 'Скачать обновление' }}
       </button>
     </div>
 
-    <div v-else-if="updateStatus.updateDownloaded" class="update-ready">
-      <div class="update-info">
-        <span class="update-label">Обновление готово:</span>
-        <span class="update-value version-ready">{{ updateStatus.version }}</span>
+    <div v-else-if="updateStatus.updateDownloaded" class="update-section">
+      <div class="divider"></div>
+      <div class="version-row">
+        <span class="version-label">Обновление готово</span>
+        <span class="version-badge version-ready">{{ updateStatus.version }}</span>
       </div>
-      <button class="btn btn-primary" @click="$emit('install')">
+      <button class="action-btn btn-install" @click="$emit('install')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+          <polyline points="23 6 13.5 15.5 8.5 10.5"/>
+          <polyline points="17 6 23 6 23 12"/>
+          <path d="M20 14.66V20a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8"/>
+        </svg>
         Перезагрузить и установить
       </button>
     </div>
 
-    <div v-else class="update-check">
-      <p v-if="updateError" class="update-error">{{ updateError }}</p>
-      <button class="btn btn-secondary" @click="$emit('check')" :disabled="isChecking">
+    <div v-else class="update-section">
+      <div class="divider"></div>
+      <div v-if="updateError" class="update-error">{{ updateError }}</div>
+      <button class="action-btn btn-check" @click="$emit('check')" :disabled="isChecking">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+          <polyline points="23 4 23 10 17 10"/>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
         {{ isChecking ? 'Проверка...' : 'Проверить обновления' }}
       </button>
       <p v-if="!updateStatus.updateAvailable && !isChecking && !updateError" class="update-message">
@@ -87,119 +104,147 @@ function formatBytes(bytes) {
 
 <style scoped>
 .update-status-card {
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  padding: 20px;
-  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
-.update-info {
+.version-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  justify-content: space-between;
+  padding: 4px 0;
 }
 
-.update-label {
+.version-label {
   font-size: 14px;
   color: var(--text-primary);
+  font-weight: 500;
 }
 
-.update-value {
-  font-size: 16px;
+.version-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 14px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
 }
 
-.update-value.version-new {
+.version-badge.version-new {
   color: var(--accent-primary);
+  border-color: var(--accent-primary);
+  background: rgba(37, 99, 235, 0.08);
 }
 
-.update-value.version-ready {
-  color: #22c55e;
+.version-badge.version-ready {
+  color: var(--accent-success);
+  border-color: var(--accent-success);
+  background: rgba(16, 185, 129, 0.08);
 }
 
-.update-available,
-.update-ready,
-.update-check {
-  margin-top: 16px;
+.divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 16px 0;
+}
+
+.update-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .update-progress {
-  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .progress-bar {
-  height: 8px;
+  height: 6px;
   background: var(--bg-primary);
-  border-radius: 4px;
+  border-radius: 3px;
   overflow: hidden;
-  margin-bottom: 8px;
 }
 
 .progress-fill {
   height: 100%;
   background: var(--accent-primary);
   transition: width 0.3s ease;
+  border-radius: 3px;
 }
 
 .progress-text {
   font-size: 12px;
-  color: var(--text-primary);
+  color: var(--text-muted);
 }
 
 .update-message {
-  margin-top: 12px;
   font-size: 13px;
-  color: var(--text-primary);
+  color: var(--accent-success);
+  font-weight: 500;
 }
 
 .update-error {
-  color: #ef4444;
+  color: var(--accent-danger);
   font-size: 13px;
-  margin-bottom: 12px;
-  padding: 8px 12px;
-  background: rgba(239, 68, 68, 0.1);
+  padding: 10px 14px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
   border-radius: var(--radius-sm);
+  line-height: 1.4;
 }
 
-.btn {
+.action-btn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 16px;
+  padding: 10px 18px;
   border: none;
   border-radius: var(--radius);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: var(--transition);
+  width: fit-content;
 }
 
-.btn-primary {
-  background: var(--accent-danger);
-  color: var(--text-inverse);
+.action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
-.btn-primary:hover {
-  background: var(--bg-tertiary);
+.btn-download {
+  background: var(--accent-primary);
+  color: #fff;
 }
 
-.btn-secondary {
+.btn-download:hover:not(:disabled) {
+  background: var(--accent-primary-hover);
+}
+
+.btn-install {
+  background: var(--accent-success);
+  color: #fff;
+}
+
+.btn-install:hover:not(:disabled) {
+  background: #059669;
+}
+
+.btn-check {
   background: var(--bg-secondary);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
 }
 
-.btn-secondary:hover {
+.btn-check:hover:not(:disabled) {
   background: var(--bg-tertiary);
   color: var(--text-inverse);
   border-color: var(--border-light);
-}
-
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 </style>

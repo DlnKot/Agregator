@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [vue()],
   root: 'src/renderer-vue',
   base: './',
+  clearScreen: false,
   build: {
     outDir: '../../dist-renderer',
     emptyOutDir: true
@@ -16,6 +17,10 @@ export default defineConfig({
     }
   },
   server: {
-    port: 5173
+    port: 5173,
+    strictPort: true,
+    watch: {
+      ignored: ['**/src-tauri/**']
+    }
   }
 })

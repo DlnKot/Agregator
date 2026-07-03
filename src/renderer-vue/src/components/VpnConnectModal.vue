@@ -83,6 +83,7 @@
 
 <script setup>
 import { ref } from 'vue'
+import { launchersApi } from '../api'
 
 const props = defineProps({
   defaultUsername: {
@@ -125,14 +126,9 @@ async function connect() {
       challenge: indeedCode.value,
       address: address.value,
     }
-    const result = await window.api.vpnConnect(credentials)
-    
-    if (result.success) {
-      emit('connect', { username: stripDomain(username.value) })
-      emit('close')
-    } else {
-      error.value = result.error || 'Не удалось подключиться к VPN'
-    }
+    await launchersApi.vpnConnect(credentials)
+    emit('connect', { username: stripDomain(username.value) })
+    emit('close')
   } catch (e) {
     error.value = e.message || 'Ошибка подключения'
   } finally {
@@ -142,9 +138,7 @@ async function connect() {
 
 async function cancelConnection() {
   try {
-    if (window.api?.vpnCancel) {
-      await window.api.vpnCancel()
-    }
+    await launchersApi.vpnCancel()
   } catch (e) {
     console.error('Failed to cancel VPN:', e)
   }
