@@ -868,7 +868,7 @@ initTheme()
 }
 
 .nav-item.active {
-  background: var(--accent-danger);
+  background: var(--bg-tertiary);
   color: var(--text-inverse);
 }
 
@@ -997,12 +997,12 @@ initTheme()
 }
 
 .btn-primary {
-  background: var(--accent-danger);
+  background: var(--bg-tertiary);
   color: var(--text-inverse);
 }
 
 .btn-primary:hover {
-  background: #dc2626;
+  background: var(--bg-hover);
   opacity: 1;
 }
 
@@ -1039,12 +1039,12 @@ initTheme()
 }
 
 .btn-danger {
-  background: var(--accent-danger);
+  background: var(--bg-tertiary);
   color: var(--text-inverse);
 }
 
 .btn-danger:hover {
-  background: #dc2626;
+  background: var(--bg-hover);
 }
 
 /* Client Tabs */
@@ -1108,14 +1108,14 @@ initTheme()
 }
 
 .btn-vpn {
-  background: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: var(--bg-tertiary);
+  color: var(--text-inverse);
+  border: 1px solid transparent;
 }
 
 .btn-vpn:hover {
-  background: rgba(239, 68, 68, 0.25);
-  border-color: rgba(239, 68, 68, 0.5);
+  background: var(--bg-hover);
+  border-color: transparent;
 }
 
 .btn-vpn svg {

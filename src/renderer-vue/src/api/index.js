@@ -71,15 +71,13 @@ export const externalApi = {
 // ==================== Network ====================
 
 export const networkApi = {
-  ping: (host, count = 4) => invoke('network_ping', { host, count }).then(unwrap),
+  ping: (host, count = 4, thresholdMs) => invoke('network_ping', { host, count, thresholdMs }).then(unwrap),
   runFullCheck: (payload) => invoke('network_run_full_check', { payload }).then(unwrap),
 }
 
-// networkGeo — not available as a Tauri command; use ip-api.com directly
+// networkGeo — uses Tauri command with reqwest (bypasses webview mixed-content blocking)
 export async function networkGeo() {
-  const res = await fetch('http://ip-api.com/json/?fields=status,country,countryCode,regionName,city,isp,org,query')
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  return res.json()
+  return invoke('network_geo').then(unwrap)
 }
 
 // ==================== Logging ====================

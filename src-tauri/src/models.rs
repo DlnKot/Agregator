@@ -60,6 +60,36 @@ pub struct UpdateSettings {
     pub use_github_releases: Option<bool>,
 }
 
+/// Ping detail — returned to frontend
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PingDetail {
+    pub loss_percent: Option<f64>,
+    pub avg_ms: Option<f64>,
+    pub min_ms: Option<f64>,
+    pub max_ms: Option<f64>,
+    pub raw: Option<String>,
+    pub error: Option<String>,
+}
+
+/// Ping evaluation — displayed as badge
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PingEval {
+    pub status: String,
+    pub label: String,
+    pub recommendation: String,
+    pub threshold_ms: u64,
+}
+
+/// Single host ping result (returned by network_ping)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SinglePingResult {
+    pub ping: PingDetail,
+    pub evaluation: PingEval,
+}
+
 /// Network check result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NetworkCheckResult {

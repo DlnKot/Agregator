@@ -118,12 +118,39 @@ src/renderer-vue/src/
 | `tracing-subscriber registry` | Два независимых слоя (stdout + file) с разными форматами |
 | `find_rudesktop_path()` с `mdfind` | Поиск .app даже в нестандартных расположениях (как старый Electron код) |
 
+### 12. UI: красные кнопки → чёрные (2026-07)
+- **App.vue**: `.btn-danger`, `.btn-vpn`, `.nav-item.active` — заменён `--accent-danger` на `--bg-tertiary` / `--bg-hover`
+- **SettingsView.vue**: `.btn-primary` (Сохранить настройки) — был красный `--accent-danger`, теперь `--bg-tertiary`
+- **ConnectionModal.vue**: `.btn-primary:hover`, `.btn-secondary:hover` — больше не уходят в красный
+- Все кнопки теперь единого стиля (как "Добавить подключение") для обеих тем
+
+### 13. Network check: редизайн и исправление логики (2026-07)
+- **BottomSlot glassmorphism**: кнопки отдельных проверок — `padding: 4px 12px; height: 32px; background: rgba(15, 25, 55, 0.1); backdrop-filter: blur(40px); border-radius: 999px`
+- **Кнопка "Проверить все"** — стиль как "Добавить подключение" (`--bg-tertiary`)
+- **Подписи кнопок** — сокращены до "Проверить доступ" (одинаково для всех сервисов)
+- **Подробный вывод ping** — метрики (потери/средняя/мин-макс) показываются сразу после проверки, без `<details>`-коллапса (нужно инженерам)
+- **Loading overlay** — при "Проверить все" появляется оверлей со спиннером + "Проверка сети..."
+
+### 14. Network ping: исправление оценки (2026-07)
+- **`evaluate_ping()`** — добавлена проверка: если `loss` и `avg_ms` оба `None` (хост не резолвится, неизвестная ошибка), возвращается `status: "error"`, а не `"ok"`
+- Раньше `ping: cannot resolve host: Unknown host` показывал "OK" в UI
+
+### 15. UI блокировка: async network_ping (2026-07)
+- **`network_ping`** был синхронным (`pub fn`) — в Tauri v2 выполнялся на главном потоке, блокируя webview
+- Исправлен на `async fn` + `tokio::task::spawn_blocking` — `Command::new("ping").output()` работает в потоке пула
+- На фронтенде `runAll()`: `await nextTick()` + `setTimeout(50)` перед запуском, последовательные проверки (вместо `Promise.allSettled`)
+
+### 16. Геоданные: Tauri command вместо fetch (2026-07)
+- **Проблема**: `fetch('http://ip-api.com/...')` блокировался webview (mixed content), хотя CSP = null
+- **Решение**: добавлен Tauri command `network_geo` в `network.rs`, выполняющий HTTP-запрос через `reqwest` (минуя webview)
+- Зарегистрирован в `lib.rs:generate_handler![]`
+- `api/index.js` вызывает `invoke('network_geo')` вместо `fetch`
+
 ## Известные проблемы / заглушки
 
 - `updates.rs` — все 4 команды заглушки (возвращают "not implemented")
 - `installer.rs` — все 5 команд заглушки (возвращают false / "not implemented")
 - `track_*` в `misc.rs` — только логгируют вызов, реальной отправки метрик нет
-- `network.rs` — использует `std::process::Command::ping`, не kqueue/epoll (но адекватно для десктопа)
 - На macOS нет GUI-установщиков для Horizon/Citrix — `InstallDialog` не используется
 - `RuDesktopStatus` — добавлен `camelCase`, но старые сохранённые конфиги могут содержать `device_id` (snake). `get_rudesktop_device_id_from_config` читает оба варианта.
 

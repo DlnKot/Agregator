@@ -113,6 +113,7 @@ pub fn run() {
             commands::misc::open_achat_web,
             commands::misc::open_tolk_web,
             commands::network::network_ping,
+            commands::network::network_geo,
             commands::misc::log_message,
             commands::misc::track_event,
             commands::misc::track_connection_launch,

@@ -271,11 +271,11 @@ function saveSettings() {
 }
 
 .btn-primary {
-  background: var(--accent-danger);
+  background: var(--bg-tertiary);
   color: var(--text-inverse);
 }
 
 .btn-primary:hover {
-  background: var(--bg-tertiary);
+  background: var(--bg-hover);
 }
 </style>

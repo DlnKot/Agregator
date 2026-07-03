@@ -412,8 +412,8 @@ onBeforeUnmount(() => {
 }
 
 .btn-primary:hover {
-  background: var(--accent-danger);
-  color: var(--text-inverse);
+  background: var(--accent-primary-hover);
+  color: #0b1220;
 }
 
 .btn-secondary {
@@ -422,7 +422,7 @@ onBeforeUnmount(() => {
 }
 
 .btn-secondary:hover {
-  background: var(--accent-danger);
+  background: var(--bg-hover);
   color: var(--text-inverse);
 }
 
