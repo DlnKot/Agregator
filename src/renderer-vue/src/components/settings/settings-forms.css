@@ -142,9 +142,9 @@
   padding: 12px 16px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   border-bottom: 1px solid var(--border-color);
-  background: var(--bg-primary);
+  background: rgba(128, 128, 128, 0.12);
 }
 
 .group-header svg {

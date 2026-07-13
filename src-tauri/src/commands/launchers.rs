@@ -1,5 +1,7 @@
+use std::io::Write;
 use std::path::Path;
 use std::process::{Command, Stdio};
+use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
 
@@ -8,6 +10,9 @@ use serde_json::Value;
 
 use crate::models::*;
 use crate::utils::CommandResult;
+
+/// Global handle to the currently running VPN connect process (Windows only).
+static VPN_CHILD: Mutex<Option<std::process::Child>> = Mutex::new(None);
 
 fn launch_exe(program: &str, args: &[&str]) -> CommandResult {
     tracing::debug!("  launch_exe: {} {:?}", program, args);
@@ -42,31 +47,140 @@ fn launch_mac(app_name: &str, args: &[&str]) -> CommandResult {
     }
 }
 
-fn macos_check_vpn_connected() -> bool {
-    if let Ok(output) = Command::new("scutil").args(["--nc", "list"]).output() {
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        stdout.contains("Connected")
+fn vpn_check_ping() -> bool {
+    let host = "mypc.moscow.alfaintra.net";
+    if cfg!(target_os = "windows") {
+        let result = Command::new("ping")
+            .args(["-n", "1", "-w", "3000", host])
+            .output();
+        if let Ok(output) = result {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            stdout.contains("Reply from") || stdout.contains("1 received")
+        } else {
+            false
+        }
     } else {
-        false
+        let result = Command::new("ping")
+            .args(["-c", "1", "-W", "3", host])
+            .output();
+        if let Ok(output) = result {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            stdout.contains("1 packets received") || stdout.contains("1 received")
+        } else {
+            false
+        }
     }
 }
 
-fn macos_get_connected_vpn_names() -> Vec<String> {
-    let mut names = Vec::new();
-    if let Ok(output) = Command::new("scutil").args(["--nc", "list"]).output() {
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        for line in stdout.lines() {
-            if line.contains("[Connected]") {
-                if let Some(paren) = line.find('(') {
-                    let name = line[..paren].trim();
-                    if !name.is_empty() {
-                        names.push(name.to_string());
-                    }
+// ─── Windows VPN helpers ──────────────────────────────────────────────────────
+
+fn find_trac_exe() -> Option<String> {
+    if !cfg!(target_os = "windows") {
+        return None;
+    }
+    let pf = std::env::var("ProgramFiles").ok();
+    let pf86 = std::env::var("ProgramFiles(x86)").ok();
+    let pfw = std::env::var("ProgramW6432").ok();
+    let bases = [pf, pf86, pfw].into_iter().flatten();
+
+    for base in bases {
+        for rel in &[
+            r"CheckPoint\Endpoint Connect\trac.exe",
+            r"CheckPoint\Endpoint Security VPN\trac.exe",
+        ] {
+            let p = Path::new(&base).join(rel);
+            if p.exists() {
+                return Some(p.to_string_lossy().to_string());
+            }
+        }
+    }
+
+    // Fallback: search PATH via where.exe
+    if let Ok(out) = Command::new("where.exe").arg("trac.exe").output() {
+        if out.status.success() {
+            let s = String::from_utf8_lossy(&out.stdout);
+            if let Some(line) = s.lines().next() {
+                let t = line.trim();
+                if !t.is_empty() && Path::new(t).exists() {
+                    return Some(t.to_string());
                 }
             }
         }
     }
-    names
+    None
+}
+
+fn find_tr_gui_exe() -> Option<String> {
+    if !cfg!(target_os = "windows") {
+        return None;
+    }
+    let pf = std::env::var("ProgramFiles").ok();
+    let pf86 = std::env::var("ProgramFiles(x86)").ok();
+    let pfw = std::env::var("ProgramW6432").ok();
+    let bases = [pf, pf86, pfw].into_iter().flatten();
+
+    for base in bases {
+        for rel in &[
+            r"TrGUI\TrGUI.exe",
+            r"TrGUI\TrGUI\TrGUI.exe",
+            r"CheckPoint\Endpoint Connect\TrGUI.exe",
+            r"CheckPoint\Endpoint Security VPN\TrGUI.exe",
+        ] {
+            let p = Path::new(&base).join(rel);
+            if p.exists() {
+                return Some(p.to_string_lossy().to_string());
+            }
+        }
+    }
+
+    if let Ok(out) = Command::new("where.exe").arg("TrGUI.exe").output() {
+        if out.status.success() {
+            let s = String::from_utf8_lossy(&out.stdout);
+            if let Some(line) = s.lines().next() {
+                let t = line.trim();
+                if !t.is_empty() && Path::new(t).exists() {
+                    return Some(t.to_string());
+                }
+            }
+        }
+    }
+    None
+}
+
+fn windows_vpn_disconnect_inner() -> CommandResult {
+    *VPN_CHILD.lock().unwrap() = None;
+
+    let trac = match find_trac_exe() {
+        Some(p) => p,
+        None => return CommandResult::err("Checkpoint trac.exe не найден"),
+    };
+
+    tracing::info!("  windows_vpn_disconnect: {}", trac);
+
+    match Command::new(&trac)
+        .arg("disconnect")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+    {
+        Ok(_) => {
+            tracing::info!("← windows_vpn_disconnect: ok");
+            CommandResult::ok_empty()
+        }
+        Err(e) => {
+            tracing::error!("← windows_vpn_disconnect: FAILED — {}", e);
+            CommandResult::err(format!("Ошибка отключения VPN: {}", e))
+        }
+    }
+}
+
+fn find_macos_trac() -> Option<String> {
+    let p = "/Library/Application Support/Checkpoint/Endpoint Connect/trac";
+    if Path::new(p).exists() {
+        Some(p.to_string())
+    } else {
+        None
+    }
 }
 
 // ==================== RuDesktop Helpers ====================
@@ -982,7 +1096,16 @@ pub fn launch_citrix(connection: Connection, _settings: Settings) -> CommandResu
 pub fn launch_vpn() -> CommandResult {
     tracing::debug!("→ launch_vpn");
     if cfg!(target_os = "windows") {
-        launch_exe("rasdial", &[])
+        match find_tr_gui_exe() {
+            Some(gui) => {
+                tracing::info!("  launch_vpn: found TrGUI.exe at {}", gui);
+                launch_exe(&gui, &[])
+            }
+            None => {
+                tracing::warn!("  launch_vpn: TrGUI.exe not found, trying rasdial");
+                launch_exe("rasdial", &[])
+            }
+        }
     } else if cfg!(target_os = "macos") {
         let known_bundles = [
             "/Applications/Endpoint Security VPN.app",
@@ -1016,16 +1139,22 @@ pub fn launch_vpn() -> CommandResult {
 #[tauri::command]
 pub fn vpn_status() -> CommandResult<VpnStatus> {
     tracing::debug!("→ vpn_status");
-    let platform = std::env::consts::OS.to_string();
-    let connected = if cfg!(target_os = "macos") {
-        macos_check_vpn_connected()
-    } else {
+    let platform = if cfg!(target_os = "windows") { "win32".to_string() } else { std::env::consts::OS.to_string() };
+    // Check if a VPN connect process is still running
+    let child_alive = {
+        let mut guard = VPN_CHILD.lock().unwrap();
+        guard.as_mut().map_or(false, |c| c.try_wait().ok().flatten().is_none())
+    };
+    let connected = if child_alive {
+        // Process still running → not connected yet (still connecting)
         false
+    } else {
+        vpn_check_ping()
     };
     tracing::info!("← vpn_status: platform={}, connected={}", platform, connected);
     CommandResult::ok(VpnStatus {
         connected,
-        client_installed: cfg!(target_os = "macos"),
+        client_installed: if cfg!(target_os = "windows") { find_trac_exe().is_some() } else { cfg!(target_os = "macos") },
         platform,
     })
 }
@@ -1033,33 +1162,172 @@ pub fn vpn_status() -> CommandResult<VpnStatus> {
 #[tauri::command]
 pub fn vpn_disconnect() -> CommandResult {
     tracing::debug!("→ vpn_disconnect");
-    if cfg!(target_os = "macos") {
-        let names = macos_get_connected_vpn_names();
-        if names.is_empty() {
-            tracing::info!("← vpn_disconnect: no connected VPNs found");
-        } else {
-            for name in &names {
-                tracing::info!("  vpn_disconnect: stopping {}", name);
-                let _ = Command::new("scutil")
-                    .args(["--nc", "stop", name])
-                    .spawn();
+    if cfg!(target_os = "windows") {
+        *VPN_CHILD.lock().unwrap() = None;
+        windows_vpn_disconnect_inner()
+    } else if cfg!(target_os = "macos") {
+        *VPN_CHILD.lock().unwrap() = None;
+
+        let trac = match find_macos_trac() {
+            Some(p) => p,
+            None => return CommandResult::err("Checkpoint trac не найден"),
+        };
+
+        // Try direct disconnect first (may not need root), then osascript as fallback
+        let direct = Command::new(&trac)
+            .arg("disconnect")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn();
+
+        match direct {
+            Ok(_) => {
+                tracing::info!("← vpn_disconnect: trac disconnect direct (no sudo)");
+                CommandResult::ok_empty()
             }
-            tracing::info!("← vpn_disconnect: stopped {} VPN(s)", names.len());
+            Err(_) => {
+                tracing::warn!("  vpn_disconnect: direct failed, trying osascript with admin privileges");
+                let as_escape = |s: &str| -> String {
+                    s.replace('\\', "\\\\").replace('"', "\\\"")
+                };
+                let osa_script = format!(
+                    "set trac to \"{}\"\n\
+                     do shell script (quoted form of trac) & \" disconnect &\" with administrator privileges",
+                    as_escape(&trac)
+                );
+                match Command::new("osascript")
+                    .arg("-e")
+                    .arg(&osa_script)
+                    .stdin(Stdio::null())
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .spawn()
+                {
+                    Ok(_) => {
+                        tracing::info!("← vpn_disconnect: osascript spawned");
+                        CommandResult::ok_empty()
+                    }
+                    Err(e) => {
+                        tracing::error!("← vpn_disconnect: FAILED — {}", e);
+                        CommandResult::err(format!("Ошибка отключения VPN: {}", e))
+                    }
+                }
+            }
         }
-        CommandResult::ok_empty()
     } else {
-        tracing::info!("← vpn_disconnect: no-op (not macOS)");
+        tracing::info!("← vpn_disconnect: no-op (not macOS/Windows)");
         CommandResult::ok_empty()
     }
 }
 
 #[tauri::command]
-pub fn vpn_connect(_credentials: Value) -> CommandResult {
+pub fn vpn_connect(credentials: Value) -> CommandResult {
     tracing::debug!("→ vpn_connect");
-    if cfg!(target_os = "macos") {
-        launch_vpn()
+    if cfg!(target_os = "windows") {
+        let username = credentials.get("username").and_then(|v| v.as_str()).unwrap_or("");
+        let password = credentials.get("password").and_then(|v| v.as_str()).unwrap_or("");
+        let challenge = credentials.get("challenge").and_then(|v| v.as_str()).unwrap_or("");
+        let address = credentials.get("address").and_then(|v| v.as_str()).unwrap_or("");
+
+        if username.is_empty() || password.is_empty() || challenge.is_empty() || address.is_empty() {
+            return CommandResult::err("Не все поля credentials заполнены");
+        }
+
+        let trac = match find_trac_exe() {
+            Some(p) => p,
+            None => return CommandResult::err("Checkpoint trac.exe не найден"),
+        };
+
+        tracing::info!("  vpn_connect: spawning {} connect -s {} -u {} -p ***", trac, address, username);
+
+        match Command::new(&trac)
+            .args(["connect", "-s", address, "-u", username, "-p", challenge])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+        {
+            Ok(mut child) => {
+                let stdin = child.stdin.take();
+                *VPN_CHILD.lock().unwrap() = Some(child);
+
+                // Send domain password to stdin after a short delay (trac.exe must initialize)
+                if let Some(mut stdin) = stdin {
+                    let pwd = password.to_string();
+                    thread::spawn(move || {
+                        thread::sleep(Duration::from_secs(3));
+                        let _ = stdin.write_all(format!("{}\r\n", pwd).as_bytes());
+                        let _ = stdin.flush();
+                        tracing::info!("  vpn_connect: password sent to trac.exe stdin");
+                    });
+                }
+
+                tracing::info!("← vpn_connect: trac.exe started");
+                CommandResult::ok_empty()
+            }
+            Err(e) => {
+                tracing::error!("← vpn_connect: FAILED — {}", e);
+                CommandResult::err(format!("Ошибка запуска trac.exe: {}", e))
+            }
+        }
+    } else if cfg!(target_os = "macos") {
+        let username = credentials.get("username").and_then(|v| v.as_str()).unwrap_or("");
+        let password = credentials.get("password").and_then(|v| v.as_str()).unwrap_or("");
+        let challenge = credentials.get("challenge").and_then(|v| v.as_str()).unwrap_or("");
+        let address = credentials.get("address").and_then(|v| v.as_str()).unwrap_or("");
+
+        if username.is_empty() || password.is_empty() || challenge.is_empty() || address.is_empty() {
+            return CommandResult::err("Не все поля credentials заполнены");
+        }
+
+        let trac = match find_macos_trac() {
+            Some(p) => p,
+            None => return CommandResult::err("Checkpoint trac не найден"),
+        };
+
+        tracing::info!("  vpn_connect: macOS osascript auth + trac connect");
+
+        // Escape values for AppleScript double-quoted strings: \ → \\, " → \"
+        let as_escape = |s: &str| -> String {
+            s.replace('\\', "\\\\").replace('"', "\\\"")
+        };
+
+        // Use osascript with `with administrator privileges` for native macOS auth dialog
+        // AppleScript's `quoted form of` handles bash quoting safely
+        let osa_script = format!(
+            "set pwd to \"{}\"\n\
+             set trac to \"{}\"\n\
+             set addr to \"{}\"\n\
+             set user to \"{}\"\n\
+             set chal to \"{}\"\n\
+             do shell script \"echo \" & quoted form of pwd & \" | \" & quoted form of trac & \" connect -s \" & quoted form of addr & \" -u \" & quoted form of user & \" -p \" & quoted form of chal & \" &\" with administrator privileges",
+            as_escape(password),
+            as_escape(&trac),
+            as_escape(address),
+            as_escape(username),
+            as_escape(challenge)
+        );
+
+        match Command::new("osascript")
+            .arg("-e")
+            .arg(&osa_script)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+        {
+            Ok(child) => {
+                *VPN_CHILD.lock().unwrap() = Some(child);
+                tracing::info!("← vpn_connect: osascript spawned (auth dialog shown)");
+                CommandResult::ok_empty()
+            }
+            Err(e) => {
+                tracing::error!("← vpn_connect: FAILED — {}", e);
+                CommandResult::err(format!("Ошибка запуска: {}", e))
+            }
+        }
     } else {
-        tracing::warn!("← vpn_connect: no-op (not macOS)");
+        tracing::warn!("← vpn_connect: no-op (not Windows/macOS)");
         CommandResult::ok_empty()
     }
 }
@@ -1067,16 +1335,27 @@ pub fn vpn_connect(_credentials: Value) -> CommandResult {
 #[tauri::command]
 pub fn vpn_client_status() -> CommandResult<VpnStatus> {
     tracing::debug!("→ vpn_client_status");
-    let platform = std::env::consts::OS.to_string();
-    let connected = if cfg!(target_os = "macos") {
-        macos_check_vpn_connected()
+    let platform = if cfg!(target_os = "windows") { "win32".to_string() } else { std::env::consts::OS.to_string() };
+    let client_installed = if cfg!(target_os = "windows") {
+        find_trac_exe().is_some()
+    } else if cfg!(target_os = "macos") {
+        find_macos_trac().is_some()
     } else {
         false
+    };
+    let child_alive = {
+        let mut guard = VPN_CHILD.lock().unwrap();
+        guard.as_mut().map_or(false, |c| c.try_wait().ok().flatten().is_none())
+    };
+    let connected = if child_alive {
+        false
+    } else {
+        vpn_check_ping()
     };
     tracing::info!("← vpn_client_status: platform={}, connected={}", platform, connected);
     CommandResult::ok(VpnStatus {
         connected,
-        client_installed: cfg!(target_os = "macos"),
+        client_installed,
         platform,
     })
 }
@@ -1084,6 +1363,29 @@ pub fn vpn_client_status() -> CommandResult<VpnStatus> {
 #[tauri::command]
 pub fn vpn_cancel() -> CommandResult {
     tracing::debug!("→ vpn_cancel");
+
+    // Common: kill tracked child process (works for both Windows and macOS)
+    let mut guard = VPN_CHILD.lock().unwrap();
+    if let Some(mut child) = guard.take() {
+        tracing::info!("  vpn_cancel: killing child pid={}", child.id());
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+
+    if cfg!(target_os = "macos") {
+        // Additional cleanup: kill any remaining trac connect processes
+        let _ = Command::new("pkill")
+            .args(["-f", "trac connect"])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn();
+        tracing::info!("← vpn_cancel: macOS cleanup done");
+    } else if cfg!(target_os = "windows") {
+        tracing::info!("← vpn_cancel: trac.exe killed");
+    } else {
+        tracing::info!("← vpn_cancel: no-op (not Windows/macOS)");
+    }
+
     CommandResult::ok_empty()
 }
 

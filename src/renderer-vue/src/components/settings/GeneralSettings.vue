@@ -140,7 +140,7 @@ const previewUsername = computed(() => {
 .login-preview-value {
   font-size: 14px;
   font-weight: 600;
-  color: var(--accent-primary);
+  color: var(--text-primary);
   letter-spacing: 0.3px;
 }
 </style>

@@ -107,7 +107,7 @@
       v-if="showRudesktopModal" 
       :show="showRudesktopModal"
       @close="showRudesktopModal = false"
-      @download="handleRudesktopDownload"
+      @confirm="handleRudesktopDownload"
     />
 
     <!-- VPN Connect Modal -->
@@ -119,42 +119,47 @@
     />
 
     <!-- A-Chat not found modal -->
-    <div v-if="showAChatModal" class="modal-overlay" @click.self="showAChatModal = false">
-      <div class="modal-content modal-sm">
-        <div class="modal-header">
-          <h3>А-Чат</h3>
-          <button class="modal-close" @click="showAChatModal = false">&times;</button>
-        </div>
-        <div class="modal-body">
-          <p>Приложение А-Чат не установлено. Хотите открыть веб-версию?</p>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showAChatModal = false">Нет</button>
-          <button class="btn btn-primary" @click="openAChatWeb">Да</button>
-        </div>
-      </div>
-    </div>
+    <RudesktopNotFoundModal
+      v-if="showAChatModal"
+      :show="showAChatModal"
+      title="А-Чат"
+      message="Приложение А-Чат не установлено. Хотите открыть веб-версию?"
+      confirm-label="Да"
+      cancel-label="Нет"
+      @close="showAChatModal = false"
+      @confirm="openAChatWeb"
+    />
 
     <!-- Tolk not found modal -->
-    <div v-if="showTolkModal" class="modal-overlay" @click.self="showTolkModal = false">
-      <div class="modal-content modal-sm">
-        <div class="modal-header">
-          <h3>Толк</h3>
-          <button class="modal-close" @click="showTolkModal = false">&times;</button>
-        </div>
-        <div class="modal-body">
-          <p>Приложение Толк не установлено. Хотите открыть веб-версию?</p>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showTolkModal = false">Нет</button>
-          <button class="btn btn-primary" @click="openTolkWeb">Да</button>
-        </div>
-      </div>
-    </div>
+    <RudesktopNotFoundModal
+      v-if="showTolkModal"
+      :show="showTolkModal"
+      title="Толк"
+      message="Приложение Толк не установлено. Хотите открыть веб-версию?"
+      confirm-label="Да"
+      cancel-label="Нет"
+      @close="showTolkModal = false"
+      @confirm="openTolkWeb"
+    />
 
     <!-- Toast -->
-    <div v-if="toast.show" :class="['toast', toast.type]">
-      <span class="toast-message">{{ toast.message }}</span>
+    <div v-if="toast.show" :class="['toast', `toast-${toast.type}`]">
+      <div class="toast-badge">
+        <div class="toast-badge-circle">
+          <svg v-if="toast.type === 'success'" width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M4 10.5L8 14.5L16 5.5" stroke="rgba(255,255,255,0.94)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <svg v-else-if="toast.type === 'error'" width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M6 6L14 14M14 6L6 14" stroke="rgba(255,255,255,0.94)" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <svg v-else width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M4 10.5L8 14.5L16 5.5" stroke="rgba(255,255,255,0.94)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+      <div class="toast-text">
+        <span class="toast-title">{{ toast.message }}</span>
+      </div>
     </div>
 
     <!-- Alert Notification -->

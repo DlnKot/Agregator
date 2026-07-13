@@ -88,6 +88,17 @@
           </button>
         </div>
       </div>
+
+      <!-- Confirm disconnect overlay -->
+      <div class="confirm-overlay" v-if="showConfirm" @click.self="cancelDisconnect">
+        <div class="confirm-dialog">
+          <p class="confirm-title">Отключение от VPN</p>
+          <div class="confirm-actions">
+            <button class="btn-ghost" @click="cancelDisconnect">Отмена</button>
+            <button class="btn-primary" @click="confirmDisconnect">Отключиться</button>
+          </div>
+        </div>
+      </div>
     </nav>
 
     <div class="sidebar-footer">
@@ -140,6 +151,8 @@ const rudesktopStatus = reactive({
   deviceId: null
 })
 
+const showConfirm = ref(false)
+
 const vpnStatus = reactive({
   clientInstalled: false,
   connected: false,
@@ -172,7 +185,11 @@ async function loadRudesktopStatus() {
   }
 }
 
+let vpnStatusLoading = false
+
 async function loadVpnStatus() {
+  if (vpnStatusLoading) return
+  vpnStatusLoading = true
   try {
     const platform = await appApi.getPlatform()
     vpnStatus.platform = platform || 'win32'
@@ -189,34 +206,34 @@ async function loadVpnStatus() {
     }
   } catch (e) {
     console.error('Failed to get VPN status:', e)
+  } finally {
+    vpnStatusLoading = false
   }
 }
 
 async function handleVpnClick() {
-  vpnStatus.loading = true
-  try {
-    if (vpnStatus.platform === 'macos') {
-      const result = await launchersApi.launchVpn()
-      // Refresh VPN status to check if connection was established
-      await loadVpnStatus()
-    } else if (vpnStatus.platform === 'win32') {
-      if (!vpnStatus.clientInstalled) {
-        console.error('VPN client not installed')
-        return
-      }
-      if (vpnStatus.connected) {
-        await launchersApi.vpnDisconnect()
-        vpnStatus.connected = false
-        await loadVpnStatus()
-      } else {
-        emit('show-vpn-modal')
-      }
+  if (vpnStatus.platform === 'macos' || vpnStatus.platform === 'win32') {
+    if (!vpnStatus.clientInstalled) {
+      console.error('VPN client not installed')
+      return
     }
-  } catch (e) {
-    console.error('VPN toggle error:', e)
-  } finally {
-    vpnStatus.loading = false
+    if (vpnStatus.connected) {
+      showConfirm.value = true
+    } else {
+      emit('show-vpn-modal')
+    }
   }
+}
+
+function confirmDisconnect() {
+  showConfirm.value = false
+  vpnStatus.connected = false
+  // Fire-and-forget: disconnect runs in background, don't block UI
+  launchersApi.vpnDisconnect().catch(() => {})
+}
+
+function cancelDisconnect() {
+  showConfirm.value = false
 }
 
 async function handleRudesktopClick() {
@@ -537,5 +554,102 @@ defineExpose({
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.2px;
+}
+
+/* Confirm disconnect dialog */
+.confirm-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+
+.confirm-dialog {
+  background: #FFFFFF;
+  border-radius: 12px;
+  padding: 28px 32px;
+  width: 320px;
+  box-shadow: 0 14px 38px rgba(17, 24, 39, 0.14);
+  animation: confirmFadeIn 200ms ease;
+}
+
+@keyframes confirmFadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.confirm-title {
+  font-family: 'Styrene A Web', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 24px;
+  color: rgba(3, 3, 6, 0.88);
+  margin: 0 0 24px;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.confirm-actions .btn-ghost,
+.confirm-actions .btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 20px;
+  min-width: 104px;
+  height: 44px;
+  border: none;
+  border-radius: 999px;
+  font-family: 'Styrene A Web', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 500;
+  font-size: 15px;
+  line-height: 20px;
+  cursor: pointer;
+  transition: opacity 150ms ease;
+  white-space: nowrap;
+}
+
+.confirm-actions .btn-ghost {
+  background: transparent;
+  border: 1px solid rgba(4, 4, 21, 0.47);
+  color: rgba(3, 3, 6, 0.88);
+}
+
+.confirm-actions .btn-ghost:hover {
+  opacity: 0.85;
+}
+
+.confirm-actions .btn-primary {
+  background: #212124;
+  color: rgba(255, 255, 255, 0.94);
+}
+
+.confirm-actions .btn-primary:hover {
+  opacity: 0.9;
+}
+
+/* ---- Dark Theme ---- */
+html[data-theme="dark"] .confirm-dialog {
+  background: var(--bg-secondary);
+}
+
+html[data-theme="dark"] .confirm-title {
+  color: var(--text-primary);
+}
+
+html[data-theme="dark"] .confirm-actions .btn-ghost {
+  border-color: var(--border-color);
+  color: var(--text-primary);
 }
 </style>

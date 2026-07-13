@@ -3,71 +3,121 @@
     <div class="modal-overlay" @mousedown="onOverlayMouseDown" @click="onOverlayClick"></div>
     <div class="modal-content" @mousedown.stop @click.stop>
       <div class="modal-header">
-        <h3 id="modal-title">{{ isEditing ? 'Редактировать подключение' : 'Новое подключение' }}</h3>
-        <button class="modal-close" @click="$emit('close')">&times;</button>
+        <h2 class="modal-title">{{ isEditing ? 'Редактировать подключение' : 'Новое подключение' }}</h2>
+        <button class="modal-close-btn" @click="$emit('close')" aria-label="Закрыть">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M6 6L18 18M18 6L6 18" stroke="rgba(3,3,6,0.88)" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
       </div>
+
       <div class="modal-body">
-        <div v-if="isFactory" class="factory-note" role="note" aria-live="polite">
-          Это стандартное подключение. Можно изменить только название.
-        </div>
+        <div v-if="isFactory" class="factory-note">Это стандартное подключение. Можно изменить только название.</div>
         <div v-if="formError" class="form-error">{{ formError }}</div>
+
         <form id="connection-form" @submit.prevent="save">
           <input type="hidden" id="connection-id" v-model="form.id">
 
-          <div class="form-group">
-            <label for="connection-type">Тип подключения</label>
-            <select id="connection-type" v-model="form.type" required :disabled="isFactory">
+          <!-- Тип подключения -->
+          <div class="input-field">
+            <div class="field-container">
+              <div class="field-content">
+                <span class="field-label">Тип подключения</span>
+                <span class="field-value-text">{{ typeLabel }}</span>
+              </div>
+              <div class="field-right">
+                <div class="chevron-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M6 9L12 15L18 9" stroke="rgba(4,4,21,0.47)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <select v-model="form.type" class="field-select-hidden" :disabled="isFactory">
               <option value="rdp">RDP (Remote Desktop)</option>
               <option value="horizon">VMware Horizon</option>
               <option value="citrix">Citrix Workspace</option>
             </select>
           </div>
 
-          <div class="form-group">
-            <label for="connection-name">Название</label>
-            <input ref="nameInput" type="text" id="connection-name" v-model="form.name" required placeholder="Например: Рабочий стол">
+          <!-- Название -->
+          <div class="input-field">
+            <div class="field-container">
+              <div class="field-content">
+                <span class="field-label">Название</span>
+                <input ref="nameInput" type="text" v-model="form.name" class="field-input" placeholder="Например: Рабочий стол" />
+              </div>
+            </div>
           </div>
 
-          <!-- Host field - hidden for Citrix -->
-          <div class="form-group" v-if="form.type !== 'citrix'">
-            <label for="connection-host">Хост / IP адрес</label>
-            <input type="text" id="connection-host" v-model="form.host" required :disabled="isFactory"
-              placeholder="192.168.1.100 или hostname">
+          <!-- Хост / IP адрес -->
+          <div class="input-field" v-if="form.type !== 'citrix'">
+            <div class="field-container">
+              <div class="field-content">
+                <span class="field-label">Хост / IP адрес</span>
+                <input type="text" v-model="form.host" class="field-input" placeholder="192.168.1.100 или hostname" :disabled="isFactory" />
+              </div>
+            </div>
           </div>
 
-          <div class="form-group horizon-fields" :style="{ display: form.type === 'horizon' ? 'block' : 'none' }">
-            <label for="connection-pool">Desktop Pool (имя пула)</label>
-            <input type="text" id="connection-pool" v-model="form.desktopPool" placeholder="workspace-fullwm" :disabled="isFactory">
+          <!-- Desktop Pool (Horizon only) -->
+          <div class="input-field" v-if="form.type === 'horizon'">
+            <div class="field-container">
+              <div class="field-content">
+                <span class="field-label">Desktop Pool</span>
+                <input type="text" v-model="form.desktopPool" class="field-input" placeholder="workspace-fullwm" :disabled="isFactory" />
+              </div>
+            </div>
           </div>
 
-          <div class="form-group citrix-fields" :style="{ display: form.type === 'citrix' ? 'block' : 'none' }">
-            <label for="connection-store">Citrix Store URL</label>
-            <input type="text" id="connection-store" v-model="form.storeUrl" :disabled="isFactory" required
-              placeholder="https://store.company.com/Citrix/Store">
+          <!-- Citrix Store URL -->
+          <div class="input-field" v-if="form.type === 'citrix'">
+            <div class="field-container">
+              <div class="field-content">
+                <span class="field-label">Citrix Store URL</span>
+                <input type="text" v-model="form.storeUrl" class="field-input" placeholder="https://store.company.com/Citrix/Store" :disabled="isFactory" />
+              </div>
+            </div>
           </div>
 
-          <div class="form-group citrix-fields" :style="{ display: form.type === 'citrix' ? 'block' : 'none' }">
-            <label for="connection-citrix-app">Приложение (опционально)</label>
-            <input type="text" id="connection-citrix-app" v-model="form.citrixApp" :disabled="isFactory"
-              placeholder="CITRIX-VDI Win11">
-            <small class="form-hint">Оставьте пустым для открытия списка приложений</small>
+          <!-- Citrix App -->
+          <div class="input-field" v-if="form.type === 'citrix'">
+            <div class="field-container">
+              <div class="field-content">
+                <span class="field-label">Приложение</span>
+                <input type="text" v-model="form.citrixApp" class="field-input" placeholder="CITRIX-VDI Win11" :disabled="isFactory" />
+              </div>
+            </div>
+            <span class="field-hint">Оставьте пустым для открытия списка приложений</span>
           </div>
 
-          <div class="form-group">
-            <label for="connection-username">Учётная запись (domain\username)</label>
-            <input type="text" id="connection-username" v-model="form.username" placeholder="DOMAIN\username" :disabled="isFactory">
+          <!-- Учётная запись -->
+          <div class="input-field">
+            <div class="field-container">
+              <div class="field-content">
+                <span class="field-label">Учётная запись</span>
+                <input type="text" v-model="form.username" class="field-input" placeholder="DOMAIN\username" :disabled="isFactory" />
+              </div>
+            </div>
           </div>
 
-          <div class="form-group">
-            <label for="connection-description">Описание</label>
-            <textarea id="connection-description" v-model="form.description" rows="2"
-              placeholder="Описание подключения" :disabled="isFactory"></textarea>
+          <!-- Описание -->
+          <div class="input-field">
+            <div class="field-container field-textarea">
+              <div class="field-content">
+                <span class="field-label">Описание</span>
+                <textarea v-model="form.description" class="field-textarea-input" placeholder="Описание подключения" :disabled="isFactory"></textarea>
+              </div>
+            </div>
           </div>
         </form>
       </div>
+
       <div class="modal-footer">
-        <button class="btn btn-secondary" @click="$emit('close')">Отмена</button>
-        <button class="btn btn-primary" @click="save">Сохранить</button>
+        <div class="modal-footer-content">
+          <button class="btn btn-primary" @click="save">Сохранить</button>
+          <button class="btn btn-ghost" @click="$emit('close')">Отмена</button>
+        </div>
       </div>
     </div>
   </div>
@@ -77,14 +127,8 @@
 import { ref, reactive, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 
 const props = defineProps({
-  connection: {
-    type: Object,
-    default: null
-  },
-  defaultUsername: {
-    type: String,
-    default: ''
-  }
+  connection: { type: Object, default: null },
+  defaultUsername: { type: String, default: '' }
 })
 
 const emit = defineEmits(['close', 'save'])
@@ -107,6 +151,11 @@ const formError = ref('')
 const isFactory = computed(() => !!props.connection?.factoryId || props.connection?.isDefault === true)
 const isEditing = computed(() => !!props.connection?.id || !!props.connection?.factoryId)
 
+const typeLabel = computed(() => {
+  const labels = { rdp: 'RDP (Remote Desktop)', horizon: 'VMware Horizon', citrix: 'Citrix Workspace' }
+  return labels[form.type] || form.type
+})
+
 const nameInput = ref(null)
 
 const overlayMouseDown = ref(false)
@@ -120,14 +169,11 @@ function onOverlayMouseDown(e) {
 function onOverlayClick(e) {
   if (!overlayMouseDown.value) return
   overlayMouseDown.value = false
-
   const sel = window.getSelection?.()?.toString?.() || ''
   if (sel) return
-
   const dx = Math.abs((e.clientX || 0) - (overlayDown.value.x || 0))
   const dy = Math.abs((e.clientY || 0) - (overlayDown.value.y || 0))
   if (dx > 3 || dy > 3) return
-
   emit('close')
 }
 
@@ -135,7 +181,6 @@ function onWindowMouseUp() {
   overlayMouseDown.value = false
 }
 
-// Initialize form with connection data
 watch(() => props.connection, (newVal) => {
   if (newVal) {
     Object.assign(form, {
@@ -151,31 +196,18 @@ watch(() => props.connection, (newVal) => {
       description: newVal.description || ''
     })
   } else {
-    // Reset form for new connection - use default username from settings
     Object.assign(form, {
-      id: '',
-      factoryId: '',
-      type: 'rdp',
-      name: '',
-      host: '',
-      desktopPool: '',
-      storeUrl: '',
-      citrixApp: '',
-      username: props.defaultUsername || '',
-      description: ''
+      id: '', factoryId: '', type: 'rdp', name: '', host: '',
+      desktopPool: '', storeUrl: '', citrixApp: '',
+      username: props.defaultUsername || '', description: ''
     })
   }
-
-  nextTick(() => {
-    try { nameInput.value?.focus?.() } catch { /* ignore */ }
-  })
+  nextTick(() => { try { nameInput.value?.focus?.() } catch { /* ignore */ } })
 }, { immediate: true })
 
-// Normalize URL - add https:// if missing protocol
 function normalizeServerUrl(url) {
   if (!url) return ''
   const trimmed = url.trim()
-  // Add https:// if no protocol specified
   if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
     return 'https://' + trimmed
   }
@@ -183,7 +215,6 @@ function normalizeServerUrl(url) {
 }
 
 function normalizeCitrixStoreUrl(url) {
-  // Keep whatever the user pasted (including /discovery), but normalize scheme and trailing slashes.
   return normalizeServerUrl(url).trim().replace(/\/+$/, '')
 }
 
@@ -191,46 +222,24 @@ function save() {
   formError.value = ''
 
   if (isFactory.value) {
-    if (!form.name) {
-      formError.value = 'Заполните обязательные поля'
-      return
-    }
+    if (!form.name) { formError.value = 'Заполните обязательные поля'; return }
     emit('save', { ...props.connection, name: form.name.trim() })
     return
   }
 
-  // Validation: name is always required
-  if (!form.name) {
-    formError.value = 'Заполните обязательные поля'
-    return
-  }
+  if (!form.name) { formError.value = 'Заполните обязательные поля'; return }
 
-  // For Citrix: storeUrl is required, host is not needed
   if (form.type === 'citrix') {
-    if (!String(form.storeUrl || '').trim()) {
-      formError.value = 'Укажите Citrix Store URL'
-      return
-    }
+    if (!String(form.storeUrl || '').trim()) { formError.value = 'Укажите Citrix Store URL'; return }
   } else {
-    // For RDP and Horizon: host is required
-    if (!form.host) {
-      formError.value = 'Заполните обязательные поля'
-      return
-    }
+    if (!form.host) { formError.value = 'Заполните обязательные поля'; return }
   }
 
-  // For Horizon connections, normalize server URL (add https:// if missing)
   let normalizedHost = form.host.trim()
-  if (form.type === 'horizon') {
-    normalizedHost = normalizeServerUrl(form.host)
-  }
+  if (form.type === 'horizon') normalizedHost = normalizeServerUrl(form.host)
+  if (form.type === 'citrix') normalizedHost = normalizeCitrixStoreUrl(form.storeUrl || '')
 
-  // For Citrix, use storeUrl as host
-  if (form.type === 'citrix') {
-    normalizedHost = normalizeCitrixStoreUrl(form.storeUrl || '')
-  }
-
-  const connectionData = {
+  emit('save', {
     id: form.id || Date.now().toString(),
     type: form.type,
     name: form.name.trim(),
@@ -241,16 +250,12 @@ function save() {
     username: form.username.trim(),
     description: form.description.trim(),
     isUserModified: true
-  }
-
-  emit('save', connectionData)
+  })
 }
 
 onMounted(() => {
   window.addEventListener('mouseup', onWindowMouseUp)
-  nextTick(() => {
-    try { nameInput.value?.focus?.() } catch { /* ignore */ }
-  })
+  nextTick(() => { try { nameInput.value?.focus?.() } catch { /* ignore */ } })
 })
 
 onBeforeUnmount(() => {
@@ -281,7 +286,6 @@ onBeforeUnmount(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 1000;
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(4px);
   z-index: 1;
@@ -290,68 +294,67 @@ onBeforeUnmount(() => {
 .modal-content {
   position: relative;
   z-index: 2;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  width: 100%;
-  max-width: 480px;
-  max-height: 90vh;
-  overflow: hidden;
+  width: 600px;
+  background: #FFFFFF;
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 14px 38px rgba(17, 24, 39, 0.14);
   animation: modalSlideIn 200ms ease;
+  overflow: hidden;
+  max-height: 90vh;
 }
 
 @keyframes modalSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
+/* ---- Header ---- */
 .modal-header {
+  padding: 28px 28px 0;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--border-color);
+  flex-direction: row;
+  align-items: flex-start;
+  flex-shrink: 0;
 }
 
-.modal-header h3 {
-  font-size: 18px;
-  font-weight: 600;
+.modal-title {
+  flex: 1;
+  padding: 12px;
+  font-family: 'Styrene A Web', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 700;
+  font-size: 22px;
+  line-height: 26px;
+  letter-spacing: 0.2px;
+  color: rgba(3, 3, 6, 0.88);
+  margin: 0;
 }
 
-.modal-close {
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 24px;
-  cursor: pointer;
-  border-radius: var(--radius-sm);
+.modal-close-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: var(--transition);
+  width: 48px;
+  height: 48px;
+  border: none;
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(40px);
+  border-radius: 50px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 150ms ease;
 }
 
-.modal-close:hover {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
+.modal-close-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
 }
 
+/* ---- Body ---- */
 .modal-body {
   flex: 1;
   overflow-y: auto;
-  padding: 24px;
+  padding: 0 40px;
   pointer-events: auto;
 }
 
@@ -359,24 +362,25 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  padding: 16px 0 12px;
   pointer-events: auto;
 }
 
 .factory-note {
   margin-bottom: 14px;
   padding: 10px 12px;
-  border-radius: var(--radius);
-  border: 1px solid var(--border-color);
-  border-left: 3px solid var(--accent-warning);
-  background: var(--bg-secondary);
-  color: var(--text-primary);
+  border-radius: 8px;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.1);
+  color: #92400e;
   font-size: 13px;
+  font-weight: 500;
 }
 
 .form-error {
   margin-bottom: 14px;
   padding: 10px 12px;
-  border-radius: var(--radius);
+  border-radius: 8px;
   border: 1px solid rgba(239, 68, 68, 0.35);
   background: rgba(239, 68, 68, 0.1);
   color: #dc2626;
@@ -384,107 +388,198 @@ onBeforeUnmount(() => {
   font-weight: 500;
 }
 
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 16px 24px;
-  border-top: 1px solid var(--border-color);
-}
-
-/* Buttons */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  border: none;
-  border-radius: var(--radius-xl);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-.btn-primary {
-  background: var(--accent-primary);
-  color: #0b1220;
-}
-
-.btn-primary:hover {
-  background: var(--accent-primary-hover);
-  color: #0b1220;
-}
-
-.btn-secondary {
-  background: var(--bg-tertiary);
-  color: var(--text-inverse);
-}
-
-.btn-secondary:hover {
-  background: var(--bg-hover);
-  color: var(--text-inverse);
-}
-
-/* Forms */
-.form-group {
-  margin-bottom: 20px;
-}
-
-.form-group label {
-  display: block;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  margin-bottom: 8px;
-}
-
-.form-group input[type="text"],
-.form-group select,
-.form-group textarea {
+/* ---- Input Fields ---- */
+.input-field {
+  position: relative;
   width: 100%;
-  padding: 10px 14px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  font-size: 14px;
-  transition: var(--transition);
 }
 
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-  outline: none;
-  border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-  
+.field-container {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  width: 100%;
+  min-height: 56px;
+  background: rgba(15, 25, 55, 0.1);
+  border-radius: 10px;
 }
 
-.form-group textarea {
-  resize: vertical;
+.field-container.field-textarea {
   min-height: 80px;
-  background: var(--bg-secondary);
 }
 
-.form-group select {
-  cursor: pointer;
-  background: var(--bg-secondary);
+.field-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  padding: 0 12px;
+  min-width: 0;
 }
 
-.form-group input[type="text"]:disabled,
-.form-group select:disabled,
-.form-group textarea:disabled {
-  background: var(--bg-primary);
+.field-label {
+  font-family: 'Styrene A Web', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 400;
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: -0.08px;
+  color: rgba(4, 4, 19, 0.55);
+  pointer-events: none;
+}
+
+.field-value-text {
+  font-family: 'Styrene A Web', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 20px;
+  letter-spacing: -0.24px;
+  color: rgba(3, 3, 6, 0.88);
+}
+
+.field-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: 'Styrene A Web', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 20px;
+  letter-spacing: -0.24px;
+  color: rgba(3, 3, 6, 0.88);
+  padding: 0;
+}
+
+.field-input::placeholder {
+  color: rgba(5, 8, 29, 0.38);
+}
+
+.field-input:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
-  opacity: 0.6;
 }
 
-.form-hint {
+.field-textarea-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: 'Styrene A Web', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 20px;
+  letter-spacing: -0.24px;
+  color: rgba(3, 3, 6, 0.88);
+  padding: 0;
+  resize: none;
+  min-height: 44px;
+}
+
+.field-textarea-input::placeholder {
+  color: rgba(5, 8, 29, 0.38);
+}
+
+.field-textarea-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.field-hint {
   display: block;
   margin-top: 6px;
   font-size: 12px;
-  color: var(--text-muted);
   font-style: italic;
+  color: rgba(4, 4, 19, 0.45);
+  padding-left: 4px;
+}
+
+/* Select override */
+.field-select-hidden {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.field-select-hidden:disabled {
+  cursor: not-allowed;
+}
+
+/* Right addon for select */
+.field-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 12px 0 0;
+  flex-shrink: 0;
+}
+
+.chevron-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chevron-icon svg {
+  display: block;
+}
+
+/* ---- Footer ---- */
+.modal-footer {
+  padding: 24px 40px 40px;
+  flex-shrink: 0;
+  background: #FFFFFF;
+  border-radius: 0 0 12px 12px;
+}
+
+.modal-footer-content {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+/* ---- Buttons ---- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 20px;
+  min-width: 104px;
+  height: 48px;
+  min-height: 48px;
+  border: none;
+  border-radius: 999px;
+  font-family: 'Styrene A Web', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 20px;
+  letter-spacing: -0.05px;
+  cursor: pointer;
+  transition: opacity 150ms ease;
+  white-space: nowrap;
+}
+
+.btn:hover {
+  opacity: 0.9;
+}
+
+.btn-primary {
+  background: #212124;
+  color: rgba(255, 255, 255, 0.94);
+}
+
+.btn-ghost {
+  background: rgba(15, 25, 55, 0.1);
+  backdrop-filter: blur(40px);
+  color: rgba(3, 3, 6, 0.88);
 }
 </style>

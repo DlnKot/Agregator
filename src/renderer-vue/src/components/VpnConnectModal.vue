@@ -1,88 +1,87 @@
 <template>
   <div class="modal active">
-    <div class="modal-overlay" @click.self="$emit('close')"></div>
+    <div class="modal-overlay" @click.self="handleOverlayClick"></div>
     <div class="modal-content">
       <div class="modal-header">
-        <h3>Подключение к VPN</h3>
-        <button class="modal-close" @click="$emit('close')" :disabled="loading">&times;</button>
+        <h2 class="modal-title">Подключение к VPN</h2>
       </div>
+
       <div class="modal-body">
-        <p class="vpn-desc" v-if="!loading">Введите пароль для подключения к корпоративной сети</p>
-        
-        <p class="vpn-status" v-if="loading">
-          <span class="spinner"></span>
+        <p class="modal-desc" v-if="!connecting">Введите пароль для подключения к корпоративной сети</p>
+
+        <p class="vpn-status" v-if="connecting">
+          <span class="spinner"><span class="spinner-dot"></span><span class="spinner-dot"></span><span class="spinner-dot"></span></span>
           {{ statusMessage }}
         </p>
 
-        <div v-if="error" class="vpn-error">
-          {{ error }}
-        </div>
+        <div v-if="error" class="form-error">{{ error }}</div>
 
-        <form @submit.prevent="connect" v-if="!loading">
-            <div class="form-group">
-            <label for="vpn-address">Адрес</label>
-            <select
-              type="text" 
-              id="vpn-address" 
-              v-model="address" 
-              required
-              :disabled="loading">
+        <form @submit.prevent="connect" v-if="!connecting">
+          <button type="submit" style="display:none"></button>
+          <div class="input-field">
+            <div class="input-field-inner">
+              <div class="input-content">
+                <label class="input-label">Адрес</label>
+                <span class="input-value">{{ address }}</span>
+              </div>
+              <div class="input-right">
+                <div class="chevron-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M6 9L12 15L18 9" stroke="rgba(4,4,21,0.47)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <select v-model="address" class="input-select-hidden" required>
               <option value="mypc.alfabank.ru">mypc.alfabank.ru</option>
               <option value="mycc.alfabank.ru">mycc.alfabank.ru</option>
               <option value="84.201.187.53">резерв</option>
             </select>
           </div>
-          <div class="form-group">
-            <label for="vpn-username">Учётная запись</label>
-            <input 
-              type="text" 
-              id="vpn-username" 
-              v-model="username" 
-              placeholder="u12345"
-              required
-              :disabled="loading"
-            >
-          </div>
-          
-          <div class="form-group">
-            <label for="vpn-password">Пароль доменной учётной записи</label>
-            <input 
-              type="password" 
-              id="vpn-password" 
-              v-model="password" 
-              placeholder="Пароль от домена"
-              required
-              :disabled="loading"
-              autocomplete="current-password"
-            >
+
+          <div class="input-field">
+            <div class="input-field-inner">
+              <div class="input-content">
+                <label class="input-label">Учётная запись</label>
+                <input type="text" v-model="username" class="input-element" placeholder="u12345" required>
+              </div>
+            </div>
           </div>
 
-          <div class="form-group">
-            <label for="vpn-indeed">Код Indeed (одноразовый код)</label>
-            <input 
-              type="password" 
-              id="vpn-indeed" 
-              v-model="indeedCode" 
-              placeholder="Код из Indeed"
-              required
-              :disabled="loading"
-              autocomplete="one-time-code"
-            >
+          <div class="input-field">
+            <div class="input-field-inner">
+              <div class="input-content">
+                <label class="input-label">Пароль доменной учётной записи</label>
+                <input type="password" v-model="password" class="input-element" placeholder="Пароль от домена" required autocomplete="current-password">
+              </div>
+            </div>
+          </div>
+
+          <div class="input-field">
+            <div class="input-field-inner">
+              <div class="input-content">
+                <label class="input-label">Код Indeed (одноразовый код)</label>
+                <input type="password" v-model="indeedCode" class="input-element" placeholder="Код из Indeed" required autocomplete="one-time-code">
+              </div>
+            </div>
           </div>
         </form>
       </div>
+
       <div class="modal-footer">
-        <button class="btn btn-secondary" @click="cancelConnection">Отмена</button>
-        <button class="btn btn-primary" @click="connect" :disabled="loading || !username || !password || !indeedCode">
-          {{ loading ? 'Подключение...' : 'Подключиться' }}
-        </button>
+        <div class="modal-footer-content">
+          <button class="btn btn-ghost" @click="handleCancel">{{ connecting ? 'Отменить' : 'Отмена' }}</button>
+          <button class="btn btn-primary" @click="connect" :disabled="connecting || !username || !password || !indeedCode">
+            {{ connecting ? 'Подключение...' : 'Подключиться' }}
+          </button>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onUnmounted } from 'vue'
 import { launchersApi } from '../api'
 
 const props = defineProps({
@@ -97,10 +96,15 @@ const emit = defineEmits(['close', 'connect'])
 const username = ref(props.defaultUsername)
 const password = ref('')
 const indeedCode = ref('')
-const loading = ref(false)
-const error = ref('')
 const address = ref('mypc.alfabank.ru')
-const statusMessage = ref('Подключение к VPN...')
+
+const connecting = ref(false)
+const error = ref('')
+const statusMessage = ref('')
+
+let pollTimer = null
+const POLL_INTERVAL = 2500
+const CONNECT_TIMEOUT = 70000
 
 function stripDomain(fullUsername) {
   if (!fullUsername) return ''
@@ -111,11 +115,9 @@ function stripDomain(fullUsername) {
 }
 
 async function connect() {
-  if (!username.value || !password.value || !indeedCode.value) {
-    return
-  }
+  if (!username.value || !password.value || !indeedCode.value) return
 
-  loading.value = true
+  connecting.value = true
   error.value = ''
   statusMessage.value = 'Подключение к VPN...'
 
@@ -127,24 +129,62 @@ async function connect() {
       address: address.value,
     }
     await launchersApi.vpnConnect(credentials)
-    emit('connect', { username: stripDomain(username.value) })
-    emit('close')
+
+    const startTime = Date.now()
+    await pollStatus(startTime)
   } catch (e) {
     error.value = e.message || 'Ошибка подключения'
-  } finally {
-    loading.value = false
+    connecting.value = false
   }
 }
 
-async function cancelConnection() {
-  try {
-    await launchersApi.vpnCancel()
-  } catch (e) {
-    console.error('Failed to cancel VPN:', e)
+async function pollStatus(startTime) {
+  const check = async () => {
+    try {
+      const status = await launchersApi.vpnStatus()
+      if (status?.connected) {
+        connecting.value = false
+        emit('connect', { username: stripDomain(username.value) })
+        emit('close')
+        return
+      }
+    } catch (_) {}
+
+    if (Date.now() - startTime > CONNECT_TIMEOUT) {
+      error.value = 'Время ожидания подключения истекло'
+      connecting.value = false
+      return
+    }
+
+    pollTimer = setTimeout(check, POLL_INTERVAL)
   }
-  loading.value = false
+
+  pollTimer = setTimeout(check, POLL_INTERVAL)
+}
+
+async function handleCancel() {
+  clearTimeout(pollTimer)
+  pollTimer = null
+
+  if (connecting.value) {
+    connecting.value = false
+    try {
+      await launchersApi.vpnCancel()
+    } catch (e) {
+      console.error('Failed to cancel VPN:', e)
+    }
+  }
+
   emit('close')
 }
+
+function handleOverlayClick() {
+  if (!connecting.value) emit('close')
+}
+
+onUnmounted(() => {
+  clearTimeout(pollTimer)
+})
 </script>
 
 <style scoped>
@@ -176,17 +216,14 @@ async function cancelConnection() {
 
 .modal-content {
   position: relative;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  width: 100%;
-  max-width: 420px;
-  max-height: 90vh;
-  overflow: hidden;
+  width: 520px;
+  background: #FFFFFF;
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 14px 38px rgba(17, 24, 39, 0.14);
   animation: modalSlideIn 200ms ease;
+  overflow: hidden;
 }
 
 @keyframes modalSlideIn {
@@ -200,178 +237,305 @@ async function cancelConnection() {
   }
 }
 
+/* ---- Header ---- */
 .modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--border-color);
+  padding: 28px 28px 0;
+  flex-shrink: 0;
 }
 
-.modal-header h3 {
-  font-size: 18px;
-  font-weight: 600;
+.modal-title {
+  padding: 12px;
+  font-family: 'Styrene A Web', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 700;
+  font-size: 22px;
+  line-height: 26px;
+  letter-spacing: 0.2px;
+  color: rgba(3, 3, 6, 0.88);
+  margin: 0;
 }
 
-.modal-close {
-  background: none;
-  border: none;
-  font-size: 24px;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 0;
-  line-height: 1;
-}
-
-.modal-close:hover {
-  color: var(--text-primary);
-}
-
-.modal-close:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
+/* ---- Body ---- */
 .modal-body {
-  padding: 24px;
+  flex: 1;
+  padding: 0 40px;
   overflow-y: auto;
-}
-
-.modal-footer {
   display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 16px 24px;
-  border-top: 1px solid var(--border-color);
+  flex-direction: column;
 }
 
-.vpn-desc {
-  color: var(--text-secondary);
-  font-size: 14px;
-  margin-bottom: 20px;
-  line-height: 1.5;
+.modal-desc {
+  font-family: 'Styrene A Web', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 24px;
+  letter-spacing: -0.24px;
+  color: rgba(3, 3, 6, 0.88);
+  margin: 0 0 16px;
 }
 
-[data-theme="light"] .vpn-desc {
-  color: #4a5568;
-}
-
+/* ---- Status / Spinner ---- */
 .vpn-status {
   display: flex;
   align-items: center;
   gap: 12px;
-  color: var(--text-primary);
-  font-size: 14px;
-  padding: 16px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
+  font-family: 'Styrene A Web', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 24px;
+  color: rgba(3, 3, 6, 0.88);
+  padding: 16px 0;
 }
 
 .spinner {
-  width: 20px;
-  height: 20px;
-  border: 2px solid var(--border-color);
-  border-top-color: var(--text-primary);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+  display: flex;
+  gap: 5px;
   flex-shrink: 0;
+  padding: 0 2px;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+.spinner-dot {
+  width: 8px;
+  height: 8px;
+  background: rgba(4, 4, 21, 0.47);
+  border-radius: 50%;
+  animation: dotBounce 1.4s ease-in-out infinite both;
 }
 
-.vpn-error {
-  color: var(--accent-danger);
-  font-size: 13px;
-  padding: 12px;
+.spinner-dot:nth-child(1) { animation-delay: -0.32s; }
+.spinner-dot:nth-child(2) { animation-delay: -0.16s; }
+.spinner-dot:nth-child(3) { animation-delay: 0s; }
+
+@keyframes dotBounce {
+  0%, 80%, 100% { transform: scale(0.5); opacity: 0.3; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+/* ---- Error ---- */
+.form-error {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.35);
   background: rgba(239, 68, 68, 0.1);
-  border: 1px solid var(--accent-danger);
-  border-radius: var(--radius-sm);
+  color: #dc2626;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* ---- Input Fields ---- */
+.input-field {
+  position: relative;
+  width: 100%;
   margin-bottom: 16px;
 }
 
+.input-field-inner {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  width: 100%;
+  height: 56px;
+  min-height: 56px;
+  border: 2px solid rgba(4, 4, 21, 0.47);
+  border-radius: 10px;
+  background: #FFFFFF;
+}
+
+.input-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  padding: 0 12px;
+  min-width: 0;
+}
+
+.input-label {
+  font-family: 'Styrene A Web', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 400;
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: -0.08px;
+  color: rgba(4, 4, 19, 0.55);
+  pointer-events: none;
+  display: block;
+}
+
+.input-value {
+  font-family: 'Styrene A Web', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 20px;
+  letter-spacing: -0.24px;
+  color: rgba(3, 3, 6, 0.88);
+}
+
+.input-element {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: 'Styrene A Web', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 20px;
+  letter-spacing: -0.24px;
+  color: rgba(3, 3, 6, 0.88);
+  padding: 0;
+}
+
+.input-element::placeholder {
+  color: rgba(5, 8, 29, 0.38);
+}
+
+.input-element:focus {
+  outline: none;
+}
+
+.input-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 12px 0 0;
+  flex-shrink: 0;
+}
+
+.chevron-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chevron-icon svg {
+  display: block;
+}
+
+.input-select-hidden {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.input-select-hidden:focus + .input-field-inner {
+  border-color: #2288FA;
+}
+
+/* ---- Footer ---- */
+.modal-footer {
+  padding: 24px 40px 40px;
+  flex-shrink: 0;
+  background: #FFFFFF;
+  border-radius: 0 0 12px 12px;
+}
+
+.modal-footer-content {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+/* ---- Buttons ---- */
 .btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 20px;
+  min-width: 104px;
+  height: 48px;
+  min-height: 48px;
   border: none;
-  border-radius: var(--radius);
-  font-size: 14px;
+  border-radius: 999px;
+  font-family: 'Styrene A Web', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-weight: 500;
+  font-size: 16px;
+  line-height: 20px;
+  letter-spacing: -0.05px;
   cursor: pointer;
-  transition: var(--transition);
+  transition: opacity 150ms ease;
+  white-space: nowrap;
+}
+
+.btn:hover {
+  opacity: 0.9;
 }
 
 .btn:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
 .btn-primary {
-  background: var(--accent-primary);
-  color: var(--text-inverse);
+  background: #212124;
+  color: rgba(255, 255, 255, 0.94);
 }
 
-.btn-primary:hover:not(:disabled) {
-  background: var(--accent-primary-hover);
+.btn-ghost {
+  background: transparent;
+  border: 1px solid rgba(4, 4, 21, 0.47);
+  color: rgba(3, 3, 6, 0.88);
 }
 
-.btn-secondary {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-}
-
-.btn-secondary:hover:not(:disabled) {
+/* ---- Dark Theme ---- */
+html[data-theme="dark"] .modal-content {
   background: var(--bg-secondary);
+  box-shadow: var(--shadow-lg);
 }
 
-.form-group {
-  margin-bottom: 20px;
-}
-
-.form-group label {
-  display: block;
-  font-size: 13px;
-  font-weight: 500;
-  color: #4a5568;
-  margin-bottom: 8px;
-}
-
-[data-theme="dark"] .form-group label {
-  color: var(--text-secondary);
-}
-
-.form-group input {
-  width: 100%;
-  padding: 10px 14px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
+html[data-theme="dark"] .modal-title,
+html[data-theme="dark"] .modal-desc,
+html[data-theme="dark"] .vpn-status {
   color: var(--text-primary);
-  font-size: 14px;
-  transition: var(--transition);
 }
 
-.form-group input::placeholder {
-  color: #9ca3af;
+html[data-theme="dark"] .input-field-inner {
+  background: var(--bg-primary);
+  border-color: var(--border-color);
 }
 
-[data-theme="dark"] .form-group input::placeholder {
+html[data-theme="dark"] .input-label {
   color: var(--text-muted);
 }
 
-.form-group input:focus {
-  outline: none;
-  border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+html[data-theme="dark"] .input-value {
+  color: var(--text-primary);
 }
 
-.form-group input:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+html[data-theme="dark"] .input-element {
+  color: var(--text-primary);
+}
+
+html[data-theme="dark"] .input-element::placeholder {
+  color: var(--text-muted);
+}
+
+html[data-theme="dark"] .input-select-hidden:focus + .input-field-inner {
+  border-color: var(--accent-primary);
+}
+
+html[data-theme="dark"] .chevron-icon svg path {
+  stroke: var(--text-muted);
+}
+
+html[data-theme="dark"] .modal-footer {
+  background: var(--bg-secondary);
+}
+
+html[data-theme="dark"] .btn-ghost {
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+html[data-theme="dark"] .spinner-dot {
+  background: var(--text-muted);
 }
 </style>
