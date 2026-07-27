@@ -1,5 +1,5 @@
 <template>
-  <div v-if="connections.length === 0" class="empty-state">
+  <div v-if="connections.length === 0 && filter !== 'recent'" class="empty-state">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
       <rect x="2" y="3" width="20" height="14" rx="2"/>
       <line x1="8" y1="21" x2="16" y2="21"/>
@@ -8,6 +8,13 @@
     <h3>Нет подключений</h3>
     <p>Добавьте первое подключение для быстрого доступа к удалённым рабочим столам</p>
     <button class="btn btn-primary btn-empty-add" @click="$emit('add')">+ Добавить подключение</button>
+  </div>
+
+  <div v-else-if="connections.length === 0 && filter === 'recent'" class="empty-state">
+    <img :src="notFoundIcon" alt="" class="empty-icon">
+    <h3>Нет подключений</h3>
+    <p>У вас ещё нет последних подключений. Добавьте новое подключение</p>
+    <button class="btn btn-recent-add" @click="$emit('add')">Добавить подключение</button>
   </div>
   
   <div v-else class="connections-grid">
@@ -25,15 +32,10 @@
         </div>
         <div class="connection-actions">
           <button class="btn btn-icon" @click="$emit('launch', conn.id)" title="Подключиться">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-              <polygon points="5 3 19 12 5 21 5 3"/>
-            </svg>
+            <img :src="startIcon" alt="" class="action-icon">
           </button>
           <button class="btn btn-icon" @click="$emit('edit', conn)" :title="conn.isDefault ? 'Переименовать' : 'Редактировать'">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-            </svg>
+            <img :src="editIcon" alt="" class="action-icon">
           </button>
           <button v-if="!conn.isDefault" class="btn btn-icon" @click="$emit('delete', conn.id)" title="Удалить">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
@@ -51,10 +53,18 @@
 </template>
 
 <script setup>
+import startIcon from '../assets/icons/start-icon.svg'
+import editIcon from '../assets/icons/edit-icon.svg'
+import notFoundIcon from '../assets/icons/not-found-icon.png'
+
 defineProps({
   connections: {
     type: Array,
     default: () => []
+  },
+  filter: {
+    type: String,
+    default: 'all'
   }
 })
 
@@ -122,6 +132,8 @@ function escapeHtml(text) {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
+  line-height: 1;
+  height: 22px;
 }
 
 .connection-type.rdp {
@@ -142,10 +154,12 @@ function escapeHtml(text) {
 .connection-status {
   display: inline-flex;
   align-items: center;
-  padding: 3px 8px;
-  border-radius: 12px;
-  font-size: 10px;
-  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  height: 22px;
 }
 
 .connection-status.default {
@@ -203,16 +217,48 @@ function escapeHtml(text) {
   color: var(--text-primary);
 }
 
+.action-icon {
+  width: 27px;
+  height: 27px;
+  display: block;
+  filter: var(--icon-filter, none);
+}
+
 .btn-icon:hover {
   background: var(--bg-tertiary);
   stroke: var(--text-inverse);
   color: var(--text-inverse);
 }
 
+.btn-icon:hover .action-icon {
+  filter: brightness(0) invert(1);
+}
+
 
 .btn-empty-add {
   min-width: 220px;
   justify-content: center;
+}
+
+.btn-recent-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 16px;
+  min-width: 88px;
+  height: 40px;
+  border: none;
+  border-radius: 999px;
+  background: var(--bg-tertiary);
+  color: var(--text-inverse);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-recent-add:hover {
+  background: var(--bg-hover);
 }
 
 /* Empty State */
@@ -223,6 +269,12 @@ function escapeHtml(text) {
   justify-content: center;
   padding: 60px 20px;
   text-align: center;
+}
+
+.empty-icon {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 20px;
 }
 
 .empty-state svg {

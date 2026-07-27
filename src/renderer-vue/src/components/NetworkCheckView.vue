@@ -1,103 +1,129 @@
 <template>
-  <div class="network-check">
-    <div class="net-head">
-      <div class="net-title">
-        <h3>Проверка сети</h3>
-        <p class="net-subtitle">Проверяем доступность сервисов через ping ({{ packets }} пакетов)</p>
+  <div class="network-check-container">
+    <div class="network-check">
+      <!-- Loading overlay -->
+      <div v-if="runAllLoading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <span>Проверка сети...</span>
       </div>
-      <div class="net-meta">
-        <span>Порог: <span class="mono">{{ thresholdMs }}</span> мс</span>
-        <button class="btn btn-primary" type="button" @click="runAll" :disabled="runAllLoading">
-          {{ runAllLoading ? 'Проверяем...' : 'Проверить все' }}
-        </button>
-        <button class="btn btn-secondary" type="button" @click="refreshGeo" :disabled="geoLoading">
-          {{ geoLoading ? 'Обновление...' : 'Обновить гео' }}
-        </button>
-      </div>
-    </div>
 
-    <div v-if="geoOk && geo.countryCode !== 'RU'" class="net-alert net-alert-warning">
-      <div class="net-alert-title">Возможно, у вас включен VPN</div>
-      <div class="net-alert-text">
-        Мы определили страну подключения как <span class="mono">{{ geo.country }} ({{ geo.countryCode }})</span>.
-        Если вы не из России или у вас включен VPN, доступ к VDI может быть медленнее или нестабильным.
-      </div>
-    </div>
-
-    <p v-if="globalError" class="net-error">{{ globalError }}</p>
-
-    <div class="net-grid">
-      <div class="card geo">
-        <h3>Гео и провайдер</h3>
-        <div v-if="geoOk" class="kv">
-          <div class="row"><span class="k">IP</span><span class="v mono">{{ geo.query }}</span></div>
-          <div class="row"><span class="k">Страна</span><span class="v">{{ geo.country }} ({{ geo.countryCode }})</span>
-          </div>
-          <div class="row"><span class="k">Регион</span><span class="v">{{ geo.regionName }}</span></div>
-          <div class="row"><span class="k">Город</span><span class="v">{{ geo.city }}</span></div>
-          <div class="row"><span class="k">Провайдер</span><span class="v">{{ geo.isp }}</span></div>
-          <div class="row"><span class="k">Орг.</span><span class="v">{{ geo.org }}</span></div>
+      <div class="net-head">
+        <div class="net-title">
+          <h3>Проверка сети</h3>
+          <p class="net-subtitle">Проверка доступности сервисов через ping ({{ packets }} пакетов)</p>
         </div>
-        <div v-else class="muted">
-          {{ geoLoading ? 'Загрузка...' : 'Не удалось получить данные ip-api' }}
-          <span v-if="geoError" class="mono">({{ geoError }})</span>
-        </div>
-      </div>
-
-      <div v-for="t in targets" :key="t.id" class="card host">
-        <div class="host-head">
-          <div class="host-left">
-            <h3 class="host-name">{{ t.title }}</h3>
-            <div class="host-sub muted mono">{{ t.host }}</div>
-          </div>
-          <span v-if="results[t.id]?.evaluation" class="badge" :class="`s-${results[t.id].evaluation.status}`">
-            {{ results[t.id].evaluation.label }}
-          </span>
-        </div>
-
-        <div class="host-actions">
-          <button class="btn btn-primary" type="button" @click="runTarget(t)" :disabled="results[t.id]?.loading">
-            {{ results[t.id]?.loading ? 'Проверка...' : t.buttonLabel }}
+        <div class="net-meta">
+          <button class="btn btn-check-all" type="button" @click="runAll" :disabled="runAllLoading">
+            {{ runAllLoading ? 'Проверяем...' : 'Проверить все' }}
           </button>
-          <span class="muted" v-if="results[t.id]?.lastRunAt">Последняя: {{ fmtTime(results[t.id].lastRunAt) }}</span>
         </div>
-
-        <p v-if="results[t.id]?.error" class="net-error">{{ results[t.id].error }}</p>
-
-        <div v-if="results[t.id]?.ping && results[t.id]?.evaluation" class="metrics">
-          <div class="metric">
-            <span class="k">Потери</span>
-            <span class="v mono">{{ fmtLoss(results[t.id].ping.lossPercent) }}</span>
-          </div>
-          <div class="metric">
-            <span class="k">Средняя</span>
-            <span class="v mono">{{ fmtMs(results[t.id].ping.avgMs) }}</span>
-          </div>
-          <div class="metric">
-            <span class="k">Мин/Макс</span>
-            <span class="v mono">{{ fmtMinMax(results[t.id].ping.minMs, results[t.id].ping.maxMs) }}</span>
-          </div>
-        </div>
-
-        <p v-if="results[t.id]?.evaluation?.recommendation" class="recommendation">
-          {{ results[t.id].evaluation.recommendation }}
-        </p>
-
-        <p v-if="results[t.id]?.evaluation" class="hint" :class="hintClass(results[t.id].evaluation.status)">
-          {{ hintText(results[t.id].evaluation.status) }}
-        </p>
-
-        <details v-if="results[t.id]?.ping" class="details">
-          <summary>Детали</summary>
-          <pre class="raw">{{ results[t.id].ping.raw || results[t.id].ping.error || 'Нет данных' }}</pre>
-        </details>
       </div>
+
+      <!-- Geo info — always visible -->
+      <div class="geo-bar" v-if="geoOk">
+        <span class="geo-flag">{{ geo.countryCode === 'RU' ? '🇷🇺' : '🌍' }}</span>
+        <span class="geo-text">
+          {{ geo.country }} ({{ geo.countryCode }})
+          <span v-if="geo.city"> · {{ geo.city }}</span>
+          <span v-if="geo.isp"> · {{ geo.isp }}</span>
+        </span>
+        <button class="btn btn-geo" type="button" @click="refreshGeo" :disabled="geoLoading">
+          {{ geoLoading ? '...' : '↻' }}
+        </button>
+      </div>
+      <div class="geo-bar geo-loading" v-else-if="geoLoading">
+        <span class="geo-text muted">Определение местоположения...</span>
+      </div>
+      <div class="geo-bar geo-error" v-else-if="geoError">
+        <span class="geo-text">Не удалось определить местоположение</span>
+      </div>
+
+      <!-- VPN warning -->
+      <div v-if="geoOk && geo.countryCode !== 'RU'" class="net-alert net-alert-warning">
+        <div class="net-alert-title">Возможно, у вас включен VPN</div>
+        <div class="net-alert-text">
+          Мы определили страну подключения как <span class="mono">{{ geo.country }} ({{ geo.countryCode }})</span>.
+          Если вы не из России или у вас включен VPN, доступ к VDI может быть медленнее или нестабильным.
+        </div>
+      </div>
+
+      <p v-if="globalError" class="net-error">{{ globalError }}</p>
+
+      <div class="net-grid">
+        <div v-for="t in targets" :key="t.id" class="card host">
+          <div class="host-head">
+            <div class="host-left">
+              <h3 class="host-name">{{ t.title }}</h3>
+              <div class="host-sub muted mono">{{ t.host }}</div>
+            </div>
+            <span v-if="results[t.id]?.evaluation" class="badge" :class="`s-${results[t.id].evaluation.status}`">
+              {{ results[t.id].evaluation.label }}
+            </span>
+            <span v-else class="badge s-none">—</span>
+          </div>
+
+          <div class="host-actions">
+            <button class="btn-check-target" type="button" @click="runTarget(t)" :disabled="results[t.id]?.loading">
+              {{ results[t.id]?.loading ? 'Проверка...' : t.buttonLabel }}
+            </button>
+            <span class="muted" v-if="results[t.id]?.lastRunAt">Последняя: {{ fmtTime(results[t.id].lastRunAt) }}</span>
+          </div>
+
+          <p v-if="results[t.id]?.error" class="net-error">{{ results[t.id].error }}</p>
+
+          <div v-if="results[t.id]?.ping" class="ping-details">
+            <p v-if="results[t.id]?.evaluation?.recommendation" class="recommendation">
+              {{ results[t.id].evaluation.recommendation }}
+            </p>
+            <div class="metrics">
+              <div class="metric">
+                <span class="k">Потери</span>
+                <span class="v mono">{{ fmtLoss(results[t.id].ping.lossPercent) }}</span>
+              </div>
+              <div class="metric">
+                <span class="k">Средняя</span>
+                <span class="v mono">{{ fmtMs(results[t.id].ping.avgMs) }}</span>
+              </div>
+              <div class="metric">
+                <span class="k">Мин/Макс</span>
+                <span class="v mono">{{ fmtMinMax(results[t.id].ping.minMs, results[t.id].ping.maxMs) }}</span>
+              </div>
+            </div>
+            <details v-if="results[t.id]?.ping?.raw" class="details-raw">
+              <summary class="details-summary">Вывод ping</summary>
+              <pre class="raw">{{ results[t.id].ping.raw || 'Нет данных' }}</pre>
+            </details>
+          </div>
+        </div>
+      </div>
+
+      <details class="details geo-details" v-if="geoOk || geoError || geoLoading">
+        <summary class="details-summary">Геоданные</summary>
+        <div class="details-content">
+          <div class="geo-info">
+            <div v-if="geoOk" class="kv">
+              <div class="row"><span class="k">IP</span><span class="v mono">{{ geo.query }}</span></div>
+              <div class="row"><span class="k">Страна</span><span class="v">{{ geo.country }} ({{ geo.countryCode }})</span></div>
+              <div class="row"><span class="k">Регион</span><span class="v">{{ geo.regionName }}</span></div>
+              <div class="row"><span class="k">Город</span><span class="v">{{ geo.city }}</span></div>
+              <div class="row"><span class="k">Провайдер</span><span class="v">{{ geo.isp }}</span></div>
+              <div class="row"><span class="k">Орг.</span><span class="v">{{ geo.org }}</span></div>
+            </div>
+            <div v-else-if="geoLoading" class="muted">Загрузка...</div>
+            <div v-else class="muted">
+              Не удалось получить данные ip-api
+              <span v-if="geoError" class="mono">({{ geoError }})</span>
+            </div>
+          </div>
+        </div>
+      </details>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
+import { networkApi, networkGeo, trackingApi } from '../api'
 
 const props = defineProps({
   settings: {
@@ -126,9 +152,9 @@ const packets = 10
 const geoOk = computed(() => geo.value?.status === 'success')
 
 const targets = [
-  { id: 'vdi', host: 'telework.alfabank.ru', title: 'VDI', buttonLabel: 'Проверить доступ до VDI' },
-  { id: 'vdi_backup', host: 'telework.moscow.alfaintra.net', title: 'VDI (резерв)', buttonLabel: 'Проверить доступ до VDI РЕЗЕРВ' },
-  { id: 'purms', host: 'mypc.moscow.alfaintra.net', title: 'ПУРМС', buttonLabel: 'Проверить доступ к ПУРМС' }
+  { id: 'vdi', host: 'telework.alfabank.ru', title: 'VDI', buttonLabel: 'Проверить доступ' },
+  { id: 'vdi_backup', host: 'telework.moscow.alfaintra.net', title: 'VDI (резерв)', buttonLabel: 'Проверить доступ' },
+  { id: 'purms', host: 'mypc.moscow.alfaintra.net', title: 'ПУРМС', buttonLabel: 'Проверить доступ' }
 ]
 
 function fmtMs(v) {
@@ -154,84 +180,44 @@ function fmtTime(ts) {
   try { return new Date(ts).toLocaleString() } catch { return '—' }
 }
 
-function hintClass(status) {
-  return status === 'ok' ? 'hint-ok' : 'hint-bad'
-}
-
-function hintText(status) {
-  if (status === 'ok') return '✓ Отлично! Сервис работает правильно и быстро.'
-  if (status === 'high_latency') return '⚠ Медленное соединение. Сервис доступен, но может быть замедленным. Проверьте своё интернет-соединение.'
-  if (status === 'loss') return '⚠ Нестабильное соединение. Некоторые пакеты теряются. Может быть проблема с сетью или маршрутизацией.'
-  if (status === 'down') return '✗ Сервис недоступен. Проверьте подключение к интернету и убедитесь, что VPN включен (если требуется).'
-  return '? Не удалось проверить. Попробуйте позже или обратитесь в IT Support.'
-}
-
 async function refreshGeo() {
   geoError.value = ''
   geoLoading.value = true
   try {
-    if (!window.api?.networkGeo) {
-      geoError.value = 'Недоступно в браузере'
-      return
-    }
-
-    const res = await window.api.networkGeo()
-    if (!res?.success) {
-      geoError.value = res?.error || 'Ошибка'
-      return
-    }
-    geo.value = res.data
+    const data = await networkGeo()
+    geo.value = data
   } catch (e) {
-    geoError.value = e?.message || String(e)
+    const msg = e?.message || String(e)
+    console.error('[geo] error', msg)
+    geoError.value = msg
   } finally {
     geoLoading.value = false
   }
 }
 
 async function runTarget(t) {
-  // Трекинг метрик
-  if (window.api?.trackNetworkCheck) {
-    window.api.trackNetworkCheck()
-  }
-  
+  trackingApi.trackNetworkCheck()
+
   globalError.value = ''
-  // Avoid race conditions when multiple checks run in parallel.
   results.value = {
     ...results.value,
     [t.id]: { ...(results.value[t.id] || {}), loading: true, error: '' }
   }
 
   try {
-    if (!window.api?.networkPing) {
-      results.value = {
-        ...results.value,
-        [t.id]: { ...(results.value[t.id] || {}), loading: false, error: 'Проверка доступна только в Electron' }
-      }
-      return
-    }
-
-    // Ensure geo is present, but do not block checks if it fails.
     if (!geo.value && !geoLoading.value) {
       refreshGeo().catch(() => { })
     }
 
-    const res = await window.api.networkPing(t.host, packets)
-    if (!res?.success) {
-      results.value = {
-        ...results.value,
-        [t.id]: { ...(results.value[t.id] || {}), loading: false, error: res?.error || 'Ошибка' }
-      }
-      return
-    }
-
+    const result = await networkApi.ping(t.host, packets, thresholdMs.value)
     results.value = {
       ...results.value,
       [t.id]: {
         ...(results.value[t.id] || {}),
         loading: false,
         error: '',
-        ping: res.data.ping,
-        evaluation: res.data.evaluation,
+        ping: result.ping,
+        evaluation: result.evaluation,
         lastRunAt: Date.now()
       }
     }
@@ -246,31 +232,103 @@ async function runTarget(t) {
 async function runAll() {
   globalError.value = ''
   runAllLoading.value = true
+  await nextTick()
+  await new Promise(r => setTimeout(r, 50))
   try {
-    // Run all checks in parallel; per-target updates are race-safe.
-    await Promise.allSettled(targets.map(t => runTarget(t)))
+    for (const t of targets) {
+      await runTarget(t)
+    }
   } finally {
     runAllLoading.value = false
   }
 }
 
 onMounted(() => {
-  // Geo is lightweight; ping checks are only manual via buttons.
   refreshGeo().catch(() => { })
 })
 </script>
 
 <style scoped>
+.network-check-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  background: var(--bg-primary);
+  border-radius: 16px;
+  padding: 20px;
+  overflow: hidden;
+  position: relative;
+}
+
 .network-check {
   display: flex;
   flex-direction: column;
   gap: 14px;
   flex: 1;
   min-height: 0;
+  position: relative;
 }
 
+/* Geo bar */
+.geo-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.geo-flag {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.geo-text {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.geo-loading {
+  opacity: 0.7;
+}
+
+.geo-error {
+  opacity: 0.6;
+}
+
+.btn-geo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: var(--bg-tertiary);
+  color: var(--text-inverse);
+  font-size: 16px;
+  cursor: pointer;
+  transition: var(--transition);
+  flex-shrink: 0;
+}
+
+.btn-geo:hover {
+  background: var(--bg-hover);
+}
+
+.btn-geo:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Alert */
 .net-alert {
-  border-radius: var(--radius);
+  border-radius: 16px;
   border: 1px solid rgba(245, 158, 11, 0.28);
   background: rgba(245, 158, 11, 0.10);
   padding: 12px 14px;
@@ -288,6 +346,7 @@ onMounted(() => {
   line-height: 1.45;
 }
 
+/* Header */
 .net-head {
   display: flex;
   align-items: center;
@@ -317,96 +376,21 @@ onMounted(() => {
 }
 
 .net-error {
-  color: #7f1d1d;
+  color: var(--text-primary);
   font-size: 13px;
   padding: 10px 12px;
   border: 1px solid rgba(239, 68, 68, 0.35);
   background: rgba(239, 68, 68, 0.10);
-  border-radius: var(--radius);
+  border-radius: 16px;
 }
 
-.hint {
-  margin-top: 10px;
-  padding: 9px 10px;
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  line-height: 1.35;
-}
-
-.hint-ok {
-  color: #065f46;
-  border: 1px solid rgba(16, 185, 129, 0.45);
-  background: rgba(16, 185, 129, 0.12);
-}
-
-.hint-bad {
-  color: #7f1d1d;
-  border: 1px solid rgba(239, 68, 68, 0.35);
-  background: rgba(239, 68, 68, 0.10);
-}
-
-html[data-theme="dark"] .net-error,
-html[data-theme="dark"] .hint-bad {
-  color: rgba(255, 255, 255, 0.88);
-  border-color: rgba(239, 68, 68, 0.42);
-  background: rgba(239, 68, 68, 0.14);
-}
-
-html[data-theme="dark"] .hint-ok {
-  color: rgba(255, 255, 255, 0.90);
-  border-color: rgba(16, 185, 129, 0.45);
-  background: rgba(16, 185, 129, 0.16);
-}
-
+/* Grid */
 .net-grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: 12px;
   overflow: auto;
-  /* Give shadows breathing room so they don't clip on last row */
   padding: 2px 8px 18px 2px;
-}
-
-/* Local button styles (App.vue button styles are scoped and don't apply here) */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  border: none;
-  border-radius: var(--radius-xl);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: var(--transition);
-  user-select: none;
-}
-
-.btn-primary {
-  background: var(--accent-danger);
-  color: var(--text-inverse);
-  box-shadow: var(--shadow);
-}
-
-.btn-primary:hover {
-  background: var(--bg-tertiary);
-}
-
-.btn-secondary {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-}
-
-.btn-secondary:hover {
-  background: var(--bg-tertiary);
-  color: var(--text-inverse);
-  border-color: var(--border-light);
-}
-
-.btn:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
 }
 
 @media (min-width: 860px) {
@@ -424,10 +408,11 @@ html[data-theme="dark"] .hint-ok {
   }
 }
 
+/* Card */
 .card {
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-xl);
+  border-radius: 16px;
   padding: 16px;
   box-shadow: var(--shadow);
 }
@@ -460,69 +445,110 @@ html[data-theme="dark"] .hint-ok {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
-.kv .row {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 6px 0;
-  border-bottom: 1px dashed var(--border-color);
-}
-
-.kv .row:last-child {
-  border-bottom: none;
-}
-
-.kv .k {
-  color: var(--text-secondary);
-  font-size: 12px;
-}
-
-.kv .v {
-  color: var(--text-primary);
-  font-size: 12px;
-  text-align: right;
-}
-
-.summary-line {
+/* Loading overlay */
+.loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-}
-
-.badge {
-  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: fit-content;
-  padding: 6px 10px;
+  gap: 16px;
+  background: var(--bg-primary);
+  border-radius: 16px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.loading-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--border-color);
+  border-top-color: var(--text-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* "Проверить все" button — prominent style like "Добавить подключение" */
+.btn-check-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: none;
   border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
-  border: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  user-select: none;
+  white-space: nowrap;
+  background: var(--bg-tertiary);
+  color: var(--text-inverse);
 }
 
-.badge.s-ok {
-  border-color: rgba(16, 185, 129, 0.55);
-  background: rgba(16, 185, 129, 0.18);
-  color: var(--text-primary);
+.btn-check-all:hover {
+  background: var(--bg-hover);
 }
 
-.badge.s-high_latency {
-  border-color: rgba(245, 158, 11, 0.35);
-  background: rgba(245, 158, 11, 0.10);
-  color: var(--text-primary);
+.btn-check-all:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
 }
 
-.badge.s-loss,
-.badge.s-down,
-.badge.s-error {
-  border-color: rgba(239, 68, 68, 0.35);
-  background: rgba(239, 68, 68, 0.10);
+/* Individual target check button — BottomSlot glassmorphism */
+.btn-check-target {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  padding: 4px 12px;
+  gap: 2px;
+  min-width: 80px;
+  height: 32px;
+  min-height: 32px;
+  background: rgba(15, 25, 55, 0.1);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  user-select: none;
+  white-space: nowrap;
+  flex: none;
+  order: 2;
+  flex-grow: 0;
 }
 
+.btn-check-target:hover {
+  background: rgba(15, 25, 55, 0.18);
+}
+
+.btn-check-target:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+html[data-theme="dark"] .btn-check-target {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+html[data-theme="dark"] .btn-check-target:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* Host card */
 .host-head {
   display: flex;
   align-items: center;
@@ -555,6 +581,47 @@ html[data-theme="dark"] .hint-ok {
   margin-bottom: 10px;
 }
 
+/* Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+
+.badge.s-ok {
+  border-color: rgba(16, 185, 129, 0.55);
+  background: rgba(16, 185, 129, 0.18);
+  color: var(--text-primary);
+}
+
+.badge.s-high_latency {
+  border-color: rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.10);
+  color: var(--text-primary);
+}
+
+.badge.s-loss,
+.badge.s-down,
+.badge.s-error {
+  border-color: rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.10);
+  color: var(--text-primary);
+}
+
+.badge.s-none {
+  opacity: 0.4;
+}
+
+/* Metrics */
 .metrics {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -564,7 +631,7 @@ html[data-theme="dark"] .hint-ok {
 
 .metric {
   padding: 10px;
-  border-radius: var(--radius);
+  border-radius: 8px;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
 }
@@ -586,30 +653,102 @@ html[data-theme="dark"] .hint-ok {
   font-size: 12px;
   color: var(--text-secondary);
   margin: 0 0 10px;
+  line-height: 1.4;
 }
 
-.details summary {
+/* Ping details — always visible after check */
+.ping-details {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+}
+
+/* Details / Collapse */
+.details {
+  margin-top: 8px;
+}
+
+.details-summary {
   cursor: pointer;
   font-size: 12px;
   color: var(--text-muted);
+  padding: 6px 8px;
+  border-radius: 8px;
+  user-select: none;
+  display: inline-block;
 }
 
-.raw {
-  margin-top: 10px;
+.details-summary:hover {
+  background: var(--item-hover-bg);
+  color: var(--text-primary);
+}
+
+.details-content {
+  margin-top: 8px;
   padding: 12px;
-  border-radius: var(--radius);
+  border-radius: 16px;
   background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.details-raw {
+  margin-top: 8px;
+}
+
+.geo-details {
+  margin-top: 0;
+}
+
+.geo-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Key-value rows */
+.kv .row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--border-color);
+}
+
+.kv .row:last-child {
+  border-bottom: none;
+}
+
+.kv .k {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.kv .v {
+  color: var(--text-primary);
+  font-size: 12px;
+  text-align: right;
+}
+
+/* Raw output */
+.raw {
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--bg-primary);
   border: 1px solid var(--border-color);
   overflow: auto;
   max-height: 220px;
   font-size: 11px;
   color: var(--text-primary);
+  margin-top: 8px;
+  white-space: pre-wrap;
 }
 
 .empty {
   padding: 14px;
   border: 1px dashed var(--border-color);
-  border-radius: var(--radius-xl);
+  border-radius: 16px;
   background: var(--bg-primary);
 }
 </style>

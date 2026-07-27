@@ -12,16 +12,14 @@
     </div>
 
     <div class="settings-sections">
-      <UserSettings v-if="activeTab === 'user'" :settings="localSettings" />
-      <RdpSettings v-if="activeTab === 'rdp'" :settings="localSettings" />
-      <HorizonSettings v-if="activeTab === 'horizon'" :settings="localSettings" />
-      <CitrixSettings v-if="activeTab === 'citrix'" :settings="localSettings" />
       <GeneralSettings 
         v-if="activeTab === 'general'" 
         :settings="localSettings"
         @reset-default-connections="$emit('reset-default-connections')"
       />
-      <NetworkSettings v-if="activeTab === 'network'" :settings="localSettings" />
+      <RdpSettings v-if="activeTab === 'rdp'" :settings="localSettings" />
+      <HorizonSettings v-if="activeTab === 'horizon'" :settings="localSettings" />
+      <CitrixSettings v-if="activeTab === 'citrix'" :settings="localSettings" />
       <UpdatesSettings 
         v-if="activeTab === 'updates'" 
         :settings="localSettings"
@@ -47,15 +45,14 @@
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useApp } from '../../composables/useApp'
 import { useSettingsForm } from './useSettingsForm'
+import { appApi, updatesApi } from '../../api'
 import versionData from '../../../../version.js'
 import './settings-forms.css'
 
-import UserSettings from './UserSettings.vue'
+import GeneralSettings from './GeneralSettings.vue'
 import RdpSettings from './RdpSettings.vue'
 import HorizonSettings from './HorizonSettings.vue'
 import CitrixSettings from './CitrixSettings.vue'
-import GeneralSettings from './GeneralSettings.vue'
-import NetworkSettings from './NetworkSettings.vue'
 import UpdatesSettings from './UpdatesSettings.vue'
 
 const props = defineProps({
@@ -83,24 +80,25 @@ const isChecking = ref(false)
 const isDownloading = ref(false)
 const appVersion = ref(versionData.version)
 
-onMounted(async () => {
+  onMounted(async () => {
   initAutoUpdater()
 
   try {
-    const res = await window.api?.getVersion?.()
-    const version = res && typeof res === 'object' && res.success === true ? res.data : res
+    const version = await appApi.getVersion()
     if (version) appVersion.value = version
   } catch (e) {
     // Ignore
   }
 
   try {
-    const res = await window.api?.getUpdateStatus?.()
-    const status = res && typeof res === 'object' && res.success === true ? res.data : res
+    const status = await updatesApi.getUpdateStatus()
     if (status) updateStatus.value = status
   } catch (e) {
     // Ignore
   }
+
+  // Fix slider position on first open
+  await fixSliderOnMount()
 })
 
 async function handleCheckUpdates() {
@@ -126,16 +124,14 @@ function handleInstallUpdate() {
 }
 
 const tabs = [
-  { id: 'user', label: 'Пользователь' },
+  { id: 'general', label: 'Общие' },
   { id: 'rdp', label: 'RDP' },
   { id: 'horizon', label: 'Horizon' },
   { id: 'citrix', label: 'Citrix' },
-  { id: 'general', label: 'Общие' },
-  { id: 'network', label: 'Сеть' },
   { id: 'updates', label: 'Обновление' }
 ]
 
-const activeTab = ref('user')
+const activeTab = ref('general')
 
 // Settings tabs slider
 const settingsTabsRef = ref(null)
@@ -148,19 +144,29 @@ function setTabRef(id, el) {
 }
 
 const sliderStyle = computed(() => {
-  if (!settingsTabsRef.value) return {}
-  
+  if (!settingsTabsRef.value) return { opacity: '0' }
+
   const currentTabEl = tabRefs.value[activeTab.value]
-  if (!currentTabEl) return {}
-  
+  if (!currentTabEl) return { opacity: '0' }
+
   const containerRect = settingsTabsRef.value.getBoundingClientRect()
   const tabRect = currentTabEl.getBoundingClientRect()
-  
+
   return {
     width: `${tabRect.width}px`,
-    transform: `translateX(${tabRect.left - containerRect.left}px)`
+    transform: `translateX(${tabRect.left - containerRect.left}px)`,
+    opacity: '1'
   }
 })
+
+// Force slider recalculation on mount — fixes first-open positioning
+async function fixSliderOnMount() {
+  await nextTick()
+  const current = activeTab.value
+  activeTab.value = ''
+  await nextTick()
+  activeTab.value = current
+}
 
 watch(() => props.settings, (newSettings) => {
   initSettings(newSettings)
@@ -187,46 +193,54 @@ function saveSettings() {
   display: flex;
   gap: 8px;
   margin-bottom: 24px;
-  padding: 4px;
-  background: var(--bg-secondary);
+  padding: 2px;
+  background: var(--bg-primary);
   border-radius: var(--radius-xl);
   width: fit-content;
+  max-width: 100%;
   position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  height: 40px;
 }
 
 .tab-slider {
   position: absolute;
-  top: 4px;
+  top: 1px;
   left: 0;
-  height: calc(100% - 8px);
-  background: var(--bg-tertiary);
+  height: 36px;
+  background: var(--tab-slider-bg);
+  border: 0.5px solid var(--tab-slider-border);
   border-radius: var(--radius-xl);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 0;
 }
 
 .settings-tab {
-  padding: 10px 20px;
+  padding: 8px 24px;
   border: none;
   background: transparent;
-  color: var(--text-primary);
-  opacity: 0.8;
-  font-size: 14px;
+  color: var(--tab-text-inactive);
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  border-radius: 25px;
+  border-radius: 20px;
   transition: color 0.2s ease;
   position: relative;
   z-index: 1;
+  white-space: nowrap;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .settings-tab:hover {
-  opacity: 1;
+  color: var(--tab-text-inactive);
 }
 
 .settings-tab.active {
-  opacity: 1;
-  color: var(--text-inverse);
+  color: var(--tab-text-active);
 }
 
 .settings-sections {
@@ -257,11 +271,11 @@ function saveSettings() {
 }
 
 .btn-primary {
-  background: var(--accent-danger);
+  background: var(--bg-tertiary);
   color: var(--text-inverse);
 }
 
 .btn-primary:hover {
-  background: var(--bg-tertiary);
+  background: var(--bg-hover);
 }
 </style>

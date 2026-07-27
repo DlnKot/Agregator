@@ -47,6 +47,7 @@ Thumbs.db
 # Build artifacts
 build/
 out/
+src-tauri/target/
 
 # User data and local config
 user-config.json

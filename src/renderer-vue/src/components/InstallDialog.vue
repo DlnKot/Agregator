@@ -90,6 +90,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { installerApi, onDownloadProgress } from '../api'
 
 const props = defineProps({
   show: {
@@ -141,22 +142,16 @@ async function handleInstall() {
 
   try {
     // Set up progress listener
-    if (window.api?.onDownloadProgress) {
-      removeProgressListener = window.api.onDownloadProgress((data) => {
-        if (data.clientType === props.clientType) {
-          progress.value = data.percent
-        }
-      })
-    }
+    removeProgressListener = onDownloadProgress((data) => {
+      if (data.clientType === props.clientType) {
+        progress.value = data.percent
+      }
+    })
 
-    const result = await window.api.downloadDistribution(props.clientType)
-    
-    if (result && result.success) {
-      downloadedPath.value = result.data?.path || result.path
-      state.value = 'downloaded'
-    } else {
-      throw new Error(result?.error || 'Ошибка скачивания')
-    }
+    const path = await installerApi.downloadDistribution(props.clientType)
+
+    downloadedPath.value = path?.path || path
+    state.value = 'downloaded'
   } catch (error) {
     errorMessage.value = error?.message || 'Сервер недоступен. Попробуйте позже.'
     state.value = 'error'
@@ -175,7 +170,7 @@ async function handleRetry() {
 
 function handleOpenInstaller() {
   if (downloadedPath.value) {
-    window.api.openInstaller(downloadedPath.value)
+    installerApi.openInstaller(downloadedPath.value)
     emit('installed', downloadedPath.value)
   }
   handleCancel()
@@ -196,6 +191,7 @@ watch(() => props.show, (newVal) => {
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -203,12 +199,25 @@ watch(() => props.show, (newVal) => {
 }
 
 .modal {
-  background: var(--bg-primary, #1a1a1a);
-  border-radius: 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
   width: 100%;
   max-width: 400px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-lg);
   overflow: hidden;
+  animation: modalSlideIn 200ms ease;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .modal-header {
@@ -216,14 +225,14 @@ watch(() => props.show, (newVal) => {
   align-items: center;
   justify-content: space-between;
   padding: 20px;
-  border-bottom: 1px solid var(--border-color, #333);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .modal-header h3 {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: var(--text-primary, #fff);
+  color: var(--text-primary);
 }
 
 .modal-close {
@@ -231,12 +240,12 @@ watch(() => props.show, (newVal) => {
   border: none;
   padding: 4px;
   cursor: pointer;
-  color: var(--text-muted, #888);
-  transition: color 0.2s;
+  color: var(--text-muted);
+  transition: var(--transition);
 }
 
 .modal-close:hover {
-  color: var(--text-primary, #fff);
+  color: var(--text-primary);
 }
 
 .modal-close svg {
@@ -258,31 +267,31 @@ watch(() => props.show, (newVal) => {
 
 .btn {
   padding: 10px 20px;
-  border-radius: 8px;
+  border-radius: var(--radius);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: var(--transition);
   border: none;
 }
 
 .btn-primary {
-  background: #e74c3c;
-  color: white;
+  background: var(--accent-primary);
+  color: var(--text-inverse);
 }
 
 .btn-primary:hover {
-  background: #c0392b;
+  background: var(--accent-primary-hover);
 }
 
 .btn-secondary {
-  background: var(--bg-secondary, #2a2a2a);
-  color: var(--text-primary, #fff);
-  border: 1px solid var(--border-color, #333);
+  background: var(--bg-tertiary);
+  color: var(--text-inverse);
+  border: 1px solid var(--border-color);
 }
 
 .btn-secondary:hover {
-  background: var(--bg-tertiary, #333);
+  background: var(--bg-hover);
 }
 
 .install-icon,
@@ -301,27 +310,27 @@ watch(() => props.show, (newVal) => {
 }
 
 .install-icon svg {
-  stroke: #3498db;
+  stroke: var(--accent-primary);
 }
 
 .error-icon svg {
-  stroke: #e74c3c;
+  stroke: var(--accent-danger);
 }
 
 .success-icon svg {
-  stroke: #2ecc71;
+  stroke: var(--accent-success);
 }
 
 .install-message {
   font-size: 14px;
   line-height: 1.6;
-  color: var(--text-primary, #fff);
+  color: var(--text-primary);
   margin: 0;
 }
 
 .error-message {
   font-size: 13px;
-  color: #e74c3c;
+  color: var(--accent-danger);
   margin: 0;
   line-height: 1.5;
 }
@@ -332,7 +341,7 @@ watch(() => props.show, (newVal) => {
 
 .progress-bar {
   height: 8px;
-  background: var(--bg-secondary, #2a2a2a);
+  background: var(--bg-tertiary);
   border-radius: 4px;
   overflow: hidden;
   margin-bottom: 8px;
@@ -340,12 +349,12 @@ watch(() => props.show, (newVal) => {
 
 .progress-fill {
   height: 100%;
-  background: #3498db;
+  background: var(--accent-primary);
   transition: width 0.3s ease;
 }
 
 .progress-text {
   font-size: 12px;
-  color: var(--text-muted, #888);
+  color: var(--text-muted);
 }
 </style>

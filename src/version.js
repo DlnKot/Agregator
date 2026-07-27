@@ -1,8 +1,3 @@
-/**
- * Centralized version management (ESM for Vite renderer)
- * NOTE: This file is generated from package.json by scripts/sync-version.js
- */
-
-export const version = "0.8.5"
-export const name = "Alfa Remote Client"
+export const version = "0.9.0"
+export const name = "alfa-remote-client"
 export default { version, name }

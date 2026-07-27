@@ -265,6 +265,7 @@
 
 <script setup>
 import { ref, watch } from 'vue'
+import { appApi, trackingApi } from '../api'
 
 const tabs = [
   { id: 'helpdesk', label: 'HelpDesk' },
@@ -275,20 +276,14 @@ const tabs = [
 
 const activeTab = ref('helpdesk')
 
-// Трекинг метрик при смене вкладки
 watch(activeTab, (newTab) => {
-  if (window.api?.trackHelpView) {
-    window.api.trackHelpView(newTab)
-  }
+  trackingApi.trackHelpView(newTab)
 }, { immediate: true })
 
 function openLink(url) {
-  if (window.api?.openExternal) {
-    window.api.openExternal(url)
-  } else {
-    // Fallback for browser
+  appApi.openExternal(url).catch(() => {
     window.open(url, '_blank')
-  }
+  })
 }
 </script>
 
