@@ -1,25 +1,36 @@
 import { ref, computed } from 'vue'
 import { connectionsApi, settingsApi } from '../api'
 
+const MAX_RECENT = 3
+
 export function useConnections() {
   const connections = ref([])
   const currentClientFilter = ref('all')
-  const lastConnectionId = ref(null)
+  const recentConnectionIds = ref([])
   const isLoading = ref(false)
 
-  const lastConnection = computed(() => {
-    if (!lastConnectionId.value) return null
-    return connections.value.find(c => c.id === lastConnectionId.value) || null
+  const recentConnections = computed(() => {
+    return recentConnectionIds.value
+      .map(id => connections.value.find(c => c.id === id))
+      .filter(Boolean)
   })
 
   const filteredConnections = computed(() => {
     if (currentClientFilter.value === 'recent') {
-      return lastConnection.value ? [lastConnection.value] : []
+      return recentConnections.value
     }
     if (currentClientFilter.value === 'all') {
       return connections.value
     }
     return connections.value.filter(c => c.type === currentClientFilter.value)
+  })
+
+  const lastConnection = computed(() => {
+    return recentConnections.value[0] || null
+  })
+
+  const lastConnectionId = computed(() => {
+    return recentConnectionIds.value[0] || null
   })
 
   async function loadConnections() {
@@ -33,21 +44,21 @@ export function useConnections() {
     }
   }
 
-  async function loadLastConnection() {
+  async function loadRecentConnections() {
     try {
-      const data = await connectionsApi.getLast()
-      lastConnectionId.value = data || null
+      const data = await connectionsApi.getRecent()
+      recentConnectionIds.value = Array.isArray(data) ? data : []
     } catch (error) {
-      console.error('Error loading last connection:', error)
+      console.error('Error loading recent connections:', error)
     }
   }
 
-  async function setLastConnection(id) {
+  async function pushRecentConnection(id) {
     try {
-      lastConnectionId.value = id
-      await connectionsApi.setLast(id)
+      await connectionsApi.pushRecent(id)
+      recentConnectionIds.value = [id, ...recentConnectionIds.value.filter(x => x !== id)].slice(0, MAX_RECENT)
     } catch (error) {
-      console.error('Error saving last connection:', error)
+      console.error('Error saving recent connection:', error)
     }
   }
 
@@ -68,8 +79,8 @@ export function useConnections() {
       await connectionsApi.delete(id)
       connections.value = await connectionsApi.getList()
 
-      if (lastConnectionId.value === id) {
-        await setLastConnection(null)
+      if (recentConnectionIds.value.includes(id)) {
+        recentConnectionIds.value = recentConnectionIds.value.filter(x => x !== id)
       }
 
       return { success: true }
@@ -103,12 +114,14 @@ export function useConnections() {
     connections,
     filteredConnections,
     currentClientFilter,
-    lastConnectionId,
+    recentConnectionIds,
+    recentConnections,
     lastConnection,
+    lastConnectionId,
     isLoading,
     loadConnections,
-    loadLastConnection,
-    setLastConnection,
+    loadRecentConnections,
+    pushRecentConnection,
     saveConnection,
     deleteConnection,
     resetDefaultConnections,

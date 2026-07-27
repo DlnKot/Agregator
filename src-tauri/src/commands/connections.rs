@@ -119,35 +119,36 @@ pub fn reset_default_connections(state: State<'_, Mutex<AppState>>) -> CommandRe
 }
 
 #[tauri::command]
-pub fn get_last_connection(state: State<'_, Mutex<AppState>>) -> CommandResult<Option<String>> {
-    tracing::debug!("→ get_last_connection");
+pub fn get_recent_connections(state: State<'_, Mutex<AppState>>) -> CommandResult<Vec<String>> {
+    tracing::debug!("→ get_recent_connections");
     let app = state.lock().unwrap();
-    let val = app.store.get("last_connection");
-    let result = match val {
-        Value::String(s) => {
-            tracing::info!("← get_last_connection: {}", s);
-            CommandResult::ok(Some(s))
-        }
-        _ => {
-            tracing::info!("← get_last_connection: none");
-            CommandResult::ok(None::<String>)
-        }
+    let val = app.store.get("recent_connections");
+    let result: Vec<String> = match val {
+        Value::Array(arr) => arr.iter().filter_map(|v| v.as_str().map(String::from)).collect(),
+        _ => vec![],
     };
-    result
+    tracing::info!("← get_recent_connections: {} entries", result.len());
+    CommandResult::ok(result)
 }
 
 #[tauri::command]
-pub fn set_last_connection(state: State<'_, Mutex<AppState>>, id: Option<String>) -> CommandResult {
-    tracing::debug!("→ set_last_connection: {:?}", id);
+pub fn push_recent_connection(state: State<'_, Mutex<AppState>>, id: String) -> CommandResult {
+    tracing::debug!("→ push_recent_connection: {}", id);
     let app = state.lock().unwrap();
-    app.store.set(
-        "last_connection",
-        match &id {
-            Some(s) => Value::String(s.clone()),
-            None => Value::Null,
-        },
-    );
+    let val = app.store.get("recent_connections");
+    let mut list: Vec<String> = match val {
+        Value::Array(arr) => arr.iter().filter_map(|v| v.as_str().map(String::from)).collect(),
+        _ => vec![],
+    };
+
+    // Remove existing entry with same id (if any), so it moves to front
+    list.retain(|x| x != &id);
+    list.insert(0, id);
+    // Keep only last 3
+    list.truncate(3);
+
+    app.store.set("recent_connections", Value::Array(list.into_iter().map(Value::String).collect()));
     app.store.flush();
-    tracing::info!("← set_last_connection: ok");
+    tracing::info!("← push_recent_connection: ok");
     CommandResult::ok_empty()
 }

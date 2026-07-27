@@ -58,8 +58,8 @@ fn init_store() -> SimpleStore {
     if !store.has("settings") {
         store.set("settings", defaults.settings);
     }
-    if !store.has("last_connection") {
-        store.set("last_connection", Value::Null);
+    if !store.has("recent_connections") {
+        store.set("recent_connections", Value::Array(vec![]));
     }
 
     store.flush();
@@ -89,8 +89,8 @@ pub fn run() {
             commands::connections::save_connection,
             commands::connections::delete_connection,
             commands::connections::reset_default_connections,
-            commands::connections::get_last_connection,
-            commands::connections::set_last_connection,
+            commands::connections::get_recent_connections,
+            commands::connections::push_recent_connection,
             commands::settings::get_settings,
             commands::settings::save_settings,
             commands::app::get_version,

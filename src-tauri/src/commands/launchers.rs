@@ -9,14 +9,14 @@ use directories::BaseDirs;
 use serde_json::Value;
 
 use crate::models::*;
-use crate::utils::CommandResult;
+use crate::utils::{CommandResult, CommandSilentExt, decode_windows_output};
 
 /// Global handle to the currently running VPN connect process (Windows only).
 static VPN_CHILD: Mutex<Option<std::process::Child>> = Mutex::new(None);
 
 fn launch_exe(program: &str, args: &[&str]) -> CommandResult {
     tracing::debug!("  launch_exe: {} {:?}", program, args);
-    match Command::new(program).args(args).spawn() {
+    match Command::new(program).no_window().args(args).spawn() {
         Ok(_) => {
             tracing::info!("  launch_exe: {} started", program);
             CommandResult::ok_empty()
@@ -30,7 +30,7 @@ fn launch_exe(program: &str, args: &[&str]) -> CommandResult {
 
 fn launch_mac(app_name: &str, args: &[&str]) -> CommandResult {
     tracing::debug!("  launch_mac: {} {:?}", app_name, args);
-    let mut cmd = Command::new("open");
+    let mut cmd = Command::new("open").no_window();
     cmd.arg("-a").arg(app_name);
     for a in args {
         cmd.arg(a);
@@ -50,17 +50,17 @@ fn launch_mac(app_name: &str, args: &[&str]) -> CommandResult {
 fn vpn_check_ping() -> bool {
     let host = "mypc.moscow.alfaintra.net";
     if cfg!(target_os = "windows") {
-        let result = Command::new("ping")
+        let result = Command::new("ping").no_window()
             .args(["-n", "1", "-w", "3000", host])
             .output();
         if let Ok(output) = result {
-            let stdout = String::from_utf8_lossy(&output.stdout);
+            let stdout = decode_windows_output(&output.stdout);
             stdout.contains("Reply from") || stdout.contains("1 received")
         } else {
             false
         }
     } else {
-        let result = Command::new("ping")
+        let result = Command::new("ping").no_window()
             .args(["-c", "1", "-W", "3", host])
             .output();
         if let Ok(output) = result {
@@ -87,18 +87,38 @@ fn find_trac_exe() -> Option<String> {
         for rel in &[
             r"CheckPoint\Endpoint Connect\trac.exe",
             r"CheckPoint\Endpoint Security VPN\trac.exe",
+            r"CheckPoint\Endpoint Security\trac.exe",
+            r"Checkpoint\Endpoint Connect\trac.exe",
+            r"Checkpoint\Endpoint Security VPN\trac.exe",
+            r"Check Point\Endpoint Connect\trac.exe",
+            r"Check Point\Endpoint Security VPN\trac.exe",
+            r"Check Point\Endpoint Security\trac.exe",
         ] {
             let p = Path::new(&base).join(rel);
             if p.exists() {
                 return Some(p.to_string_lossy().to_string());
             }
         }
+        // Also search recursively in CheckPoint directories
+        let cp_dirs = &[
+            "CheckPoint",
+            "Checkpoint",
+            "Check Point",
+        ];
+        for cp in cp_dirs {
+            let cp_path = Path::new(&base).join(cp);
+            if cp_path.is_dir() {
+                if let Some(found) = find_exe_recursive(&cp_path, "trac.exe", 0, 4) {
+                    return Some(found);
+                }
+            }
+        }
     }
 
     // Fallback: search PATH via where.exe
-    if let Ok(out) = Command::new("where.exe").arg("trac.exe").output() {
+    if let Ok(out) = Command::new("where.exe").no_window().arg("trac.exe").output() {
         if out.status.success() {
-            let s = String::from_utf8_lossy(&out.stdout);
+            let s = decode_windows_output(&out.stdout);
             if let Some(line) = s.lines().next() {
                 let t = line.trim();
                 if !t.is_empty() && Path::new(t).exists() {
@@ -125,17 +145,29 @@ fn find_tr_gui_exe() -> Option<String> {
             r"TrGUI\TrGUI\TrGUI.exe",
             r"CheckPoint\Endpoint Connect\TrGUI.exe",
             r"CheckPoint\Endpoint Security VPN\TrGUI.exe",
+            r"CheckPoint\Endpoint Security\TrGUI.exe",
+            r"Checkpoint\Endpoint Connect\TrGUI.exe",
+            r"Checkpoint\Endpoint Security VPN\TrGUI.exe",
+            r"Check Point\Endpoint Connect\TrGUI.exe",
+            r"Check Point\Endpoint Security VPN\TrGUI.exe",
         ] {
             let p = Path::new(&base).join(rel);
             if p.exists() {
                 return Some(p.to_string_lossy().to_string());
             }
         }
+        // Also search recursively in TrGUI directories
+        let trgui_path = Path::new(&base).join("TrGUI");
+        if trgui_path.is_dir() {
+            if let Some(found) = find_exe_recursive(&trgui_path, "TrGUI.exe", 0, 3) {
+                return Some(found);
+            }
+        }
     }
 
-    if let Ok(out) = Command::new("where.exe").arg("TrGUI.exe").output() {
+    if let Ok(out) = Command::new("where.exe").no_window().arg("TrGUI.exe").output() {
         if out.status.success() {
-            let s = String::from_utf8_lossy(&out.stdout);
+            let s = decode_windows_output(&out.stdout);
             if let Some(line) = s.lines().next() {
                 let t = line.trim();
                 if !t.is_empty() && Path::new(t).exists() {
@@ -157,7 +189,7 @@ fn windows_vpn_disconnect_inner() -> CommandResult {
 
     tracing::info!("  windows_vpn_disconnect: {}", trac);
 
-    match Command::new(&trac)
+    match Command::new(&trac).no_window()
         .arg("disconnect")
         .stdout(Stdio::null())
         .stderr(Stdio::null())
@@ -196,7 +228,7 @@ fn find_rudesktop_path() -> Option<String> {
                 return Some(p.to_string());
             }
         }
-        if let Ok(output) = Command::new("where").arg("rudesktop.exe").output() {
+        if let Ok(output) = Command::new("where").no_window().arg("rudesktop.exe").output() {
             if output.status.success() {
                 let stdout = String::from_utf8_lossy(&output.stdout);
                 if let Some(line) = stdout.lines().next() {
@@ -222,7 +254,7 @@ fn find_rudesktop_path() -> Option<String> {
                 return Some(user_path);
             }
         }
-        if let Ok(output) = Command::new("mdfind")
+        if let Ok(output) = Command::new("mdfind").no_window()
             .args(["kMDItemCFBundleIdentifier == \"ru.rudesktop.client\""])
             .output()
         {
@@ -257,7 +289,7 @@ fn rudesktop_binary_path(app_path: &str) -> String {
 
 fn get_rudesktop_device_id_from_binary(bin_path: &str) -> Option<String> {
     let actual_bin = rudesktop_binary_path(bin_path);
-    let result = Command::new(&actual_bin)
+    let result = Command::new(&actual_bin).no_window()
         .arg("--get-id")
         .output()
         .ok()?;
@@ -306,7 +338,7 @@ fn find_mac_rdp_app() -> (String, Option<String>) {
     let bundle_id = "com.microsoft.rdc.macos".to_string();
 
     // Try mdfind by bundle identifier
-    if let Ok(output) = Command::new("mdfind")
+    if let Ok(output) = Command::new("mdfind").no_window()
         .args([r#"kMDItemCFBundleIdentifier == "com.microsoft.rdc.macos""#])
         .output()
     {
@@ -597,7 +629,7 @@ pub fn launch_rdp(connection: Connection, settings: Value) -> CommandResult {
 
     // Platform-specific launch
     if cfg!(target_os = "windows") {
-        match Command::new("mstsc.exe")
+        match Command::new("mstsc.exe").no_window()
             .arg(&rdp_path_str)
             .stdout(Stdio::null())
             .stderr(Stdio::null())
@@ -621,7 +653,7 @@ pub fn launch_rdp(connection: Connection, settings: Value) -> CommandResult {
         }
 
         // Try launching via bundle ID first
-        let result = Command::new("open")
+        let result = Command::new("open").no_window()
             .arg("-b")
             .arg(&bundle_id)
             .arg(&rdp_path_str)
@@ -637,7 +669,7 @@ pub fn launch_rdp(connection: Connection, settings: Value) -> CommandResult {
             Err(_) => {
                 // Fallback: use default .rdp handler
                 tracing::warn!("  launch_rdp: open -b failed, falling back to default handler");
-                match Command::new("open")
+                match Command::new("open").no_window()
                     .arg(&rdp_path_str)
                     .stdout(Stdio::null())
                     .stderr(Stdio::null())
@@ -668,7 +700,7 @@ pub fn launch_rdp(connection: Connection, settings: Value) -> CommandResult {
             args.extend(split_args(custom));
         }
 
-        match Command::new("xfreerdp")
+        match Command::new("xfreerdp").no_window()
             .args(&args)
             .stdout(Stdio::null())
             .stderr(Stdio::null())
@@ -783,7 +815,7 @@ fn find_horizon_mac() -> Option<(String, Option<String>)> {
         }
     }
 
-    if let Ok(output) = Command::new("mdfind")
+    if let Ok(output) = Command::new("mdfind").no_window()
         .args(["kMDItemCFBundleIdentifier == \"com.vmware.horizon\""])
         .output()
     {
@@ -827,7 +859,7 @@ fn find_horizon_windows(custom_path: Option<&str>) -> Option<String> {
     let reg_value = "ClientInstallPath";
 
     for arch in &["/reg:64", "/reg:32", ""] {
-        let mut cmd = Command::new("reg");
+        let mut cmd = Command::new("reg").no_window();
         cmd.args(["query", reg_key, "/v", reg_value]);
         if !arch.is_empty() {
             cmd.arg(arch);
@@ -870,7 +902,7 @@ fn find_horizon_windows(custom_path: Option<&str>) -> Option<String> {
         }
     }
 
-    if let Ok(output) = Command::new("where").arg("vmware-view.exe").output() {
+    if let Ok(output) = Command::new("where").no_window().arg("vmware-view.exe").output() {
         if output.status.success() {
             let stdout = String::from_utf8_lossy(&output.stdout);
             if let Some(line) = stdout.lines().next() {
@@ -890,21 +922,11 @@ fn build_horizon_args(connection: &Connection, settings: &Value, mac_format: boo
     let mut args = Vec::new();
     let hor = settings.get("horizon");
 
-    // serverURL (same format on both platforms)
+    // serverURL
     if !connection.host.is_empty() {
         let url = normalize_url(&connection.host);
         args.push("-serverURL".to_string());
         args.push(url);
-    }
-
-    // desktopName (desktopPool from connection.extra)
-    let desktop_pool = connection.extra.get("desktopPool").and_then(|v| v.as_str()).unwrap_or("");
-    if !desktop_pool.is_empty() {
-        args.push("-desktopName".to_string());
-        args.push(desktop_pool.to_string());
-    } else if let Some(desktop_name) = hor.and_then(|h| h.get("desktopName")).and_then(|v| v.as_str()).filter(|s| !s.is_empty()) {
-        args.push("-desktopName".to_string());
-        args.push(desktop_name.to_string());
     }
 
     // userName (same format on both platforms)
@@ -919,9 +941,23 @@ fn build_horizon_args(connection: &Connection, settings: &Value, mac_format: boo
         args.push(user_name);
     }
 
-    // macOS-only flags from settings.horizon
+    // macOS flags
     if mac_format {
+        // desktopName for macOS: desktopPool from connection.extra, fallback to hor.desktopName
+        let desktop_pool = connection.extra.get("desktopPool").and_then(|v| v.as_str()).unwrap_or("");
+        if !desktop_pool.is_empty() {
+            args.push("-desktopName".to_string());
+            args.push(desktop_pool.to_string());
+        } else if let Some(desktop_name) = hor.and_then(|h| h.get("desktopName")).and_then(|v| v.as_str()).filter(|s| !s.is_empty()) {
+            args.push("-desktopName".to_string());
+            args.push(desktop_name.to_string());
+        }
+
         if let Some(h) = hor {
+            if let Some(v) = h.get("appName").and_then(|v| v.as_str()).filter(|s| !s.is_empty()) {
+                args.push("-desktopName".to_string());
+                args.push(v.to_string());
+            }
             if let Some(v) = h.get("desktopProtocol").and_then(|v| v.as_str()).filter(|s| !s.is_empty()) {
                 args.push("-desktopProtocol".to_string());
                 args.push(v.to_string());
@@ -957,19 +993,16 @@ fn build_horizon_args(connection: &Connection, settings: &Value, mac_format: boo
             }
         }
     } else {
-        // Windows-only flags
+        // Windows flags (matches old Electron launchWindows)
         if let Some(h) = hor {
+            // desktopName — ONLY from horizon.desktopName (never from connection.extra.desktopPool)
+            if let Some(v) = h.get("desktopName").and_then(|v| v.as_str()).filter(|s| !s.is_empty()) {
+                args.push("-desktopName".to_string());
+                args.push(v.to_string());
+            }
             if h.get("loginAsCurrentUser").and_then(|v| v.as_bool()).unwrap_or(false) {
                 args.push("-loginAsCurrentUser".to_string());
                 args.push("true".to_string());
-            }
-            // Use appName from settings if no desktopPool
-            let desktop_pool = connection.extra.get("desktopPool").and_then(|v| v.as_str()).unwrap_or("");
-            if desktop_pool.is_empty() {
-                if let Some(v) = h.get("appName").and_then(|v| v.as_str()).filter(|s| !s.is_empty()) {
-                    args.push("-desktopName".to_string());
-                    args.push(v.to_string());
-                }
             }
         }
     }
@@ -1006,7 +1039,7 @@ pub fn launch_horizon(connection: Connection, settings: Value) -> CommandResult 
         let args = build_horizon_args(&connection, &settings, false);
 
         tracing::info!("  launch_horizon: launching {} {:?}", exe_path, args);
-        match Command::new(&exe_path)
+        match Command::new(&exe_path).no_window()
             .args(&args)
             .stdout(Stdio::null())
             .stderr(Stdio::null())
@@ -1035,7 +1068,7 @@ pub fn launch_horizon(connection: Connection, settings: Value) -> CommandResult 
 
         if let Some(cli) = cli_path {
             tracing::info!("  launch_horizon: launching CLI {} {:?}", cli, args);
-            match Command::new(&cli)
+            match Command::new(&cli).no_window()
                 .args(&args)
                 .stdout(Stdio::null())
                 .stderr(Stdio::null())
@@ -1052,7 +1085,7 @@ pub fn launch_horizon(connection: Connection, settings: Value) -> CommandResult 
         }
 
         tracing::info!("  launch_horizon: falling back to open -a {}", app_path);
-        match Command::new("open")
+        match Command::new("open").no_window()
             .arg("-a")
             .arg(&app_path)
             .arg("--args")
@@ -1116,7 +1149,7 @@ pub fn launch_vpn() -> CommandResult {
         for bundle in &known_bundles {
             if Path::new(bundle).exists() {
                 tracing::info!("  launch_vpn: found bundle at {}", bundle);
-                let result = Command::new("open").arg(bundle).spawn();
+                let result = Command::new("open").no_window().arg(bundle).spawn();
                 if result.is_ok() {
                     launched = true;
                     break;
@@ -1174,7 +1207,7 @@ pub fn vpn_disconnect() -> CommandResult {
         };
 
         // Try direct disconnect first (may not need root), then osascript as fallback
-        let direct = Command::new(&trac)
+        let direct = Command::new(&trac).no_window()
             .arg("disconnect")
             .stdout(Stdio::null())
             .stderr(Stdio::null())
@@ -1195,7 +1228,7 @@ pub fn vpn_disconnect() -> CommandResult {
                      do shell script (quoted form of trac) & \" disconnect &\" with administrator privileges",
                     as_escape(&trac)
                 );
-                match Command::new("osascript")
+                match Command::new("osascript").no_window()
                     .arg("-e")
                     .arg(&osa_script)
                     .stdin(Stdio::null())
@@ -1240,7 +1273,7 @@ pub fn vpn_connect(credentials: Value) -> CommandResult {
 
         tracing::info!("  vpn_connect: spawning {} connect -s {} -u {} -p ***", trac, address, username);
 
-        match Command::new(&trac)
+        match Command::new(&trac).no_window()
             .args(["connect", "-s", address, "-u", username, "-p", challenge])
             .stdin(Stdio::piped())
             .stdout(Stdio::null())
@@ -1308,7 +1341,7 @@ pub fn vpn_connect(credentials: Value) -> CommandResult {
             as_escape(challenge)
         );
 
-        match Command::new("osascript")
+        match Command::new("osascript").no_window()
             .arg("-e")
             .arg(&osa_script)
             .stdin(Stdio::null())
@@ -1374,7 +1407,7 @@ pub fn vpn_cancel() -> CommandResult {
 
     if cfg!(target_os = "macos") {
         // Additional cleanup: kill any remaining trac connect processes
-        let _ = Command::new("pkill")
+        let _ = Command::new("pkill").no_window()
             .args(["-f", "trac connect"])
             .stdout(Stdio::null())
             .stderr(Stdio::null())
@@ -1406,12 +1439,12 @@ pub fn launch_rudesktop() -> CommandResult<RuDesktopLaunchResult> {
     };
 
     let launch_result = if cfg!(target_os = "windows") {
-        Command::new(&bin_path)
+        Command::new(&bin_path).no_window()
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::null())
             .spawn()
     } else if cfg!(target_os = "macos") {
-        Command::new("open")
+        Command::new("open").no_window()
             .arg("-a")
             .arg(&bin_path)
             .stdout(std::process::Stdio::null())
@@ -1476,7 +1509,7 @@ pub fn launch_achat() -> CommandResult {
     for p in &known_paths {
         if Path::new(p).exists() {
             tracing::info!("  launch_achat: found at {}", p);
-            match Command::new(p).spawn() {
+            match Command::new(p).no_window().spawn() {
                 Ok(_) => {
                     tracing::info!("← launch_achat: ok");
                     return CommandResult::ok_empty();
@@ -1512,7 +1545,7 @@ pub fn launch_tolk() -> CommandResult {
     for p in &known_paths {
         if Path::new(p).exists() {
             tracing::info!("  launch_tolk: found at {}", p);
-            match Command::new(p).spawn() {
+            match Command::new(p).no_window().spawn() {
                 Ok(_) => {
                     tracing::info!("← launch_tolk: ok");
                     return CommandResult::ok_empty();

@@ -20,8 +20,8 @@ export const connectionsApi = {
   save: (conn) => invoke('save_connection', { connection: conn }).then(unwrap),
   delete: (id) => invoke('delete_connection', { id }).then(unwrap),
   resetDefaults: () => invoke('reset_default_connections').then(unwrap),
-  getLast: () => invoke('get_last_connection').then(unwrap),
-  setLast: (id) => invoke('set_last_connection', { id }).then(unwrap),
+  getRecent: () => invoke('get_recent_connections').then(unwrap),
+  pushRecent: (id) => invoke('push_recent_connection', { id }).then(unwrap),
 }
 
 // ==================== Settings ====================

@@ -212,16 +212,10 @@ async function loadVpnStatus() {
 }
 
 async function handleVpnClick() {
-  if (vpnStatus.platform === 'macos' || vpnStatus.platform === 'win32') {
-    if (!vpnStatus.clientInstalled) {
-      console.error('VPN client not installed')
-      return
-    }
-    if (vpnStatus.connected) {
-      showConfirm.value = true
-    } else {
-      emit('show-vpn-modal')
-    }
+  if (vpnStatus.connected) {
+    showConfirm.value = true
+  } else {
+    emit('show-vpn-modal')
   }
 }
 

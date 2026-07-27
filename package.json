@@ -1,6 +1,6 @@
 {
   "name": "alfa-remote-client",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Alfa Remote Client - агрегатор для запуска клиентов удалённых рабочих столов (RDP, Horizon, Citrix)",
   "scripts": {
     "prebuild:vue": "node scripts/sync-version.js",

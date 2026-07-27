@@ -1,7 +1,7 @@
 use std::process::Command;
 
 use crate::models::*;
-use crate::utils::CommandResult;
+use crate::utils::{CommandResult, CommandSilentExt, decode_windows_output};
 
 fn parse_unix_ping(output: &str) -> (Option<f64>, Option<f64>, Option<f64>, Option<f64>) {
     let mut loss = None;
@@ -148,13 +148,13 @@ pub async fn network_ping(host: String, count: u32, threshold_ms: Option<u64>) -
     let host_clone = host.clone();
     let result = tokio::task::spawn_blocking(move || {
         if cfg!(target_os = "windows") {
-            Command::new("ping")
+            Command::new("ping").no_window()
                 .arg("-n").arg(packets.to_string())
                 .arg("-w").arg("1000")
                 .arg(&host_clone)
                 .output()
         } else {
-            Command::new("ping")
+            Command::new("ping").no_window()
                 .arg("-c").arg(packets.to_string())
                 .arg(&host_clone)
                 .output()
@@ -165,8 +165,8 @@ pub async fn network_ping(host: String, count: u32, threshold_ms: Option<u64>) -
         Ok(Ok(o)) => {
             let combined = format!(
                 "{}\n{}",
-                String::from_utf8_lossy(&o.stdout),
-                String::from_utf8_lossy(&o.stderr)
+                decode_windows_output(&o.stdout),
+                decode_windows_output(&o.stderr)
             );
             let raw = combined.trim().to_string();
 

@@ -28,7 +28,7 @@
               <div class="client-tabs" ref="clientTabsRef">
                 <div class="tab-slider" :style="clientSliderStyle"></div>
                 <button class="client-tab" :class="{ active: currentClientFilter === 'recent' }"
-                  @click="currentClientFilter = 'recent'" v-if="lastConnectionId" ref="tabRecent">
+                  @click="currentClientFilter = 'recent'" v-if="recentConnectionIds.length > 0" ref="tabRecent">
                   Недавнее
                 </button>
                 <button class="client-tab" :class="{ active: currentClientFilter === 'all' }"
@@ -219,11 +219,12 @@ const {
   connections, 
   filteredConnections, 
   currentClientFilter, 
+  recentConnectionIds,
   lastConnectionId,
   lastConnection,
   loadConnections, 
-  loadLastConnection,
-  setLastConnection,
+  loadRecentConnections,
+  pushRecentConnection,
   saveConnection, 
   deleteConnection, 
   resetDefaultConnections,
@@ -337,15 +338,15 @@ const clientSliderStyle = computed(() => {
   }
 })
 
-// Force slider re-evaluation when lastConnectionId changes (tab may appear/disappear)
-watch(lastConnectionId, () => {
+// Force slider re-evaluation when recentConnectionIds changes (tab may appear/disappear)
+watch(recentConnectionIds, () => {
   nextTick().then(() => { sliderReEval.value++ })
-})
+}, { deep: true })
 
 // Load data function
 async function loadData() {
   await Promise.all([loadConnections(), loadSettings()])
-  await loadLastConnection()
+  await loadRecentConnections()
   
   // Set initial filter: "recent" if user has connected before, otherwise "all"
   currentClientFilter.value = lastConnectionId.value ? 'recent' : 'all'
@@ -466,7 +467,7 @@ async function handleDeleteConnection(id) {
     const result = await deleteConnection(id)
     if (result.success) {
       // If we were on the "Недавнее" tab and it no longer has a connection, switch to "Все"
-      if (currentClientFilter.value === 'recent' && !lastConnectionId.value) {
+      if (currentClientFilter.value === 'recent' && recentConnectionIds.value.length === 0) {
         currentClientFilter.value = 'all'
       }
       showToast('Подключение удалено', 'success')
@@ -487,7 +488,7 @@ async function handleLaunch(id) {
   try {
     result = await launchConnection(conn, settings.value)
   } finally {
-    await setLastConnection(id)
+    await pushRecentConnection(id)
     currentClientFilter.value = 'recent'
   }
 

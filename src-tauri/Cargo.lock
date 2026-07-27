@@ -19,10 +19,11 @@ dependencies = [
 
 [[package]]
 name = "alfa-remote-client"
-version = "0.8.5"
+version = "0.9.1"
 dependencies = [
  "chrono",
  "directories",
+ "encoding_rs",
  "open",
  "ping",
  "reqwest 0.12.28",
