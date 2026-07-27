@@ -1,18 +1,18 @@
 # Agent Guide (Agregator / Alfa Remote Client)
-This repo is an Electron app with a Vue 3 renderer.
+This repo is a **Tauri v2** app (Rust backend + Vue 3 frontend + Vite).
 
-- Main process entry: `src/main/main.js` (CommonJS)
-- Preload bridge: `src/preload/preload.js` (CommonJS, exposes `window.api`)
-- Renderer app: `src/renderer-vue/` (Vite + Vue 3, ESM)
-- Renderer build output: `dist-renderer/` (configured in `vite.config.js`)
+- Rust backend: `src-tauri/src/` (Tauri commands, store, models, utils)
+- Vue frontend: `src/renderer-vue/` (Vite + Vue 3, ESM)
+- Renderer build output: `dist-renderer/`
+- Tauri config: `src-tauri/tauri.conf.json`
 
 ## Repo Layout
-- App metadata/version: `src/version.js` (single source of truth used by main + renderer)
+- App metadata/version: `package.json` (source of truth; auto-synced to `src/version.js` via `prebuild:vue`)
+- Tauri version: `src-tauri/tauri.conf.json` (set independently — keep in sync)
+- Rust backend: `src-tauri/src/commands/`, `src-tauri/src/store/`, `src-tauri/src/models.rs`, `src-tauri/src/utils.rs`
 - Deployment defaults (enterprise): `config/deployment-defaults.json`
-- Main-process persistence: `src/main/stores/simpleStore.js` (JSON file under Electron `app.getPath('userData')`)
-- Auto updates: `src/main/utils/autoUpdater.js` (electron-updater; internal server by default; optional GitHub stable releases via settings toggle)
-- CI stable release: `.github/workflows/build-and-release.yml` (main/tags)
-- CI dev artifacts: `.github/workflows/dev-build.yml` (dev branch; artifacts only)
+- Persistence: `SimpleStore` (`src-tauri/src/store/simple_store.rs`) — JSON file under platform-specific app data dir
+- Auto updates: Tauri updater plugin (endpoint in `tauri.conf.json`)
 
 ## Commands
 Package manager: npm (repo includes `package-lock.json`).
@@ -20,126 +20,94 @@ Package manager: npm (repo includes `package-lock.json`).
 ```bash
 npm install
 
-# Dev (Vite + Electron)
+# Dev (Vite + Tauri)
 npm run dev
 
-# Start (build renderer, then run Electron)
-npm run start
+# Build for current platform
+npm run build
 
 # Build renderer only
 npm run build:vue
 
-# Package app (local builds, no publishing)
-npm run build:win
+# Platform-specific builds (macOS, Windows)
 npm run build:mac
+npm run build:win
 
-# Directory-only pack (electron-builder)
-npm run pack
+# Package the app (Tauri bundles)
+npm run build
 
-# Publish (requires token)
-export GH_TOKEN=...
-npm run publish:win
-npm run publish:mac
+# Lint / Test
+npm run lint
+npm test
 ```
 
-Notes:
-- `npm run dev` sets `ELECTRON_DEV=1` and `VITE_DEV_SERVER_URL=http://localhost:5173` (used in `src/main/main.js`).
-- There is no `npm run build` script; use `build:vue`, `build:win`, or `build:mac`.
-- Output installers/artifacts go to `dist/` (electron-builder `directories.output`).
-- Renderer build output is `dist-renderer/` (referenced by the main process when packaged).
+## CI / Release
+- **Build and Release** (`.github/workflows/build-and-release.yml`): triggered on push to `main` or `v*` tags. Produces Windows MSI/NSIS and macOS DMG installers via GitHub Actions, creates a GitHub Release.
+- **Dev Build** (`.github/workflows/dev-build.yml`): triggered on push to `dev`. Produces build artifacts only (no release).
 
 ## Manual Smoke Checks
-Use these when changing behavior (since there is no test suite):
-- `npm run dev`: app launches; sidebar tabs switch; no console spam in renderer.
-- Connections: add/edit/delete; verify persistence across app restart.
-- Launchers: try at least one of RDP/Horizon/Citrix flows on your OS (error paths should return `{ success: false, error }`).
-- Network Check: run full check + ping; verify latency threshold behavior (`settings.networkCheck.latencyThresholdMs`).
-- Auto-updater: only exercised in packaged builds (guarded by `app.isPackaged` and `!ELECTRON_DEV`). Validate both sources: internal server (default) and GitHub stable releases (toggle in Settings).
+Since there is no formal test suite, verify manually via `npm run dev`:
+- App launches; sidebar tabs switch; no console errors
+- Connections: add/edit/delete; verify persistence across restart
+- Launchers: try RDP/Horizon/Citrix flows (errors return `{ success: false, error }`)
+- Network Check: full check + ping; verify latency threshold behavior
+- Settings: verify persistence, theme toggle, updater toggles
+- Build: `npm run build` completes without Rust/Vite errors
 
-## Notes
-- RuDesktop integration is removed from this repo (no UI, no IPC, no launcher).
-
-## Lint / Format / Tests
-
-- Lint: `npm run lint` (ESLint; currently used mainly as a syntax checker)
-- Tests: `npm test` (Node's built-in test runner)
-- Use targeted manual smoke checks via `npm run dev`.
-
-Single test patterns:
-
-```bash
-# Vitest (recommended if added)
-npx vitest
-npx vitest path/to/file.test.js
-npx vitest -t "test name substring"
-
-# Node's built-in test runner (Node 18+)
-node --test
-node --test path/to/test-file.js
-```
-
-## Cursor / Copilot Instructions
-No agent instruction files found in `.cursor/rules/`, `.cursorrules`, or `.github/copilot-instructions.md`. If added later, treat them as higher-priority repo rules and mirror them here.
-
-## Code Style (follow the local file)
-This codebase mixes styles; do not do drive-by reformatting.
-- Keep changes minimal and consistent with the file you are editing.
-- Prefer 2-space indentation unless the file already uses a different indent.
-- Prefer single quotes in JS (matches renderer code and parts of main code).
+## Architecture & Conventions
 
 ### Module system
-- Main/preload (`src/main/**`, `src/preload/**`): CommonJS (`require`, `module.exports`).
-- Renderer (`src/renderer-vue/**`): ESM (`import`/`export`) and Vue SFCs.
-- Do not convert a file's module system unless you are intentionally migrating and you update all call sites.
+- Rust (`src-tauri/`): standard Rust modules
+- Renderer (`src/renderer-vue/`): ESM (`import`/`export`) and Vue SFCs
+- Renderer alias: `@` -> `src/renderer-vue/src` (see `vite.config.js`)
 
-### Imports
-Group imports/requires in this order: (1) Node built-ins (2) external deps (3) local modules.
-Renderer alias: `@` -> `src/renderer-vue/src` (see `vite.config.js`).
-
-### Formatting
-- Do not do repo-wide formatting.
-- In `src/main/**` and `src/preload/**`, semicolons are common; in `src/renderer-vue/**`, semicolons are often omitted.
-- Prefer small, reviewable diffs: keep existing whitespace, keep existing quote style, avoid unrelated renames.
-
-### Naming
-- JS: `camelCase` for variables/functions; `PascalCase` for Vue components.
-- Constants: `UPPER_SNAKE_CASE` (example: `CUSTOM_UPDATE_URL` in `src/main/utils/autoUpdater.js`).
-- IPC channels: `kebab-case` strings (example: `ipcMain.handle('get-connections', ...)` in `src/main/main.js`).
-- `window.api` methods: `camelCase` (see `src/preload/preload.js`).
+### IPC (Renderer ↔ Rust Backend)
+- Renderer calls Rust backend via Tauri `invoke` (`@tauri-apps/api/core`)
+- Commands are defined in `src-tauri/src/commands/` and registered in `src-tauri/src/lib.rs`
+- All commands return structured results: `{ success: true, data }` / `{ success: false, error }`
 
 ### Data shapes
-- Connections/settings/profiles are persisted via `SimpleStore` (`src/main/stores/simpleStore.js`); keep stored objects JSON-serializable.
-- Sanitize/normalize inputs on the main-process side (see `sanitizeConnectionInput()` / `sanitizeSettingsInput()` in `src/main/main.js`).
-- Be careful with backward compatibility: stored config may exist from older versions; normalize on load rather than crashing.
+- Connections/settings/profiles are persisted via `SimpleStore` (file-based JSON)
+- Keep stored objects JSON-serializable
+- Sanitize/normalize inputs on the Rust side
+- Backward compatibility: stored config may exist from older versions; normalize on load
 
 ### Error handling and logging
-Main process:
-- Prefer returning structured results from IPC handlers: `{ success: true, data }` / `{ success: false, error }`.
-- Log with `src/main/utils/logger.js` (`logger('info'|'warn'|'error', msg)`).
-- Avoid throwing from `ipcMain.handle()` unless the renderer is prepared for rejected promises.
+Rust backend:
+- Return structured results from Tauri commands
+- Log with the `tracing` crate (configured in `src-tauri/src/logger.rs`)
+- Avoid panicking in command handlers
 
 Renderer:
-- The renderer can run in a plain browser (Vite) without Electron preload; guard Electron APIs (`if (!window.api) { ... }`).
-- When catching errors, log to console and optionally forward to main (`window.api?.log('error', ...)`).
+- The renderer can run in a plain browser (Vite) without Tauri; guard Tauri APIs
+- When catching errors, log to console
 
-Preload:
-- Keep `contextBridge.exposeInMainWorld()` minimal; do not expose raw `ipcRenderer`.
+### Style
+- Rust: follow `rustfmt` conventions (4-space indent)
+- Vue/JS: 2-space indent, single quotes, semicolons optional
+- Do not do drive-by reformatting; keep changes minimal and consistent with the file
 
-### Security / safety (important)
-- Do not disable TLS verification globally; debug-only escape hatch exists: `ARC_ALLOW_INSECURE_TLS=1` (`src/main/main.js`).
-- Prefer shipping/loading a CA via `NODE_EXTRA_CA_CERTS` (`src/main/utils/autoUpdater.js`).
-- Validate/sanitize any user-controlled strings that become shell args, file paths, or URLs (`open-external` restricts protocols to `http`, `https`, `mailto`).
-- Prefer `spawn`/`spawnSync` with arg arrays; avoid `exec` with concatenated strings.
+### Naming
+- Rust: `snake_case` for functions/variables, `PascalCase` for types
+- JS/Vue: `camelCase` for functions/variables, `PascalCase` for components
+- Tauri command names: `snake_case`
+- IPC channels use the command name directly
+
+### Security / safety
+- Validate/sanitize any user-controlled strings that become shell args, file paths, or URLs
+- Prefer `Command::new()` with arg arrays (Rust); avoid shell string concatenation
+- No preload bridge — Tauri uses direct `invoke` calls with capability-based permissions
+- Capabilities are configured in `src-tauri/capabilities/default.json`
 
 ## Common Change Patterns
-- New IPC API: implement handler in `src/main/main.js`, expose in `src/preload/preload.js`, call via `window.api` from `src/renderer-vue/src/**`.
-- New persisted setting: update defaults in `BUILTIN_DEFAULTS` (`src/main/main.js`), sanitize in `sanitizeSettingsInput()`, and update renderer forms.
-- Anything that launches external apps: validate inputs, keep args as arrays, and log enough context to debug without leaking secrets.
+- New Rust command: implement in `src-tauri/src/commands/X.rs`, register in `mod.rs` and `lib.rs`, call via `invoke('command_name', { ... })` from renderer
+- New persisted setting: update `SimpleStore` usage in Rust, add defaults, update renderer forms
+- New launcher: implement in `src-tauri/src/commands/launchers.rs`, validate inputs, keep args as arrays
 
-## Architecture Notes (for changes)
-- Renderer talks to main only through `window.api` (preload) -> IPC -> `src/main/main.js` handlers.
-- If you add an IPC method: add handler (`src/main/main.js`), expose in preload (`src/preload/preload.js`), call from renderer (`src/renderer-vue/src/**`), and return `{ success, ... }` consistently.
+## Dependencies
+- Rust: see `src-tauri/Cargo.toml` (Tauri v2, serde, tokio, reqwest, ping, open, etc.)
+- Node: see `package.json` (Vite, Vue 3, @tauri-apps/cli + api, ESLint)
 
-## Release / CI
-- GitHub Actions workflow: `.github/workflows/build-and-release.yml`.
-- Release guidance: `DEVELOPMENT.md`.
+## Notes
+- RuDesktop integration is removed from this repo.
+- The updater endpoint in `tauri.conf.json` currently points to an internal server; GitHub stable releases can be enabled via a settings toggle if needed.

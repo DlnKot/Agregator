@@ -8,6 +8,8 @@
     "dev:vue": "vite --port 5173",
     "dev": "tauri dev",
     "build": "tauri build",
+    "build:win": "tauri build --target x86_64-pc-windows-msvc",
+    "build:mac": "tauri build",
     "lint": "eslint .",
     "test": "node --test"
   },

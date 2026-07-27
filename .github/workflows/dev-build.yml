@@ -13,65 +13,48 @@ jobs:
   build-windows:
     runs-on: windows-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
       - name: Install dependencies
         run: npm ci
-
       - name: Build Windows
         run: npm run build:win
-        env:
-          CSC_IDENTITY_AUTO_DISCOVERY: false
-
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
           name: dev-windows-artifacts
           path: |
-            dist/Alfa.Remote.Client-*-Setup.exe
-            dist/Alfa.Remote.Client-*-Setup.exe.blockmap
-            dist/latest.yml
+            src-tauri/target/**/bundle/msi/*.msi
+            src-tauri/target/**/bundle/nsis/*.exe
           retention-days: 7
 
   build-macos:
     runs-on: macos-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
       - name: Install dependencies
         run: npm ci
-
       - name: Build macOS
         run: npm run build:mac
-        env:
-          CSC_IDENTITY_AUTO_DISCOVERY: false
-
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
           name: dev-macos-artifacts
           path: |
-            dist/Alfa*.dmg
-            dist/Alfa*.dmg.blockmap
-            dist/Alfa*-mac.zip
-            dist/Alfa*-mac.zip.blockmap
-            dist/latest-mac.yml
+            src-tauri/target/**/bundle/dmg/*.dmg
           retention-days: 7
-
-  # Note: this workflow only produces build artifacts for testing.
-  # Auto-updates are controlled in-app via the "GitHub" toggle (stable releases)
-  # or internal server (default).
