@@ -194,16 +194,9 @@ async function loadVpnStatus() {
     const platform = await appApi.getPlatform()
     vpnStatus.platform = platform || 'win32'
 
-    if (vpnStatus.platform === 'macos') {
-      vpnStatus.clientInstalled = true
-      const status = await launchersApi.vpnStatus()
-      vpnStatus.connected = status?.connected || false
-    } else {
-      const client = await launchersApi.vpnClientStatus()
-      vpnStatus.clientInstalled = client?.client_installed || false
-      const status = await launchersApi.vpnStatus()
-      vpnStatus.connected = status?.connected || false
-    }
+    const status = await launchersApi.vpnStatus()
+    vpnStatus.clientInstalled = status?.client_installed || false
+    vpnStatus.connected = status?.connected || false
   } catch (e) {
     console.error('Failed to get VPN status:', e)
   } finally {
@@ -518,7 +511,7 @@ defineExpose({
 .theme-toggle:hover {
   border-color: var(--border-light);
   background: var(--toggle-hover-bg, var(--bg-tertiary));
-  color: var(--text-inverse);
+  color: var(--text-primary);
 }
 
 .theme-toggle-icon {

@@ -99,20 +99,6 @@ fn find_trac_exe() -> Option<String> {
                 return Some(p.to_string_lossy().to_string());
             }
         }
-        // Also search recursively in CheckPoint directories
-        let cp_dirs = &[
-            "CheckPoint",
-            "Checkpoint",
-            "Check Point",
-        ];
-        for cp in cp_dirs {
-            let cp_path = Path::new(&base).join(cp);
-            if cp_path.is_dir() {
-                if let Some(found) = find_exe_recursive(&cp_path, "trac.exe", 0, 4) {
-                    return Some(found);
-                }
-            }
-        }
     }
 
     // Fallback: search PATH via where.exe
@@ -154,13 +140,6 @@ fn find_tr_gui_exe() -> Option<String> {
             let p = Path::new(&base).join(rel);
             if p.exists() {
                 return Some(p.to_string_lossy().to_string());
-            }
-        }
-        // Also search recursively in TrGUI directories
-        let trgui_path = Path::new(&base).join("TrGUI");
-        if trgui_path.is_dir() {
-            if let Some(found) = find_exe_recursive(&trgui_path, "TrGUI.exe", 0, 3) {
-                return Some(found);
             }
         }
     }
@@ -941,23 +920,23 @@ fn build_horizon_args(connection: &Connection, settings: &Value, mac_format: boo
         args.push(user_name);
     }
 
-    // macOS flags
-    if mac_format {
-        // desktopName for macOS: desktopPool from connection.extra, fallback to hor.desktopName
-        let desktop_pool = connection.extra.get("desktopPool").and_then(|v| v.as_str()).unwrap_or("");
-        if !desktop_pool.is_empty() {
-            args.push("-desktopName".to_string());
-            args.push(desktop_pool.to_string());
-        } else if let Some(desktop_name) = hor.and_then(|h| h.get("desktopName")).and_then(|v| v.as_str()).filter(|s| !s.is_empty()) {
-            args.push("-desktopName".to_string());
-            args.push(desktop_name.to_string());
-        }
+    // desktopName: from connection.extra.desktopPool, controlled by useDesktopName setting
+    let use_desktop_name = hor
+        .and_then(|h| h.get("useDesktopName"))
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true);
+    let desktop_pool = connection
+        .extra
+        .get("desktopPool")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    if use_desktop_name && !desktop_pool.is_empty() {
+        args.push("-desktopName".to_string());
+        args.push(desktop_pool.to_string());
+    }
 
-        if let Some(h) = hor {
-            if let Some(v) = h.get("appName").and_then(|v| v.as_str()).filter(|s| !s.is_empty()) {
-                args.push("-desktopName".to_string());
-                args.push(v.to_string());
-            }
+    if let Some(h) = hor {
+        if mac_format {
             if let Some(v) = h.get("desktopProtocol").and_then(|v| v.as_str()).filter(|s| !s.is_empty()) {
                 args.push("-desktopProtocol".to_string());
                 args.push(v.to_string());
@@ -988,27 +967,14 @@ fn build_horizon_args(connection: &Connection, settings: &Value, mac_format: boo
             if h.get("useExisting").and_then(|v| v.as_bool()).unwrap_or(false) {
                 args.push("-useExisting".to_string());
             }
-            if h.get("singleAutoConnect").and_then(|v| v.as_bool()).unwrap_or(false) {
-                args.push("-singleAutoConnect".to_string());
-            }
-        }
-    } else {
-        // Windows flags (matches old Electron launchWindows)
-        if let Some(h) = hor {
-            // desktopName — ONLY from horizon.desktopName (never from connection.extra.desktopPool)
-            if let Some(v) = h.get("desktopName").and_then(|v| v.as_str()).filter(|s| !s.is_empty()) {
-                args.push("-desktopName".to_string());
-                args.push(v.to_string());
-            }
+        } else {
             if h.get("loginAsCurrentUser").and_then(|v| v.as_bool()).unwrap_or(false) {
                 args.push("-loginAsCurrentUser".to_string());
                 args.push("true".to_string());
             }
         }
-    }
 
-    // customFlags
-    if let Some(h) = hor {
+        // customFlags (both platforms)
         if let Some(raw) = h.get("customFlags").and_then(|v| v.as_str()).filter(|s| !s.is_empty()) {
             args.extend(split_args(raw));
         }
@@ -1170,7 +1136,7 @@ pub fn launch_vpn() -> CommandResult {
 }
 
 #[tauri::command]
-pub fn vpn_status() -> CommandResult<VpnStatus> {
+pub async fn vpn_status() -> CommandResult<VpnStatus> {
     tracing::debug!("→ vpn_status");
     let platform = if cfg!(target_os = "windows") { "win32".to_string() } else { std::env::consts::OS.to_string() };
     // Check if a VPN connect process is still running
@@ -1179,15 +1145,23 @@ pub fn vpn_status() -> CommandResult<VpnStatus> {
         guard.as_mut().map_or(false, |c| c.try_wait().ok().flatten().is_none())
     };
     let connected = if child_alive {
-        // Process still running → not connected yet (still connecting)
         false
     } else {
-        vpn_check_ping()
+        tokio::task::spawn_blocking(vpn_check_ping).await.unwrap_or(false)
     };
+    let client_installed = tokio::task::spawn_blocking(|| {
+        if cfg!(target_os = "windows") {
+            find_trac_exe().is_some()
+        } else if cfg!(target_os = "macos") {
+            find_macos_trac().is_some()
+        } else {
+            false
+        }
+    }).await.unwrap_or(false);
     tracing::info!("← vpn_status: platform={}, connected={}", platform, connected);
     CommandResult::ok(VpnStatus {
         connected,
-        client_installed: if cfg!(target_os = "windows") { find_trac_exe().is_some() } else { cfg!(target_os = "macos") },
+        client_installed,
         platform,
     })
 }
@@ -1366,16 +1340,18 @@ pub fn vpn_connect(credentials: Value) -> CommandResult {
 }
 
 #[tauri::command]
-pub fn vpn_client_status() -> CommandResult<VpnStatus> {
+pub async fn vpn_client_status() -> CommandResult<VpnStatus> {
     tracing::debug!("→ vpn_client_status");
     let platform = if cfg!(target_os = "windows") { "win32".to_string() } else { std::env::consts::OS.to_string() };
-    let client_installed = if cfg!(target_os = "windows") {
-        find_trac_exe().is_some()
-    } else if cfg!(target_os = "macos") {
-        find_macos_trac().is_some()
-    } else {
-        false
-    };
+    let client_installed = tokio::task::spawn_blocking(|| {
+        if cfg!(target_os = "windows") {
+            find_trac_exe().is_some()
+        } else if cfg!(target_os = "macos") {
+            find_macos_trac().is_some()
+        } else {
+            false
+        }
+    }).await.unwrap_or(false);
     let child_alive = {
         let mut guard = VPN_CHILD.lock().unwrap();
         guard.as_mut().map_or(false, |c| c.try_wait().ok().flatten().is_none())
@@ -1383,7 +1359,7 @@ pub fn vpn_client_status() -> CommandResult<VpnStatus> {
     let connected = if child_alive {
         false
     } else {
-        vpn_check_ping()
+        tokio::task::spawn_blocking(vpn_check_ping).await.unwrap_or(false)
     };
     tracing::info!("← vpn_client_status: platform={}, connected={}", platform, connected);
     CommandResult::ok(VpnStatus {
@@ -1473,12 +1449,12 @@ pub fn launch_rudesktop() -> CommandResult<RuDesktopLaunchResult> {
 }
 
 #[tauri::command]
-pub fn get_rudesktop_status() -> CommandResult<RuDesktopStatus> {
+pub async fn get_rudesktop_status() -> CommandResult<RuDesktopStatus> {
     tracing::debug!("→ get_rudesktop_status");
-    let bin_path = find_rudesktop_path();
+    let bin_path = tokio::task::spawn_blocking(find_rudesktop_path).await.ok().flatten();
     let installed = bin_path.is_some();
     let device_id = if installed {
-        let id = get_rudesktop_device_id(bin_path.as_deref());
+        let id = tokio::task::spawn_blocking(move || get_rudesktop_device_id(bin_path.as_deref())).await.ok().flatten();
         tracing::info!("  get_rudesktop_status: installed={}, deviceId={:?}", installed, id);
         id
     } else {

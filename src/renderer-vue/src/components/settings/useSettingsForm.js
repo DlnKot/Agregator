@@ -28,7 +28,7 @@ const SECTION_SHAPES = {
     appName: '', desktopProtocol: '', desktopLayout: '', monitors: '',
     unattended: false, nonInteractive: false, launchMinimized: false,
     loginAsCurrentUser: false, hideClientAfterLaunchSession: false,
-    useExisting: false, singleAutoConnect: false, customPath: '', customFlags: ''
+    useExisting: false,     useDesktopName: true, customPath: '', customFlags: ''
   },
   citrix: {
     accountName: '', resourceName: '', customPath: '', customFlags: ''

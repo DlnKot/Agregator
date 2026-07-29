@@ -50,9 +50,9 @@
       <div class="group-body">
         <div class="toggle-row">
           <label class="toggle-item">
-            <span>Автоподключение при одном ресурсе</span>
+            <span>DesktopName</span>
             <label class="toggle">
-              <input type="checkbox" v-model="localSettings.horizon.singleAutoConnect">
+              <input type="checkbox" v-model="localSettings.horizon.useDesktopName">
               <span class="toggle-slider"></span>
             </label>
           </label>

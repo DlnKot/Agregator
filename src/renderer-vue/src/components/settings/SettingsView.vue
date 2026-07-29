@@ -42,7 +42,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useApp } from '../../composables/useApp'
 import { useSettingsForm } from './useSettingsForm'
 import { appApi, updatesApi } from '../../api'
@@ -96,32 +96,7 @@ const appVersion = ref(versionData.version)
   } catch (e) {
     // Ignore
   }
-
-  // Fix slider position on first open
-  await fixSliderOnMount()
 })
-
-async function handleCheckUpdates() {
-  isChecking.value = true
-  try {
-    await checkForUpdates()
-  } finally {
-    isChecking.value = false
-  }
-}
-
-async function handleDownloadUpdate() {
-  isDownloading.value = true
-  try {
-    await downloadUpdate()
-  } finally {
-    isDownloading.value = false
-  }
-}
-
-function handleInstallUpdate() {
-  installUpdate()
-}
 
 const tabs = [
   { id: 'general', label: 'Общие' },
@@ -136,6 +111,7 @@ const activeTab = ref('general')
 // Settings tabs slider
 const settingsTabsRef = ref(null)
 const tabRefs = ref({})
+const sliderStyle = ref({ opacity: '0' })
 
 function setTabRef(id, el) {
   if (el) {
@@ -143,30 +119,62 @@ function setTabRef(id, el) {
   }
 }
 
-const sliderStyle = computed(() => {
-  if (!settingsTabsRef.value) return { opacity: '0' }
-
+function updateSlider() {
+  if (!settingsTabsRef.value) {
+    sliderStyle.value = { opacity: '0' }
+    return false
+  }
   const currentTabEl = tabRefs.value[activeTab.value]
-  if (!currentTabEl) return { opacity: '0' }
+  if (!currentTabEl) {
+    sliderStyle.value = { opacity: '0' }
+    return false
+  }
 
   const containerRect = settingsTabsRef.value.getBoundingClientRect()
   const tabRect = currentTabEl.getBoundingClientRect()
 
-  return {
+  if (containerRect.width === 0 || tabRect.width === 0) {
+    sliderStyle.value = { opacity: '0' }
+    return false
+  }
+
+  sliderStyle.value = {
     width: `${tabRect.width}px`,
     transform: `translateX(${tabRect.left - containerRect.left}px)`,
     opacity: '1'
   }
-})
-
-// Force slider recalculation on mount — fixes first-open positioning
-async function fixSliderOnMount() {
-  await nextTick()
-  const current = activeTab.value
-  activeTab.value = ''
-  await nextTick()
-  activeTab.value = current
+  return true
 }
+
+watch(activeTab, () => {
+  nextTick().then(() => requestAnimationFrame(updateSlider))
+}, { immediate: true })
+
+// Retry until visible — handles v-show display:none → block transition
+let ro = null
+let retryTimer = null
+onMounted(() => {
+  if (settingsTabsRef.value) {
+    ro = new ResizeObserver(() => {
+      if (settingsTabsRef.value.clientWidth > 0) {
+        requestAnimationFrame(updateSlider)
+      }
+    })
+    ro.observe(settingsTabsRef.value)
+  }
+  // Fallback poll in case ResizeObserver doesn't fire on display change
+  retryTimer = setInterval(() => {
+    if (settingsTabsRef.value?.clientWidth > 0) {
+      requestAnimationFrame(updateSlider)
+      clearInterval(retryTimer)
+      retryTimer = null
+    }
+  }, 200)
+})
+onBeforeUnmount(() => {
+  if (ro) ro.disconnect()
+  if (retryTimer) clearInterval(retryTimer)
+})
 
 watch(() => props.settings, (newSettings) => {
   initSettings(newSettings)

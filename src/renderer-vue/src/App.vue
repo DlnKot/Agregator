@@ -916,7 +916,7 @@ initTheme()
 .theme-toggle:hover {
   border-color: var(--border-light);
   background: var(--bg-tertiary);
-  color: var(--text-inverse);
+  color: var(--text-primary);
 }
 
 .theme-toggle-icon {

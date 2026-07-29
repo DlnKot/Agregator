@@ -1,6 +1,6 @@
 [package]
 name = "alfa-remote-client"
-version = "0.9.2"
+version = "0.9.3"
 description = "Alfa Remote Client - агрегатор для запуска клиентов удалённых рабочих столов"
 authors = ["Alfa Remote Client"]
 edition = "2021"

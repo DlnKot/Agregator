@@ -6,7 +6,7 @@
         <h2 class="modal-title">{{ isEditing ? 'Редактировать подключение' : 'Новое подключение' }}</h2>
         <button class="modal-close-btn" @click="$emit('close')" aria-label="Закрыть">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path d="M6 6L18 18M18 6L6 18" stroke="rgba(3,3,6,0.88)" stroke-width="2" stroke-linecap="round"/>
+            <path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
         </button>
       </div>
@@ -28,7 +28,7 @@
               <div class="field-right">
                 <div class="chevron-icon">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path d="M6 9L12 15L18 9" stroke="rgba(4,4,21,0.47)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
                 </div>
               </div>
@@ -295,11 +295,11 @@ onBeforeUnmount(() => {
   position: relative;
   z-index: 2;
   width: 600px;
-  background: #FFFFFF;
+  background: var(--bg-secondary);
   border-radius: 12px;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 14px 38px rgba(17, 24, 39, 0.14);
+  box-shadow: var(--shadow-lg);
   animation: modalSlideIn 200ms ease;
   overflow: hidden;
   max-height: 90vh;
@@ -327,7 +327,7 @@ onBeforeUnmount(() => {
   font-size: 22px;
   line-height: 26px;
   letter-spacing: 0.2px;
-  color: rgba(3, 3, 6, 0.88);
+  color: var(--text-primary);
   margin: 0;
 }
 
@@ -346,8 +346,20 @@ onBeforeUnmount(() => {
   transition: background 150ms ease;
 }
 
+.modal-close-btn {
+  color: var(--text-primary);
+}
+
 .modal-close-btn:hover {
   background: rgba(0, 0, 0, 0.06);
+}
+
+html[data-theme="dark"] .modal-close-btn {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+html[data-theme="dark"] .modal-close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 /* ---- Body ---- */
@@ -404,6 +416,10 @@ onBeforeUnmount(() => {
   border-radius: 10px;
 }
 
+html[data-theme="dark"] .field-container {
+  background: rgba(255, 255, 255, 0.06);
+}
+
 .field-container.field-textarea {
   min-height: 80px;
 }
@@ -424,7 +440,7 @@ onBeforeUnmount(() => {
   font-size: 12px;
   line-height: 16px;
   letter-spacing: -0.08px;
-  color: rgba(4, 4, 19, 0.55);
+  color: var(--text-muted);
   pointer-events: none;
 }
 
@@ -434,7 +450,7 @@ onBeforeUnmount(() => {
   font-size: 16px;
   line-height: 20px;
   letter-spacing: -0.24px;
-  color: rgba(3, 3, 6, 0.88);
+  color: var(--text-primary);
 }
 
 .field-input {
@@ -447,12 +463,12 @@ onBeforeUnmount(() => {
   font-size: 16px;
   line-height: 20px;
   letter-spacing: -0.24px;
-  color: rgba(3, 3, 6, 0.88);
+  color: var(--text-primary);
   padding: 0;
 }
 
 .field-input::placeholder {
-  color: rgba(5, 8, 29, 0.38);
+  color: var(--text-muted);
 }
 
 .field-input:disabled {
@@ -470,14 +486,14 @@ onBeforeUnmount(() => {
   font-size: 16px;
   line-height: 20px;
   letter-spacing: -0.24px;
-  color: rgba(3, 3, 6, 0.88);
+  color: var(--text-primary);
   padding: 0;
   resize: none;
   min-height: 44px;
 }
 
 .field-textarea-input::placeholder {
-  color: rgba(5, 8, 29, 0.38);
+  color: var(--text-muted);
 }
 
 .field-textarea-input:disabled {
@@ -490,7 +506,7 @@ onBeforeUnmount(() => {
   margin-top: 6px;
   font-size: 12px;
   font-style: italic;
-  color: rgba(4, 4, 19, 0.45);
+  color: var(--text-muted);
   padding-left: 4px;
 }
 
@@ -525,6 +541,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--text-muted);
 }
 
 .chevron-icon svg {
@@ -535,7 +552,7 @@ onBeforeUnmount(() => {
 .modal-footer {
   padding: 24px 40px 40px;
   flex-shrink: 0;
-  background: #FFFFFF;
+  background: var(--bg-secondary);
   border-radius: 0 0 12px 12px;
 }
 
@@ -577,9 +594,19 @@ onBeforeUnmount(() => {
   color: rgba(255, 255, 255, 0.94);
 }
 
+html[data-theme="dark"] .btn-primary {
+  background: var(--bg-tertiary);
+  color: var(--text-inverse);
+}
+
 .btn-ghost {
   background: rgba(15, 25, 55, 0.1);
   backdrop-filter: blur(40px);
   color: rgba(3, 3, 6, 0.88);
+}
+
+html[data-theme="dark"] .btn-ghost {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
 }
 </style>

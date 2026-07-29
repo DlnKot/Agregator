@@ -46,7 +46,7 @@
       "loginAsCurrentUser": false,
       "hideClientAfterLaunchSession": false,
       "useExisting": false,
-      "singleAutoConnect": true,
+      "useDesktopName": true,
       "customPath": "",
       "customFlags": ""
     },
