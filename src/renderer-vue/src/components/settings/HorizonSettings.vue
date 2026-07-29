@@ -23,7 +23,7 @@
             </select>
           </div>
           <div class="form-group flex-1">
-            <label for="horizon-layout">Раскладка экрана</label>
+            <label for="horizon-layout">Экран</label>
             <select id="horizon-layout" v-model="localSettings.horizon.desktopLayout">
               <option value="">По умолчанию</option>
               <option value="fullscreen">Fullscreen</option>
@@ -35,15 +35,6 @@
               <option value="1024x768">1024x768</option>
             </select>
           </div>
-        </div>
-        <div class="form-group">
-          <label for="horizon-monitors">Мониторы (индексы через запятую)</label>
-          <input type="text" id="horizon-monitors" v-model="localSettings.horizon.monitors" placeholder="1, 2">
-        </div>
-        <div class="form-group">
-          <label for="horizon-app">Приложение для запуска</label>
-          <input type="text" id="horizon-app" v-model="localSettings.horizon.appName"
-            placeholder="Имя приложения (опционально)">
         </div>
       </div>
     </div>
@@ -59,44 +50,9 @@
       <div class="group-body">
         <div class="toggle-row">
           <label class="toggle-item">
-            <span>Запускать в фоне (unattended)</span>
-            <label class="toggle">
-              <input type="checkbox" v-model="localSettings.horizon.unattended">
-              <span class="toggle-slider"></span>
-            </label>
-          </label>
-          <label class="toggle-item">
-            <span>Не показывать интерфейс (nonInteractive)</span>
-            <label class="toggle">
-              <input type="checkbox" v-model="localSettings.horizon.nonInteractive">
-              <span class="toggle-slider"></span>
-            </label>
-          </label>
-          <label class="toggle-item">
-            <span>Сворачивать после запуска</span>
-            <label class="toggle">
-              <input type="checkbox" v-model="localSettings.horizon.launchMinimized">
-              <span class="toggle-slider"></span>
-            </label>
-          </label>
-          <label class="toggle-item">
-            <span>Скрыть клиент после запуска</span>
-            <label class="toggle">
-              <input type="checkbox" v-model="localSettings.horizon.hideClientAfterLaunchSession">
-              <span class="toggle-slider"></span>
-            </label>
-          </label>
-          <label class="toggle-item">
             <span>Автоподключение при одном ресурсе</span>
             <label class="toggle">
               <input type="checkbox" v-model="localSettings.horizon.singleAutoConnect">
-              <span class="toggle-slider"></span>
-            </label>
-          </label>
-          <label class="toggle-item">
-            <span>Использовать существующее подключение</span>
-            <label class="toggle">
-              <input type="checkbox" v-model="localSettings.horizon.useExisting">
               <span class="toggle-slider"></span>
             </label>
           </label>

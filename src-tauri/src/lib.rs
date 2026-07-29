@@ -8,15 +8,14 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 
 use directories::BaseDirs;
-use serde_json::Value;
 
 use models::*;
-use store::simple_store::SimpleStore;
+use store::settings_file::SettingsFile;
 
 pub(crate) struct AppState {
-    pub(crate) store: SimpleStore,
+    pub(crate) store: SettingsFile,
+    pub(crate) defaults: DeploymentDefaults,
     pub(crate) version: String,
-    pub(crate) app_name: String,
 }
 
 fn get_store_dir() -> PathBuf {
@@ -33,46 +32,28 @@ pub(crate) fn load_deployment_defaults() -> DeploymentDefaults {
         .ok()
         .and_then(|v| serde_json::from_value(v).ok())
         .unwrap_or(DeploymentDefaults {
+            version: String::new(),
+            force_update_keys: vec![],
             settings: serde_json::json!({}),
             connections: vec![],
         })
 }
 
-fn init_store() -> SimpleStore {
+fn init_store(defaults: &DeploymentDefaults) -> SettingsFile {
     let dir = get_store_dir();
     std::fs::create_dir_all(&dir).ok();
-    let path = dir.join("config.json");
+    let path = dir.join("settings.json");
 
-    let store = SimpleStore::new(path.clone());
-    let defaults = load_deployment_defaults();
-
-    if !store.has("connections") {
-        let mut conns = defaults.connections;
-        for conn in &mut conns {
-            if conn.id.is_none() {
-                conn.id = Some(uuid::Uuid::new_v4().to_string());
-            }
-        }
-        store.set("connections", serde_json::to_value(&conns).unwrap_or(Value::Array(vec![])));
-    }
-    if !store.has("settings") {
-        store.set("settings", defaults.settings);
-    }
-    if !store.has("recent_connections") {
-        store.set("recent_connections", Value::Array(vec![]));
-    }
-
-    store.flush();
-    store
+    SettingsFile::new(path, defaults)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let _log_guard = logger::init_logging(get_store_dir().join("logs"));
 
-    let store = init_store();
+    let defaults = load_deployment_defaults();
+    let store = init_store(&defaults);
     let version = env!("CARGO_PKG_VERSION").to_string();
-    let app_name = env!("CARGO_PKG_NAME").to_string();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
@@ -81,8 +62,8 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(Mutex::new(AppState {
             store,
+            defaults,
             version,
-            app_name,
         }))
         .invoke_handler(tauri::generate_handler![
             commands::connections::get_connections,

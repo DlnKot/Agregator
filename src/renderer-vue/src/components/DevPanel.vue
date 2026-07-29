@@ -28,6 +28,22 @@
             </div>
           </div>
           <div class="dev-section">
+            <h4>Настройки (dev)</h4>
+            <div class="dev-setting">
+              <label for="dev-latency">Порог задержки (мс)</label>
+              <select id="dev-latency" v-model.number="latencyThreshold" @change="saveThreshold">
+                <option :value="50">50</option>
+                <option :value="80">80</option>
+                <option :value="100">100</option>
+                <option :value="150">150</option>
+                <option :value="200">200</option>
+                <option :value="300">300</option>
+                <option :value="500">500</option>
+              </select>
+              <span class="dev-setting-hint">Перезагрузите настройки в UI чтобы увидеть изменения</span>
+            </div>
+          </div>
+          <div class="dev-section">
             <h4>Информация</h4>
             <div class="dev-info">
               <div><strong>Платформа:</strong> {{ platform }}</div>
@@ -41,10 +57,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { appApi } from '../api'
+import { ref, watch, onMounted } from 'vue'
+import { appApi, settingsApi } from '../api'
 
-defineProps({
+const props = defineProps({
   visible: Boolean,
 })
 
@@ -52,10 +68,37 @@ const emit = defineEmits(['close', 'show'])
 
 const platform = ref('—')
 const version = ref('—')
+const latencyThreshold = ref(100)
+
+async function loadThreshold() {
+  try {
+    const s = await settingsApi.get()
+    if (s?.networkCheck?.latencyThresholdMs != null) {
+      latencyThreshold.value = s.networkCheck.latencyThresholdMs
+    }
+  } catch (e) {
+    // ignore
+  }
+}
+
+async function saveThreshold() {
+  try {
+    const s = await settingsApi.get()
+    if (!s.networkCheck) s.networkCheck = {}
+    s.networkCheck.latencyThresholdMs = latencyThreshold.value
+    await settingsApi.save(s)
+  } catch (e) {
+    console.error('DevPanel: failed to save threshold', e)
+  }
+}
 
 function close() {
   emit('close')
 }
+
+watch(() => props.visible, (v) => {
+  if (v) loadThreshold()
+})
 
 onMounted(async () => {
   try {
@@ -166,6 +209,34 @@ onMounted(async () => {
 .dev-btn:hover {
   background: rgba(255, 255, 255, 0.15);
   border-color: rgba(255, 255, 255, 0.3);
+}
+
+.dev-setting {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dev-setting label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.dev-setting select {
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  max-width: 120px;
+}
+
+.dev-setting-hint {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.35);
+  font-style: italic;
 }
 
 .dev-info {

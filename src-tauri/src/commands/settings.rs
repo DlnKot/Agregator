@@ -1,40 +1,25 @@
 use std::sync::Mutex;
 
+use serde_json::Value;
 use tauri::State;
 
-use crate::models::*;
 use crate::utils::CommandResult;
 use crate::AppState;
 
 #[tauri::command]
-pub fn get_settings(state: State<'_, Mutex<AppState>>) -> CommandResult<Settings> {
+pub fn get_settings(state: State<'_, Mutex<AppState>>) -> CommandResult<Value> {
     tracing::debug!("→ get_settings");
     let app = state.lock().unwrap();
-    let val = app.store.get("settings");
-    let result = match serde_json::from_value::<Settings>(val) {
-        Ok(s) => {
-            tracing::info!("← get_settings: loaded");
-            CommandResult::ok(s)
-        }
-        Err(_) => {
-            tracing::warn!("← get_settings: corrupted, returning defaults");
-            CommandResult::ok(Settings {
-                user: None,
-                network_check: None,
-                updates: None,
-                metrics_enabled: Some(false),
-            })
-        }
-    };
-    result
+    let settings = app.store.get_settings();
+    tracing::info!("← get_settings: loaded");
+    CommandResult::ok(settings)
 }
 
 #[tauri::command]
-pub fn save_settings(state: State<'_, Mutex<AppState>>, settings: Settings) -> CommandResult {
+pub fn save_settings(state: State<'_, Mutex<AppState>>, settings: Value) -> CommandResult {
     tracing::debug!("→ save_settings");
     let app = state.lock().unwrap();
-    app.store.set("settings", serde_json::to_value(&settings).unwrap_or_default());
-    app.store.flush();
+    app.store.save_settings(settings, &app.defaults);
     tracing::info!("← save_settings: ok");
     CommandResult::ok_empty()
 }

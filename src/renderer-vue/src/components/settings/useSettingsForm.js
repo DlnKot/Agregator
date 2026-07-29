@@ -1,10 +1,11 @@
-import { ref, reactive, watch } from 'vue'
+import { reactive } from 'vue'
 
-const defaultSettings = {
-  user: {
-    domain: '',
-    username: ''
-  },
+/**
+ * Minimal section shapes for filling missing top-level keys.
+ * Actual defaults come from the backend (merged deployment-defaults + user overrides).
+ */
+const SECTION_SHAPES = {
+  user: { domain: '', username: '' },
   rdp: {
     resolution: '1920x1080',
     colorDepth: '32',
@@ -15,108 +16,74 @@ const defaultSettings = {
     useAdminSession: false,
     promptCredentials: true,
     startFullScreen: false,
-    audio: {
-      playback: true,
-      capture: false
-    },
-    redirect: {
-      printers: true,
-      smartcards: true,
-      webauthn: true
-    },
+    audio: { playback: true, capture: false },
+    redirect: { printers: true, smartcards: true, webauthn: true },
     performance: {
-      wallpaper: true,
-      fontSmoothing: true,
-      desktopComposition: true,
-      fullWindowDrag: true,
-      menuAnimations: true
+      wallpaper: true, fontSmoothing: true, desktopComposition: true,
+      fullWindowDrag: true, menuAnimations: true
     },
     customFlags: ''
   },
   horizon: {
-    appName: '',
-    desktopProtocol: '',
-    desktopLayout: '',
-    monitors: '',
-    unattended: false,
-    nonInteractive: false,
-    launchMinimized: false,
-    loginAsCurrentUser: false,
-    hideClientAfterLaunchSession: false,
-    useExisting: false,
-    singleAutoConnect: false,
-    customPath: '',
-    customFlags: ''
+    appName: '', desktopProtocol: '', desktopLayout: '', monitors: '',
+    unattended: false, nonInteractive: false, launchMinimized: false,
+    loginAsCurrentUser: false, hideClientAfterLaunchSession: false,
+    useExisting: false, singleAutoConnect: false, customPath: '', customFlags: ''
   },
   citrix: {
-    accountName: '',
-    resourceName: '',
-    customPath: '',
-    customFlags: ''
+    accountName: '', resourceName: '', customPath: '', customFlags: ''
   },
   general: {
-    minimizeToTray: false,
-    startMinimized: false
-  },
-  updates: {
-    // Updates are served from custom internal server only
+    minimizeToTray: false, startMinimized: false
   },
   networkCheck: {
     latencyThresholdMs: 100
   }
 }
 
+function fillSection(section, shape) {
+  if (!section || typeof section !== 'object') return { ...shape }
+  const result = { ...shape }
+  for (const key of Object.keys(shape)) {
+    if (key in section) {
+      if (typeof shape[key] === 'object' && shape[key] !== null && !Array.isArray(shape[key])) {
+        result[key] = { ...shape[key], ...(section[key] || {}) }
+      } else {
+        result[key] = section[key]
+      }
+    }
+  }
+  return result
+}
+
+function buildSettings(settings) {
+  const result = {}
+  for (const [key, shape] of Object.entries(SECTION_SHAPES)) {
+    result[key] = fillSection(settings?.[key], shape)
+  }
+  for (const key of Object.keys(settings || {})) {
+    if (!(key in SECTION_SHAPES)) {
+      result[key] = JSON.parse(JSON.stringify(settings[key]))
+    }
+  }
+  return result
+}
+
 export function useSettingsForm(initialSettings) {
-  const localSettings = reactive(JSON.parse(JSON.stringify(defaultSettings)))
+  const localSettings = reactive(buildSettings(initialSettings))
 
   function initSettings(settings) {
     if (!settings || Object.keys(settings).length === 0) return
-
-    const merged = JSON.parse(JSON.stringify(defaultSettings))
-
-    if (settings.user) {
-      merged.user = { ...defaultSettings.user, ...settings.user }
-    }
-    if (settings.rdp) {
-      merged.rdp = { ...defaultSettings.rdp, ...settings.rdp }
-    }
-    if (settings.horizon) {
-      merged.horizon = { ...defaultSettings.horizon, ...settings.horizon }
-    }
-    if (settings.citrix) {
-      merged.citrix = { ...defaultSettings.citrix, ...settings.citrix }
-    }
-    if (settings.general) {
-      merged.general = { ...defaultSettings.general, ...settings.general }
-    }
-    if (settings.updates) {
-      merged.updates = { ...defaultSettings.updates, ...settings.updates }
-    }
-    if (settings.networkCheck) {
-      merged.networkCheck = { ...defaultSettings.networkCheck, ...settings.networkCheck }
-    }
-
-    Object.assign(localSettings, merged)
+    Object.assign(localSettings, buildSettings(settings))
   }
 
   function getSettings() {
     return JSON.parse(JSON.stringify(localSettings))
   }
 
-  function resetToDefaults() {
-    Object.assign(localSettings, JSON.parse(JSON.stringify(defaultSettings)))
-  }
-
-  // Initialize with provided settings
-  if (initialSettings) {
-    initSettings(initialSettings)
-  }
-
   return {
     localSettings,
-    defaultSettings,
     initSettings,
-    getSettings,
-    resetToDefaults
+    getSettings
   }
 }

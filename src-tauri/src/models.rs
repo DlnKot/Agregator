@@ -24,40 +24,24 @@ pub struct Connection {
     pub extra: Value,
 }
 
-/// Deployment defaults (loaded from config/deployment-defaults.json)
+/// Deployment defaults (compiled into binary from config/deployment-defaults.json)
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct DeploymentDefaults {
+    pub version: String,
+    #[serde(rename = "force_update_keys")]
+    pub force_update_keys: Vec<String>,
     pub settings: Value,
     pub connections: Vec<Connection>,
 }
 
-/// Application settings
+/// Single settings.json file on disk — the single source of truth
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Settings {
-    pub user: Option<UserCredentials>,
-    pub network_check: Option<NetworkCheckSettings>,
-    pub updates: Option<UpdateSettings>,
-    pub metrics_enabled: Option<bool>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UserCredentials {
-    pub domain: Option<String>,
-    pub username: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NetworkCheckSettings {
-    pub hosts: Option<Vec<String>>,
-    pub ping_count: Option<u32>,
-    pub latency_threshold_ms: Option<u64>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UpdateSettings {
-    pub auto_check: Option<bool>,
-    pub use_github_releases: Option<bool>,
+pub struct SettingsFileData {
+    pub defaults_version: String,
+    pub settings: Value,
+    pub connections: Vec<Connection>,
+    pub recent_connections: Vec<String>,
+    pub user_modified_keys: Vec<String>,
 }
 
 /// Ping detail — returned to frontend

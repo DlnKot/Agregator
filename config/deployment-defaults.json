@@ -1,4 +1,6 @@
 {
+  "version": "1.0",
+  "force_update_keys": [],
   "settings": {
     "user": {
       "domain": "",
@@ -6,12 +8,12 @@
     },
     "rdp": {
       "host": "",
-      "resolution": "800x600",
+      "resolution": "1920x1080",
       "colorDepth": "32",
       "multimon": true,
       "span": false,
       "startFullScreen": true,
-      "clipboard": true,
+      "clipboard": false,
       "driveMapping": false,
       "promptCredentials": false,
       "useAdminSession": false,
@@ -20,9 +22,9 @@
         "capture": true
       },
       "redirect": {
-        "printers": true,
-        "smartcards": true,
-        "webauthn": true
+        "printers": false,
+        "smartcards": false,
+        "webauthn": false
       },
       "performance": {
         "wallpaper": true,
@@ -44,7 +46,7 @@
       "loginAsCurrentUser": false,
       "hideClientAfterLaunchSession": false,
       "useExisting": false,
-      "singleAutoConnect": false,
+      "singleAutoConnect": true,
       "customPath": "",
       "customFlags": ""
     },
@@ -57,7 +59,17 @@
     "general": {
       "minimizeToTray": false,
       "startMinimized": false
-    }
+    },
+    "networkCheck": {
+      "hosts": [],
+      "pingCount": 4,
+      "latencyThresholdMs": 100
+    },
+    "updates": {
+      "autoCheck": true,
+      "useGithubReleases": false
+    },
+    "metricsEnabled": false
   },
   "connections": [
     {
@@ -65,7 +77,7 @@
       "type": "horizon",
       "name": "VDI",
       "host": "https://telework.alfabank.ru",
-      "description": "Рабочее место через Horizon",
+      "description": "Рабочее место Horizon",
       "isDefault": true,
       "isUserModified": false,
       "desktopPool": "workspace-fullwm"
@@ -75,7 +87,7 @@
       "type": "horizon",
       "name": "VDI - Резерв",
       "host": "https://telework.moscow.alfaintra.net",
-      "description": "Рабочее место через Horizon (Москва)",
+      "description": "Рабочее место Horizon через Checkpoint VPN",
       "isDefault": true,
       "isUserModified": false,
       "desktopPool": "workspace-fullvm"
@@ -101,4 +113,3 @@
     }
   ]
 }
-  

@@ -52,33 +52,6 @@
     <div class="settings-group">
       <div class="group-header">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16">
-          <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-        </svg>
-        <span>Сеть</span>
-      </div>
-      <div class="group-body">
-        <div class="form-group">
-          <label for="net-latency-threshold">Порог задержки (мс)</label>
-          <select
-            id="net-latency-threshold"
-            v-model.number="localSettings.networkCheck.latencyThresholdMs"
-          >
-            <option :value="50">50</option>
-            <option :value="80">80</option>
-            <option :value="100">100</option>
-            <option :value="150">150</option>
-            <option :value="200">200</option>
-            <option :value="300">300</option>
-            <option :value="500">500</option>
-          </select>
-          <small>Если средняя задержка (avg) выше порога, будет показано предупреждение о нестабильной связи</small>
-        </div>
-      </div>
-    </div>
-
-    <div class="settings-group">
-      <div class="group-header">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16">
           <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
         </svg>
         <span>Стандартные подключения</span>

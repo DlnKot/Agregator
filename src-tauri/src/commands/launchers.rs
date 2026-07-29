@@ -8,7 +8,7 @@ use std::time::Duration;
 use directories::BaseDirs;
 use serde_json::Value;
 
-use crate::models::*;
+use crate::models::{Connection, RuDesktopLaunchResult, RuDesktopStatus, VpnStatus};
 use crate::utils::{CommandResult, CommandSilentExt, decode_windows_output};
 
 /// Global handle to the currently running VPN connect process (Windows only).
@@ -1110,7 +1110,7 @@ pub fn launch_horizon(connection: Connection, settings: Value) -> CommandResult 
 }
 
 #[tauri::command]
-pub fn launch_citrix(connection: Connection, _settings: Settings) -> CommandResult {
+pub fn launch_citrix(connection: Connection, _settings: Value) -> CommandResult {
     let host = &connection.host;
     let store_url = format!("https://{}/Citrix/StoreWeb", host);
     tracing::debug!("→ launch_citrix: host={}", host);

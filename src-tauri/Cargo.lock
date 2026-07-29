@@ -19,7 +19,7 @@ dependencies = [
 
 [[package]]
 name = "alfa-remote-client"
-version = "0.9.1"
+version = "0.9.2"
 dependencies = [
  "chrono",
  "directories",

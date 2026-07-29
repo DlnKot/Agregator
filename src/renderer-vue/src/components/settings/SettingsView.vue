@@ -125,8 +125,8 @@ function handleInstallUpdate() {
 
 const tabs = [
   { id: 'general', label: 'Общие' },
-  { id: 'rdp', label: 'RDP' },
-  { id: 'horizon', label: 'Horizon' },
+  { id: 'rdp', label: 'ПУРМС' },
+  { id: 'horizon', label: 'VDI VMWare' },
   { id: 'citrix', label: 'Citrix' },
   { id: 'updates', label: 'Обновление' }
 ]

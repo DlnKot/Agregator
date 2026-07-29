@@ -34,9 +34,9 @@
                 <button class="client-tab" :class="{ active: currentClientFilter === 'all' }"
                   @click="currentClientFilter = 'all'" ref="tabAll">Все</button>
                 <button class="client-tab" :class="{ active: currentClientFilter === 'rdp' }"
-                  @click="currentClientFilter = 'rdp'" ref="tabRdp">RDP</button>
+                  @click="currentClientFilter = 'rdp'" ref="tabRdp">ПУРМС</button>
                 <button class="client-tab" :class="{ active: currentClientFilter === 'horizon' }"
-                  @click="currentClientFilter = 'horizon'" ref="tabHorizon">Horizon</button>
+                  @click="currentClientFilter = 'horizon'" ref="tabHorizon">VDI VMWare</button>
                 <button class="client-tab" :class="{ active: currentClientFilter === 'citrix' }"
                   @click="currentClientFilter = 'citrix'" ref="tabCitrix">Citrix</button>
               </div>
