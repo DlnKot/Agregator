@@ -7,7 +7,8 @@ module.exports = [
     ignores: [
       '**/node_modules/**',
       'dist/**',
-      'dist-renderer/**'
+      'dist-renderer/**',
+      'src-tauri/target/**'
     ]
   },
 

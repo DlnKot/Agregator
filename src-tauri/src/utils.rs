@@ -36,7 +36,7 @@ pub fn decode_windows_output(bytes: &[u8]) -> String {
         encoding_rs::WINDOWS_1252,
         encoding_rs::KOI8_R,
     ] {
-        let (decoded, _had_errors) = encoding.decode(bytes);
+        let (decoded, _encoding, _had_errors) = encoding.decode(bytes);
         if !_had_errors {
             return decoded.into_owned();
         }
