@@ -42,6 +42,17 @@
               </select>
               <span class="dev-setting-hint">Перезагрузите настройки в UI чтобы увидеть изменения</span>
             </div>
+            <div class="dev-setting" style="margin-top:8px">
+              <label for="dev-loss">Порог потерь (%)</label>
+              <select id="dev-loss" v-model.number="lossThreshold" @change="saveThreshold">
+                <option :value="1">1</option>
+                <option :value="2">2</option>
+                <option :value="5">5</option>
+                <option :value="10">10</option>
+                <option :value="20">20</option>
+              </select>
+              <span class="dev-setting-hint">Допустимый процент потерь пакетов</span>
+            </div>
           </div>
           <div class="dev-section">
             <h4>Информация</h4>
@@ -69,12 +80,16 @@ const emit = defineEmits(['close', 'show'])
 const platform = ref('—')
 const version = ref('—')
 const latencyThreshold = ref(100)
+const lossThreshold = ref(10)
 
 async function loadThreshold() {
   try {
     const s = await settingsApi.get()
     if (s?.networkCheck?.latencyThresholdMs != null) {
       latencyThreshold.value = s.networkCheck.latencyThresholdMs
+    }
+    if (s?.networkCheck?.lossThresholdPercent != null) {
+      lossThreshold.value = s.networkCheck.lossThresholdPercent
     }
   } catch (e) {
     // ignore
@@ -86,6 +101,7 @@ async function saveThreshold() {
     const s = await settingsApi.get()
     if (!s.networkCheck) s.networkCheck = {}
     s.networkCheck.latencyThresholdMs = latencyThreshold.value
+    s.networkCheck.lossThresholdPercent = lossThreshold.value
     await settingsApi.save(s)
   } catch (e) {
     console.error('DevPanel: failed to save threshold', e)

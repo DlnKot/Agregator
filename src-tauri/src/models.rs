@@ -52,6 +52,8 @@ pub struct PingDetail {
     pub avg_ms: Option<f64>,
     pub min_ms: Option<f64>,
     pub max_ms: Option<f64>,
+    // Standard deviation (jitter) in milliseconds
+    pub jitter_ms: Option<f64>,
     pub raw: Option<String>,
     pub error: Option<String>,
 }

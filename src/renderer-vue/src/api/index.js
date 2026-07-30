@@ -71,7 +71,8 @@ export const externalApi = {
 // ==================== Network ====================
 
 export const networkApi = {
-  ping: (host, count = 4, thresholdMs) => invoke('network_ping', { host, count, thresholdMs }).then(unwrap),
+  // Pass optional lossThresholdPercent alongside latency threshold
+  ping: (host, count = 4, thresholdMs, lossThresholdPercent) => invoke('network_ping', { host, count, thresholdMs, lossThresholdPercent }).then(unwrap),
   runFullCheck: (payload) => invoke('network_run_full_check', { payload }).then(unwrap),
 }
 

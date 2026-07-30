@@ -209,7 +209,8 @@ async function runTarget(t) {
       refreshGeo().catch(() => { })
     }
 
-    const result = await networkApi.ping(t.host, packets, thresholdMs.value)
+    const lossThreshold = props.settings?.networkCheck?.lossThresholdPercent ?? 10
+    const result = await networkApi.ping(t.host, packets, thresholdMs.value, lossThreshold)
     results.value = {
       ...results.value,
       [t.id]: {
