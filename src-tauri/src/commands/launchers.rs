@@ -8,6 +8,7 @@ use std::time::Duration;
 use directories::BaseDirs;
 use serde_json::Value;
 
+use crate::commands::pinger;
 use crate::models::{Connection, RuDesktopLaunchResult, RuDesktopStatus, VpnStatus};
 use crate::utils::{CommandResult, CommandSilentExt, decode_windows_output};
 
@@ -47,29 +48,8 @@ fn launch_mac(app_name: &str, args: &[&str]) -> CommandResult {
     }
 }
 
-fn vpn_check_ping() -> bool {
-    let host = "mypc.moscow.alfaintra.net";
-    if cfg!(target_os = "windows") {
-        let result = Command::new("ping").no_window()
-            .args(["-n", "1", "-w", "3000", host])
-            .output();
-        if let Ok(output) = result {
-            let stdout = decode_windows_output(&output.stdout);
-            stdout.contains("Reply from") || stdout.contains("1 received")
-        } else {
-            false
-        }
-    } else {
-        let result = Command::new("ping").no_window()
-            .args(["-c", "1", "-W", "3", host])
-            .output();
-        if let Ok(output) = result {
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            stdout.contains("1 packets received") || stdout.contains("1 received")
-        } else {
-            false
-        }
-    }
+async fn vpn_check_ping() -> bool {
+    pinger::ping_ok("mypc.moscow.alfaintra.net", 3).await
 }
 
 // ─── Windows VPN helpers ──────────────────────────────────────────────────────
@@ -1147,7 +1127,7 @@ pub async fn vpn_status() -> CommandResult<VpnStatus> {
     let connected = if child_alive {
         false
     } else {
-        tokio::task::spawn_blocking(vpn_check_ping).await.unwrap_or(false)
+        vpn_check_ping().await
     };
     let client_installed = tokio::task::spawn_blocking(|| {
         if cfg!(target_os = "windows") {
@@ -1359,7 +1339,7 @@ pub async fn vpn_client_status() -> CommandResult<VpnStatus> {
     let connected = if child_alive {
         false
     } else {
-        tokio::task::spawn_blocking(vpn_check_ping).await.unwrap_or(false)
+        vpn_check_ping().await
     };
     tracing::info!("← vpn_client_status: platform={}, connected={}", platform, connected);
     CommandResult::ok(VpnStatus {

@@ -1,6 +1,6 @@
 [package]
 name = "alfa-remote-client"
-version = "0.9.3"
+version = "0.9.4"
 description = "Alfa Remote Client - агрегатор для запуска клиентов удалённых рабочих столов"
 authors = ["Alfa Remote Client"]
 edition = "2021"
@@ -28,6 +28,6 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "registry"] }
 tracing-appender = "0.2"
 directories = "6"
 chrono = "0.4"
-ping = "0.5"
+surge-ping = "0.9"
 open = "5"
 encoding_rs = "0.8"
